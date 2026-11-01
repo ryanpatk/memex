@@ -1,88 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import supabase from '../supabase'
-import { Note, NoteWithTags, CreateNoteData, UpdateNoteData, getErrorMessage } from '@memex/core'
+import { repository } from '../data/repository'
+import { NoteWithTags, CreateNoteData, UpdateNoteData } from '@memex/core'
 
 export const noteKeys = {
   all: ['notes'] as const,
   lists: () => [...noteKeys.all, 'list'] as const,
 }
 
-const isMissingRelationError = (error: unknown, relation: string) => {
-  const message = getErrorMessage(error)
-  return message.includes(relation) && message.includes('does not exist')
-}
-
-export const notesApi = {
-  getAll: async (): Promise<NoteWithTags[]> => {
-    try {
-      const { data, error } = await supabase
-        .from('notes')
-        .select(`
-          *,
-          note_tags:note_tags(tag:tags(*))
-        `)
-        .order('updated_at', { ascending: false })
-
-      if (error) throw error
-      return data || []
-    } catch (error: unknown) {
-      // Graceful degradation while the notes migration hasn't been applied
-      if (isMissingRelationError(error, 'notes')) {
-        return []
-      }
-      if (isMissingRelationError(error, 'note_tags')) {
-        const { data, error: fallbackError } = await supabase
-          .from('notes')
-          .select('*')
-          .order('updated_at', { ascending: false })
-
-        if (fallbackError) throw fallbackError
-        return data || []
-      }
-      throw error
-    }
-  },
-
-  create: async (noteData: CreateNoteData): Promise<Note> => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('User not authenticated')
-
-    const { data, error } = await supabase
-      .from('notes')
-      .insert({
-        title: noteData.title,
-        body: noteData.body ?? '',
-        order_index: noteData.order_index ?? 0,
-        user_id: user.id,
-      })
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
-  },
-
-  update: async (id: string, updates: UpdateNoteData): Promise<Note> => {
-    const { data, error } = await supabase
-      .from('notes')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
-  },
-
-  delete: async (id: string): Promise<void> => {
-    const { error } = await supabase
-      .from('notes')
-      .delete()
-      .eq('id', id)
-
-    if (error) throw error
-  },
-}
+export const notesApi = repository.notes
 
 export const useAllNotes = () => {
   return useQuery({

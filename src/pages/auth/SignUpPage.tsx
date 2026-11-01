@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useSession } from '../../context/SessionContext';
-import supabase from '../../supabase';
+import { repository } from '../../data/repository';
 import AppLogo from '../../components/AppLogo';
 import DarkModeToggle from '../../components/DarkModeToggle';
 import { DEFAULT_MODULE_PATH } from '../../constants/modules';
@@ -41,7 +41,7 @@ const SignUpPage = () => {
     e.preventDefault();
     setIsSubmitting(true);
     setStatus('Creating account…');
-    const { error } = await supabase.auth.signUp({
+    const { error } = await repository.auth.signUp({
       email: formValues.email,
       password: formValues.password,
     });
@@ -56,11 +56,8 @@ const SignUpPage = () => {
   const handleGitHubSignUp = async () => {
     setIsSubmitting(true);
     setStatus('Redirecting to GitHub…');
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-      },
+    const { error } = await repository.auth.signInWithOAuth('github', {
+      redirectTo: `${window.location.origin}/dashboard`,
     });
     if (error) {
       setStatus(error.message);

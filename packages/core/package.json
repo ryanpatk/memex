@@ -19,5 +19,8 @@
     "@supabase/supabase-js": {
       "optional": true
     }
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.49.4"
   }
 }

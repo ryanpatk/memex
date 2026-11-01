@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import supabase from '../supabase'
+import { repository } from '../data/repository'
 import { useAppStore } from '../store'
-import { Project, ProjectWithCounts, CreateProjectData, UpdateProjectData } from '@memex/core'
+import { UpdateProjectData } from '@memex/core'
 
 // Query keys
 export const projectKeys = {
@@ -13,70 +13,7 @@ export const projectKeys = {
 }
 
 // Projects API functions
-export const projectsApi = {
-  getAll: async (): Promise<ProjectWithCounts[]> => {
-    const { data, error } = await supabase
-      .from('projects')
-      .select(`
-        *,
-        links(count)
-      `)
-      .order('is_starred', { ascending: false })
-      .order('last_modified', { ascending: false })
-    
-    if (error) throw error
-    return data || []
-  },
-
-  getById: async (id: string): Promise<Project | null> => {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('id', id)
-      .single()
-    
-    if (error) throw error
-    return data
-  },
-
-  create: async (projectData: CreateProjectData): Promise<Project> => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('User not authenticated')
-
-    const { data, error } = await supabase
-      .from('projects')
-      .insert({
-        ...projectData,
-        user_id: user.id,
-      })
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
-  },
-
-  update: async (id: string, updates: UpdateProjectData): Promise<Project> => {
-    const { data, error } = await supabase
-      .from('projects')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
-  },
-
-  delete: async (id: string): Promise<void> => {
-    const { error } = await supabase
-      .from('projects')
-      .delete()
-      .eq('id', id)
-
-    if (error) throw error
-  },
-}
+export const projectsApi = repository.projects
 
 // Custom hooks
 export const useProjects = () => {

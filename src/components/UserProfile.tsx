@@ -1,11 +1,11 @@
-import type { User } from '@supabase/supabase-js'
+import type { AuthUser } from '@memex/core'
 import { useState, useEffect, useRef } from 'react'
-import supabase from '../supabase'
+import { repository } from '../data/repository'
 import { useNavigate } from 'react-router-dom'
 import DarkModeToggle from './DarkModeToggle'
 
 interface UserProfileProps {
-  user: User | null
+  user: AuthUser | null
   isMobile?: boolean
 }
 
@@ -34,7 +34,7 @@ const UserProfile = ({ user, isMobile = false }: UserProfileProps) => {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut()
+      await repository.auth.signOut()
       navigate('/')
     } catch (error) {
       console.error('Error logging out:', error)

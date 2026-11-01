@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import supabase from "../supabase";
-import { Session } from "@supabase/supabase-js";
+import type { AuthSession } from "@memex/core";
+import { repository } from "../data/repository";
 
 type SessionContextValue = {
-  session: Session | null;
+  session: AuthSession | null;
   /** True after initial session is read from storage (avoids flash on protected routes). */
   authHydrated: boolean;
 };
@@ -21,24 +21,22 @@ export const useSession = () => {
 
 type Props = { children: React.ReactNode };
 export const SessionProvider = ({ children }: Props) => {
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [authHydrated, setAuthHydrated] = useState(false);
 
   useEffect(() => {
-    void supabase.auth.getSession().then(({ data: { session: s } }) => {
+    void repository.auth.getSession().then((s) => {
       setSession(s);
       setAuthHydrated(true);
     });
 
-    const authStateListener = supabase.auth.onAuthStateChange(
-      async (_event, s) => {
-        setSession(s);
-        setAuthHydrated(true);
-      },
-    );
+    const unsubscribe = repository.auth.onAuthStateChange((s) => {
+      setSession(s);
+      setAuthHydrated(true);
+    });
 
     return () => {
-      authStateListener.data.subscription.unsubscribe();
+      unsubscribe();
     };
   }, []);
 

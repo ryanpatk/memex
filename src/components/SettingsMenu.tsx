@@ -1,4 +1,4 @@
-import type { User } from '@supabase/supabase-js';
+import type { AuthUser } from '@memex/core';
 import CanvasColorPicker from './CanvasColorPicker';
 import DarkModeToggle from './DarkModeToggle';
 import SoundToggle from './SoundToggle';
@@ -6,7 +6,7 @@ import { LINK_CAPTION_MODES, useLinkCaptionMode } from '../utils/linkCaptions';
 import { userDisplayName } from '../utils/userDisplay';
 
 interface SettingsMenuProps {
-  user: User | null;
+  user: AuthUser | null;
   onOpenTokens: () => void;
   onLogout: () => void;
 }

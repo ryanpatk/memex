@@ -21,3 +21,4 @@ export * from './tokens/canvasColors';
 export * from './tokens/color';
 export * from './tokens/spaceColors';
 export * from './tokens/pastelSky';
+export * from './repository';

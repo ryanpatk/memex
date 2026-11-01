@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import supabase from '../supabase'
+import { repository } from '../data/repository'
 import { ApiToken } from '@memex/core'
 
 /** Generates `mx_` + 256 bits of randomness, base64url. Shown once, never stored. */
@@ -30,15 +30,17 @@ export const useApiTokens = (enabled: boolean) => {
     let cancelled = false
     setIsLoading(true)
 
-    supabase
-      .from('api_tokens')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .then(({ data, error }) => {
+    repository.apiTokens.getAll().then(
+      (data) => {
         if (cancelled) return
-        if (!error) setTokens(data ?? [])
+        setTokens(data)
         setIsLoading(false)
-      })
+      },
+      () => {
+        if (cancelled) return
+        setIsLoading(false)
+      },
+    )
 
     return () => {
       cancelled = true
@@ -48,18 +50,10 @@ export const useApiTokens = (enabled: boolean) => {
   const createToken = useCallback(async (name: string): Promise<string> => {
     setIsCreating(true)
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
-
       const token = generateToken()
       const token_hash = await sha256Hex(token)
 
-      const { data, error } = await supabase
-        .from('api_tokens')
-        .insert({ user_id: user.id, name: name.trim() || 'Untitled token', token_hash })
-        .select()
-        .single()
-      if (error) throw error
+      const data = await repository.apiTokens.create({ name: name.trim() || 'Untitled token', token_hash })
 
       setTokens((prev) => [data, ...prev])
       return token
@@ -69,8 +63,7 @@ export const useApiTokens = (enabled: boolean) => {
   }, [])
 
   const revokeToken = useCallback(async (id: string): Promise<void> => {
-    const { error } = await supabase.from('api_tokens').delete().eq('id', id)
-    if (error) throw error
+    await repository.apiTokens.delete(id)
     setTokens((prev) => prev.filter((token) => token.id !== id))
   }, [])
 

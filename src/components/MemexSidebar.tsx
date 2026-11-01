@@ -12,7 +12,7 @@ import { useProfiles } from '../hooks/useProfiles';
 import { useAppStore } from '../store';
 import { useSpaceColors } from '../hooks/useSpaceColors';
 import { useSession } from '../context/SessionContext';
-import supabase from '../supabase';
+import { repository } from '../data/repository';
 import { FeedbackToast } from './ui';
 import ApiTokensModal from './ApiTokensModal';
 import SettingsMenu from './SettingsMenu';
@@ -84,7 +84,7 @@ const MemexSidebar = () => {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await repository.auth.signOut();
       navigate('/');
     } catch (error) {
       console.error('Error logging out:', error);

@@ -1,4 +1,4 @@
-import type { User } from '@supabase/supabase-js';
+import type { AuthUser } from '@memex/core';
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -7,11 +7,11 @@ import SettingsMenu from './SettingsMenu';
 import { CloseIcon } from './icons';
 import { cue } from '../utils/sound';
 import { getHostname, type LinkWithTag } from '@memex/core';
-import supabase from '../supabase';
+import { repository } from '../data/repository';
 import Wordmark from './ui/Wordmark';
 
 interface AppHeaderProps {
-  user: User | null;
+  user: AuthUser | null;
   /** Page heading: "Home" or the space name. */
   title: string;
   /** Identity colour shown beside a space title. */
@@ -98,7 +98,7 @@ const AppHeader = ({
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await repository.auth.signOut();
       navigate('/');
     } catch (error) {
       console.error('Error logging out:', error);

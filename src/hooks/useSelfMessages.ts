@@ -1,60 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
-import supabase from '../supabase'
-import { CreateSelfMessageData, SelfMessage, getErrorMessage } from '@memex/core'
+import { repository } from '../data/repository'
+import { SelfMessage } from '@memex/core'
 
 export const selfMessageKeys = {
   all: ['self-messages'] as const,
   list: () => [...selfMessageKeys.all, 'list'] as const,
 }
 
-export const selfMessagesApi = {
-  /** Every message for the current user (RLS), oldest first. Scoping is
-   * done client-side so Home and each space share one cached list. */
-  getAll: async (): Promise<SelfMessage[]> => {
-    try {
-      const { data, error } = await supabase
-        .from('self_messages')
-        .select('*')
-        .order('created_at', { ascending: true })
-
-      if (error) throw error
-      return data || []
-    } catch (error: unknown) {
-      const message = getErrorMessage(error)
-      // Migration not applied yet — behave as an empty feed
-      if (message.includes('self_messages') && message.includes('does not exist')) {
-        return []
-      }
-      throw error
-    }
-  },
-
-  create: async (input: CreateSelfMessageData): Promise<SelfMessage> => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) throw new Error('User not authenticated')
-
-    const { data, error } = await supabase
-      .from('self_messages')
-      .insert({
-        user_id: user.id,
-        profile_id: input.profile_id,
-        body: input.body,
-      })
-      .select()
-      .single()
-
-    if (error) throw error
-    return data
-  },
-
-  delete: async (id: string): Promise<void> => {
-    const { error } = await supabase.from('self_messages').delete().eq('id', id)
-    if (error) throw error
-  },
-}
+export const selfMessagesApi = repository.jots
 
 export const useAllSelfMessages = () =>
   useQuery({
