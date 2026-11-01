@@ -2,7 +2,7 @@ import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from '
 import { Check, Inbox } from 'lucide-react';
 import { useJournal } from '../../hooks/useJournal';
 import { toParts, type Entry, type JournalSpace, type Part } from '../../utils/journalFeed';
-import { getLinkTitle } from '../../utils/linkDisplay';
+import { getLinkTitle } from '@memex/core';
 import { PartView, type JournalHandlers } from '../journal/JournalParts';
 import JournalComposer from '../journal/JournalComposer';
 import { InboxIcon, JournalIcon, LibraryIcon, PlusIcon, TasksIcon } from '../icons';

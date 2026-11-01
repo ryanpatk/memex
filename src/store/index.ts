@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector, persist } from 'zustand/middleware';
 import { useMemo } from 'react';
-import { Project, Link } from '../types/database';
+import { Project, Link } from '@memex/core';
 
 interface AppState {
   // Projects

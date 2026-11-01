@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { Check, Ellipsis, FileText, FolderInput, ListTodo, StickyNote, Trash2 } from 'lucide-react';
-import type { LinkWithTag, SelfMessage, TaskWithTags } from '../../types/database';
-import { getHostname, getLinkTitle } from '../../utils/linkDisplay';
-import { stripMarkdown } from '../../utils/markdown';
+import {
+  type LinkWithTag,
+  type SelfMessage,
+  type TaskWithTags,
+  getHostname,
+  getLinkTitle,
+  stripMarkdown,
+} from '@memex/core';
 import { getInitials } from '../../utils/streamCardFormat';
 import {
   isVisualLink,

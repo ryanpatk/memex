@@ -1,5 +1,6 @@
-// Database types for EX_P02
-// These types match the Supabase database schema
+// Domain types for memex's primitives (links, notes, tasks, jots, spaces,
+// tags) and the Supabase schema they are stored in today. Spaces are still
+// called profiles here, matching the database.
 
 export interface Project {
   id: string
@@ -187,7 +188,6 @@ export interface ProfileNote {
   order_index: number
   created_at: string
 }
-
 
 // Form types for creating/updating entities
 export interface CreateProjectData {

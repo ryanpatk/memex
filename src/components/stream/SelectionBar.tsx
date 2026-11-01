@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { ChevronDown, FolderPlus, Trash2, X } from 'lucide-react';
-import type { Profile } from '../../types/database';
+import type { Profile } from '@memex/core';
 
 interface SelectionBarProps {
   count: number;

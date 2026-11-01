@@ -40,7 +40,7 @@ export const timeGroupFor = (iso: string, now = new Date()): TimeGroupLabel => {
 };
 
 /** Group already-sorted items by recency bucket, preserving order. */
-export const groupByTime = <T,>(items: T[], getDate: (item: T) => string) => {
+export const groupByTime = <T>(items: T[], getDate: (item: T) => string) => {
   const now = new Date();
   const map = new Map<TimeGroupLabel, T[]>();
   items.forEach((item) => {

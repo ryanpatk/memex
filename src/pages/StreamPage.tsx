@@ -19,16 +19,34 @@ import SpaceDetailsModal from '../components/SpaceDetailsModal';
 import StreamFilterBar from '../components/StreamFilterBar';
 import { EmptyState, FeedbackToast, FrostedStack } from '../components/ui';
 import {
-  LIBRARY_PATH,
   ITEM_TYPES,
-  ItemType,
+  isItemType,
+  type ItemType,
+  LinkWithTag,
+  NoteWithTags,
+  SelfMessage,
+  TaskWithTags,
+  UpdateNoteData,
+  isUrlLike,
+  normalizeUrlInput,
+  getHostname,
+  getLinkTitle,
+  markdownExcerpt,
+  noteDisplayTitle,
+  dayKeyOf,
+  dueDateIso,
+  groupByTime,
+  relativeTime,
+  toDayKey,
+} from '@memex/core';
+import {
+  LIBRARY_PATH,
   LINK_PARAM,
   NOTE_PARAM,
   VIEW_PARAM,
   TAGS_PARAM,
   TYPE_PARAM,
   UNTAGGED_PARAM,
-  isItemType,
 } from '../constants/modules';
 import { useSession } from '../context/SessionContext';
 import { useFeedbackToast } from '../hooks/useFeedbackToast';
@@ -51,7 +69,6 @@ import { useDeleteSelfMessage, useSelfMessages } from '../hooks/useSelfMessages'
 import { useSetTaskTags } from '../hooks/useTaskTags';
 import { urlScraperApi } from '../hooks/useUrlScraper';
 import { useAppStore } from '../store';
-import { LinkWithTag, NoteWithTags, SelfMessage, TaskWithTags, UpdateNoteData } from '../types/database';
 import { handleBackgroundLinkClick, openUrlInBackgroundTab } from '../utils/openUrlInBackgroundTab';
 import { cue } from '../utils/sound';
 import {
@@ -63,10 +80,6 @@ import {
   itemMatchesSearch,
   mergeTags,
 } from '../utils/streamItems';
-import { isUrlLike, normalizeUrlInput } from '../utils/urlInput';
-import { getHostname, getLinkTitle } from '../utils/linkDisplay';
-import { markdownExcerpt, noteDisplayTitle } from '../utils/markdown';
-import { dayKeyOf, dueDateIso, groupByTime, relativeTime, toDayKey } from '../utils/timeGroups';
 import { useSpaceColors } from '../hooks/useSpaceColors';
 import type { RescrapeResult } from '../components/stream/LinkExpandedCard';
 import {

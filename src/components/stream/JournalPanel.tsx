@@ -11,12 +11,16 @@ import {
   X,
 } from 'lucide-react';
 import { useCreateSelfMessage, useSelfMessages } from '../../hooks/useSelfMessages';
-import type { SelfMessage } from '../../types/database';
-import { getLinkTitle } from '../../utils/linkDisplay';
-import { noteDisplayTitle } from '../../utils/markdown';
+import {
+  type SelfMessage,
+  getLinkTitle,
+  noteDisplayTitle,
+  dayKeyOf,
+  shiftDay,
+  toDayKey,
+} from '@memex/core';
 import type { StreamItem } from '../../utils/streamItems';
 import { cue } from '../../utils/sound';
-import { dayKeyOf, shiftDay, toDayKey } from '../../utils/timeGroups';
 
 const MAX_COMPOSER_ROWS = 6;
 const DAYS_PER_PAGE = 14;

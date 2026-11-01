@@ -31,9 +31,15 @@ import { useAllNotes } from '../hooks/useNotes';
 import { useAllTasks } from '../hooks/useTasks';
 import { useProfiles } from '../hooks/useProfiles';
 import { useSelfMessages } from '../hooks/useSelfMessages';
-import { getHostname, getLinkTitle } from '../utils/linkDisplay';
-import { stripMarkdown } from '../utils/markdown';
-import type { LinkWithTag, NoteWithTags, SelfMessage, TaskWithTags } from '../types/database';
+import {
+  getHostname,
+  getLinkTitle,
+  stripMarkdown,
+  type LinkWithTag,
+  type NoteWithTags,
+  type SelfMessage,
+  type TaskWithTags,
+} from '@memex/core';
 import { Artboard, Fav, Section, Thumb } from '../components/mocks/primitives';
 import JournalFirstMocks from '../components/mocks/JournalFirstMocks';
 import JournalDeskMocks from '../components/mocks/JournalDeskMocks';

@@ -11,17 +11,21 @@ import {
   Trash2,
   X,
 } from 'lucide-react';
-import type { LinkWithTag } from '../../types/database';
+import {
+  type LinkWithTag,
+  getHostname,
+  getLinkTitle,
+  relativeTime,
+  isUrlLike,
+  normalizeUrlInput,
+} from '@memex/core';
 import { useProfiles } from '../../hooks/useProfiles';
 import {
   useAddLinksToProfile,
   useProfileLinkMembership,
   useRemoveLinkFromProfile,
 } from '../../hooks/useProfileLinks';
-import { getHostname, getLinkTitle } from '../../utils/linkDisplay';
-import { relativeTime } from '../../utils/timeGroups';
 import { useSpaceColors } from '../../hooks/useSpaceColors';
-import { isUrlLike, normalizeUrlInput } from '../../utils/urlInput';
 import { cue } from '../../utils/sound';
 
 export type RescrapeResult = 'updated' | 'unchanged' | 'failed';

@@ -16,7 +16,7 @@ import {
   MarkdownText,
 } from '../components/ui';
 import type { FeedbackToastPhase } from '../components/ui';
-import type { LinkWithTag, NoteWithTags, Tag, TaskWithTags } from '../types/database';
+import type { LinkWithTag, NoteWithTags, Tag, TaskWithTags } from '@memex/core';
 import { StickyNote } from 'lucide-react';
 import Wordmark from '../components/ui/Wordmark';
 

@@ -29,9 +29,15 @@ import { useProfileLinkMembership } from '../../hooks/useProfileLinks';
 import { useProfileNoteMembership } from '../../hooks/useProfileNotes';
 import { useProfileTaskMembership } from '../../hooks/useProfileTasks';
 import { buildSpaceColors } from '../../utils/spaceColor';
-import { getHostname, getLinkTitle } from '../../utils/linkDisplay';
-import { stripMarkdown } from '../../utils/markdown';
-import type { LinkWithTag, NoteWithTags, SelfMessage, TaskWithTags } from '../../types/database';
+import {
+  getHostname,
+  getLinkTitle,
+  stripMarkdown,
+  type LinkWithTag,
+  type NoteWithTags,
+  type SelfMessage,
+  type TaskWithTags,
+} from '@memex/core';
 import { Artboard, Fav, Section, Thumb } from './primitives';
 import Wordmark from '../ui/Wordmark';
 import '../../styles/mocks-journal.css';

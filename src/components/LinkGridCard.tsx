@@ -1,7 +1,5 @@
 import { useMemo, useState } from 'react';
-import { LinkWithTag } from '../types/database';
-import { getTagsForLink } from '../utils/linkTags';
-import { getHostname, getLinkTitle } from '../utils/linkDisplay';
+import { LinkWithTag, getTagsForLink, getHostname, getLinkTitle } from '@memex/core';
 import StreamCard from './StreamCard';
 import { getInitials } from '../utils/streamCardFormat';
 import { itemKey } from '../utils/streamItems';

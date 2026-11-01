@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LIBRARY_PATH, ItemType } from '../constants/modules';
+import type { ItemType, Profile } from '@memex/core';
+import { LIBRARY_PATH } from '../constants/modules';
 import { useDeleteProfile, useUpdateProfile } from '../hooks/useProfiles';
 import { useSelfMessages } from '../hooks/useSelfMessages';
-import type { Profile } from '../types/database';
 import { cue } from '../utils/sound';
 
 interface SpaceDetailsModalProps {

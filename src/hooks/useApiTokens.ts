@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import supabase from '../supabase'
-import { ApiToken } from '../types/database'
+import { ApiToken } from '@memex/core'
 
 /** Generates `mx_` + 256 bits of randomness, base64url. Shown once, never stored. */
 const generateToken = (): string => {

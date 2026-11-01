@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import supabase from '../supabase'
-import { Note, NoteWithTags, CreateNoteData, UpdateNoteData } from '../types/database'
-import { getErrorMessage } from '../utils/errors'
+import { Note, NoteWithTags, CreateNoteData, UpdateNoteData, getErrorMessage } from '@memex/core'
 
 export const noteKeys = {
   all: ['notes'] as const,

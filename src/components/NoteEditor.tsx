@@ -1,9 +1,8 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { MarkdownText } from './ui';
 import type { MarkdownEditorHandle } from './ui/MarkdownEditor';
-import type { NoteWithTags, UpdateNoteData } from '../types/database';
+import { type NoteWithTags, type UpdateNoteData, relativeTime } from '@memex/core';
 import { Ellipsis, Trash2 } from 'lucide-react';
-import { relativeTime } from '../utils/timeGroups';
 
 type SaveStatus = 'saved' | 'saving';
 

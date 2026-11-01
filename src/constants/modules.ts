@@ -5,24 +5,6 @@
  * /notes, /tasks) redirect into the Library, carrying their query along.
  */
 
-export type ItemType = 'note' | 'link' | 'task';
-
-export interface ItemTypeDef {
-  key: ItemType;
-  label: string;
-  /** Plural label used in chips and empty states. */
-  plural: string;
-}
-
-export const ITEM_TYPES: ItemTypeDef[] = [
-  { key: 'note', label: 'Note', plural: 'Notes' },
-  { key: 'link', label: 'Link', plural: 'Links' },
-  { key: 'task', label: 'Task', plural: 'Tasks' },
-];
-
-export const isItemType = (value: string): value is ItemType =>
-  ITEM_TYPES.some((type) => type.key === value);
-
 export const JOURNAL_PATH = '/';
 export const LIBRARY_PATH = '/library';
 /** The Library's old address; the extension still deep-links `/home?link=<id>`. */

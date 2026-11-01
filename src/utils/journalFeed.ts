@@ -1,12 +1,12 @@
-import type {
-  LinkWithTag,
-  NoteWithTags,
-  Profile,
-  SelfMessage,
-  TaskWithTags,
-} from '../types/database';
-import { getHostname } from './linkDisplay';
-import { stripMarkdown } from './markdown';
+import {
+  type LinkWithTag,
+  type NoteWithTags,
+  type Profile,
+  type SelfMessage,
+  type TaskWithTags,
+  getHostname,
+  stripMarkdown,
+} from '@memex/core';
 
 /*
  * The Journal's model (ROADMAP.md Phase 1, decisions 11 and 13): every jot,

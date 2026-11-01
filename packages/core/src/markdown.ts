@@ -1,4 +1,4 @@
-import type { Note } from '../types/database'
+import type { Note } from './types'
 
 /**
  * Strip markdown syntax for plain-text excerpts (list rows, previews).

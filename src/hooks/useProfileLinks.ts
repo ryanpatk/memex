@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import supabase from '../supabase'
-import { ProfileLinkMembership, ProfileLinkWithLink } from '../types/database'
-import { getErrorMessage } from '../utils/errors'
+import { ProfileLinkMembership, ProfileLinkWithLink, getErrorMessage } from '@memex/core'
 
 export const profileLinkKeys = {
   all: ['profile-links'] as const,

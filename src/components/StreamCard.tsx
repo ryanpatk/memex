@@ -1,7 +1,7 @@
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { Check } from 'lucide-react';
-import { SHOW_TAGS_UI, type ItemType } from '../constants/modules';
-import type { Tag } from '../types/database';
+import type { ItemType, Tag } from '@memex/core';
+import { SHOW_TAGS_UI } from '../constants/modules';
 
 const MAX_VISIBLE_TAGS = 3;
 

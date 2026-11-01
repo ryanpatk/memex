@@ -6,8 +6,7 @@ import ApiTokensModal from './ApiTokensModal';
 import SettingsMenu from './SettingsMenu';
 import { CloseIcon } from './icons';
 import { cue } from '../utils/sound';
-import { getHostname } from '../utils/linkDisplay';
-import type { LinkWithTag } from '../types/database';
+import { getHostname, type LinkWithTag } from '@memex/core';
 import supabase from '../supabase';
 import Wordmark from './ui/Wordmark';
 

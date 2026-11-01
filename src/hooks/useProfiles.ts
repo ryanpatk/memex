@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import supabase from '../supabase'
-import { Profile, CreateProfileData, UpdateProfileData } from '../types/database'
-import { getErrorMessage } from '../utils/errors'
+import { Profile, CreateProfileData, UpdateProfileData, getErrorMessage } from '@memex/core'
 import { profileLinkKeys } from './useProfileLinks'
 
 export const profileKeys = {

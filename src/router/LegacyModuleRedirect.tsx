@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { LIBRARY_PATH, ItemType, TYPE_PARAM } from '../constants/modules';
+import type { ItemType } from '@memex/core';
+import { LIBRARY_PATH, TYPE_PARAM } from '../constants/modules';
 
 interface LegacyModuleRedirectProps {
   /** Type filter to preselect in the Library (omit to land on the unfiltered stream). */

@@ -17,8 +17,7 @@ import { FeedbackToast } from '../components/ui';
 import { INBOX_PARAM, LIBRARY_PATH, NOTE_PARAM } from '../constants/modules';
 import { toParts, type FileableEntry, type Suggestion } from '../utils/journalFeed';
 import type { ComposerResult } from '../utils/composer';
-import type { SelfMessage, TaskWithTags } from '../types/database';
-import { getHostname, getLinkTitle } from '../utils/linkDisplay';
+import { type SelfMessage, type TaskWithTags, getHostname, getLinkTitle } from '@memex/core';
 import { cue } from '../utils/sound';
 import '../styles/journal.css';
 

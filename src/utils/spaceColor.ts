@@ -1,5 +1,5 @@
 import { CANVAS_COLOR_OPTIONS } from '../constants/canvasColors';
-import type { Profile } from '../types/database';
+import type { Profile } from '@memex/core';
 
 /**
  * Each space gets an identity colour from the canvas-swatch palette (the hued

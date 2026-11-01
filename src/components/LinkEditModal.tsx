@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { LinkWithTag } from '../types/database';
+import { LinkWithTag } from '@memex/core';
 import { useProjects } from '../hooks/useProjects';
 import { useTags, useCreateTag, TAG_COLORS } from '../hooks/useTags';
 import { useUpdateLink } from '../hooks/useLinks';

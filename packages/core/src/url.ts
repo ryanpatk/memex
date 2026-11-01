@@ -1,4 +1,4 @@
-import type { Note } from '../types/database';
+import type { Note } from './types';
 import { ACCEPTED_TLDS } from './tlds';
 
 /** Scheme prepended when the user types a bare `domain.tld` with no scheme. */

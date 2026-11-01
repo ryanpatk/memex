@@ -12,7 +12,7 @@ import {
   useDeleteLink,
 } from '../hooks/useLinks';
 import { useTags } from '../hooks/useTags';
-import { CreateLinkData, LinkWithTag } from '../types/database';
+import { CreateLinkData, LinkWithTag } from '@memex/core';
 import LinkEditModal from '../components/LinkEditModal';
 import { openUrlInBackgroundTab } from '../utils/openUrlInBackgroundTab';
 

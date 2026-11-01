@@ -1,4 +1,4 @@
-import { ProjectWithCounts } from '../types/database';
+import { ProjectWithCounts } from '@memex/core';
 import ProjectCard from './ProjectCard';
 
 interface ProjectsHeaderProps {

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import supabase from '../supabase'
-import { getErrorMessage } from '../utils/errors'
+import { getErrorMessage } from '@memex/core'
 import { linkKeys } from './useLinks'
 
 export const linkTagsApi = {

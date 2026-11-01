@@ -1,9 +1,12 @@
 import { useMemo } from 'react';
-import { NoteWithTags } from '../types/database';
-import { markdownExcerpt, noteDisplayTitle } from '../utils/markdown';
+import {
+  NoteWithTags,
+  markdownExcerpt,
+  noteDisplayTitle,
+  noteAsUrl,
+  relativeTime,
+} from '@memex/core';
 import { itemKey, mergeTags } from '../utils/streamItems';
-import { noteAsUrl } from '../utils/urlInput';
-import { relativeTime } from '../utils/timeGroups';
 import StreamCard from './StreamCard';
 import { NoteGlyph } from './StreamGlyphs';
 import { Link, X } from 'lucide-react';

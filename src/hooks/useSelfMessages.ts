@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import supabase from '../supabase'
-import { CreateSelfMessageData, SelfMessage } from '../types/database'
-import { getErrorMessage } from '../utils/errors'
+import { CreateSelfMessageData, SelfMessage, getErrorMessage } from '@memex/core'
 
 export const selfMessageKeys = {
   all: ['self-messages'] as const,

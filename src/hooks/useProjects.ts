@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import supabase from '../supabase'
 import { useAppStore } from '../store'
-import { Project, ProjectWithCounts, CreateProjectData, UpdateProjectData } from '../types/database'
+import { Project, ProjectWithCounts, CreateProjectData, UpdateProjectData } from '@memex/core'
 
 // Query keys
 export const projectKeys = {

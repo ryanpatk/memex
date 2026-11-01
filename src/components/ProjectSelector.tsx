@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ProjectWithCounts } from '../types/database';
+import { ProjectWithCounts } from '@memex/core';
 
 interface ProjectSelectorProps {
   projects: ProjectWithCounts[];

@@ -1,6 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { getHostname } from '../../utils/linkDisplay';
-import type { LinkWithTag } from '../../types/database';
+import { getHostname, type LinkWithTag } from '@memex/core';
 
 /* Shared building blocks for the /mocks page and its rounds (styles: mocks.css). */
 

@@ -1,4 +1,4 @@
-import { normalizeUrlInput } from './urlInput';
+import { normalizeUrlInput } from '@memex/core';
 
 /*
  * The Journal composer's syntax (ROADMAP.md Phase 1). One field, and what you

@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { ITEM_TYPES, ItemType, SHOW_TAGS_UI } from '../constants/modules';
+import { ITEM_TYPES, type ItemType, Tag } from '@memex/core';
+import { SHOW_TAGS_UI } from '../constants/modules';
 import { TAG_COLORS, useCreateTag } from '../hooks/useTags';
-import { Tag } from '../types/database';
 import { FilterChip, InlineCreateForm } from './ui';
 
 interface StreamFilterBarProps {

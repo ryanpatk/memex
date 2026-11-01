@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import supabase from '../supabase'
-import { Tag, CreateTagData, UpdateTagData } from '../types/database'
+import { Tag, CreateTagData, UpdateTagData } from '@memex/core'
 
 // Query keys
 export const tagKeys = {

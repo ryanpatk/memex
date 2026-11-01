@@ -1,7 +1,6 @@
 import { useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { Check, ExternalLink } from 'lucide-react';
-import type { LinkWithTag } from '../../types/database';
-import { getHostname, getLinkTitle } from '../../utils/linkDisplay';
+import { type LinkWithTag, getHostname, getLinkTitle } from '@memex/core';
 import { itemKey } from '../../utils/streamItems';
 import { handleBackgroundLinkClick } from '../../utils/openUrlInBackgroundTab';
 

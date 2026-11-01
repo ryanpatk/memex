@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import supabase from '../supabase'
-import { getErrorMessage } from '../utils/errors'
+import { getErrorMessage } from '@memex/core'
 
 export const profileNoteKeys = {
   all: ['profile-notes'] as const,
