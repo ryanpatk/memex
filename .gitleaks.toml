@@ -1,0 +1,21 @@
+# gitleaks config: the default rules plus memex's own token format.
+# Runs in CI (.github/workflows/secret-scan.yml) and locally:
+#   gitleaks git --redact --log-opts="--all" .
+title = "memex gitleaks config"
+
+[extend]
+useDefault = true
+
+# memex API tokens: `mx_` + 256 random bits as base64url (src/hooks/useApiTokens.ts).
+[[rules]]
+id = "memex-api-token"
+description = "memex API access token"
+regex = '''\bmx_[A-Za-z0-9_-]{43}\b'''
+keywords = ["mx_"]
+
+# Docs use short, made-up tokens (e.g. a deliberately wrong one to show a 401).
+# Real tokens are 46 characters, so this can never hide one.
+[[allowlists]]
+description = "Placeholder memex tokens in docs and examples"
+regexTarget = "secret"
+regexes = ['''^mx_[a-z_]{0,16}$''']

@@ -93,6 +93,19 @@ npm run preview     # Preview production build
 4. Spaces module (composes notes, links, tasks); retire legacy projects
 5. Cross-primitive search, note encryption, mobile polish
 
+## Secrets and backups
+
+- Env files (`.env`, `.env.*`, `.dev.vars`) are gitignored everywhere; only `.env.example` templates are committed.
+- CI runs gitleaks over the full history on every push and PR (`.github/workflows/secret-scan.yml`, config `.gitleaks.toml`). Run the same scan locally before pushing anything that touched config or docs:
+
+  ```bash
+  brew install gitleaks
+  gitleaks git --redact --log-opts="--all" .   # every commit on every branch
+  gitleaks dir --redact .                      # working tree, including uncommitted files
+  ```
+
+- Back up production before any migration: `scripts/backup-supabase.sh` (details and restore steps in `docs/backups.md`).
+
 ## Troubleshooting
 
 1. **Build issues**: Ensure all environment variables are set correctly
