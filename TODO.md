@@ -11,7 +11,8 @@ v1 stays on Supabase + Cloudflare Workers. Details and phase mapping: `ROADMAP.m
 - [ ] **Journal-first web for desktop** — finish Phase 1 (space board, Library views, drag to space, Tasks view)
 - [ ] **Live capture** — extension + memex-api deployed and verified on the real sites (Phase 3; memex-api first deploy ✓ 2026-11-01, `docs/extension-setup.md`)
 - [x] **Walk-away export** ✓ 2026-11-01 — `scripts/export-vault.mjs` writes everything (images included) to `~/memex-vault/` as an Obsidian-ready vault; format + fixture in `docs/vault-format.md` / `docs/vault-fixture/`; nightly at 03:30 via launchd (`scripts/install-export-agent.sh`, log `~/Library/Logs/memex-export.log`). Next: a parser + round-trip test in `packages/core` (Phase 2)
-- [ ] **React Native (Expo) app on TestFlight** (Phase 6, on `packages/core`; data path is decision 20)
+- [x] **`packages/core` + first tests** ✓ 2026-11-01 — npm workspace, shared logic and tokens in `@memex/core`, the `Repository` interface with a Supabase adapter (no supabase-js imports left in `src/`), 185 Vitest tests, CI (typecheck, lint, test, build)
+- [ ] **React Native (Expo) app on TestFlight** (Phase 6, on `packages/core`; talks to Supabase through `@memex/core/supabase` with SecureStore session storage, decision 20)
 - [ ] **Portfolio-ready screens** — v1 screens will appear on Ryan's public portfolio; plan demo data so screenshots don't show real jots
 
 ## 🔑 Your action items (need your credentials / accounts — code is ready and waiting)
@@ -95,7 +96,7 @@ Phases there: 1 Journal-first web → 2 `packages/core` seam + vault export → 
 - [x] Cross-primitive search — inherent to the stream / Library
 - [ ] Supabase exit → `ROADMAP.md` Phase 4 (local-first event log + markdown vault in R2, not D1/Neon tables) — **v2** (2026-11-01)
 - [ ] Encryption → Later; mobile polish → the PWA bridges until the Expo app (Phase 6, v1 on TestFlight). PWA hardening landed 2026-09-19: re-add to home screen to pick up the new manifest/meta; test bottom bar, safe areas, and input zoom on device
-- [ ] Testing setup → Vitest arrives with `packages/core` (Phase 2); Playwright later. First candidate: `src/utils/authRedirect.ts` (`safeNextPath`)
+- [x] Testing setup → Vitest with `packages/core` ✓ 2026-11-01 (`npm test`, CI); Playwright later
 
 ## 📌 Parking lot / open questions
 

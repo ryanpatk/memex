@@ -57,7 +57,7 @@ memex is the place for all of one person's scattered thoughts, creative inspirat
 
 There isn't a magic bridge between React DOM and React Native. What's practical is one shared TypeScript package for everything that isn't pixels, plus separate UI layers.
 
-- **Shared (`packages/core`):** data types, the entry/item model, composer parsing (`@space`, `#tag`, URL and task detection), filtering and search (`utils/streamItems.ts`), the `Repository` interface, React Query hooks, Zustand stores, the source registry, design tokens as TS constants.
+- **Shared (`packages/core`):** data types, the entry/item model, composer parsing (`@space`, `#tag`, URL and task detection), filtering and search (`stream/`), the `Repository` interface, React Query hooks, Zustand stores, the source registry, design tokens as TS constants.
 - **Web stays Vite + React DOM.** The Pastel Sky CSS, masonry, frosted surfaces and CodeMirror editor are DOM-native craft.
 - **Desktop reuses the web UI** inside Tauri, so it costs almost nothing beyond the native parts (re-sync, mirror, shortcut, tray).
 - **Mobile is new Expo UI** on the same core. Expo DOM components (`'use dom'`) keep the CodeMirror editor instead of rewriting it.
@@ -202,7 +202,7 @@ Validate the product direction before rebuilding the plumbing.
 - [x] Round 5 `/mocks` with real data: Journal home (chat order, §8 #1), space board, Library table ✓ 2026-10-24 — picks in §8 #11–16
 - [x] Feed derived from existing tables: jots (`self_messages`) interleaved with links/notes/tasks by `created_at`; auto-saves grouped (“3 pins saved on Pinterest”) using `links.source` ✓ 2026-10-25 (`src/utils/journalFeed.ts`, 11D entries in `components/journal/`)
 - [x] Journal becomes `/`; current stream becomes `/library`; `/home` redirects ✓ 2026-10-25 (query carried, so the extension's `/home?link=` deep links still land)
-- [x] Composer syntax: `@space`, URL → link, `[] ` → task, ⌘↵ → note ✓ 2026-10-25 (`src/utils/composer.ts`, `@` picker). `#tag` waits until tags come back (`SHOW_TAGS_UI` is off)
+- [x] Composer syntax: `@space`, URL → link, `[] ` → task, ⌘↵ → note ✓ 2026-10-25 (`@memex/core` `composer.ts`, `@` picker). `#tag` waits until tags come back (`SHOW_TAGS_UI` is off)
 - [ ] Filing affordances on entries: space chips ✓, one-press suggestions ✓, “File to…” ✓ (2026-10-25); drag to sidebar space still to do
 - [x] ~~Back-office rail~~ → decision 12B: Inbox in the sidebar and a header button, both only while suggestions wait; the tray opens beside the feed (`/?inbox=1`); Tasks in the sidebar (Library filtered to tasks for now) ✓ 2026-10-25
 - [ ] Space page becomes a board (pinned sites · tasks · notes · saves) with a scoped Journal column
@@ -211,11 +211,11 @@ Validate the product direction before rebuilding the plumbing.
 
 ### Phase 2 — The seam + walk-away export · **v1**
 *2026-11-01: the export script is the v1 walk-away guarantee; `packages/core` is what the Expo app shares with the web. The `Repository` interface keeps Supabase as the only adapter in v1.*
-- [ ] npm workspaces: `apps/web`, `packages/core`; `api/`, `scraper/`, `extension/` join the workspace
-- [ ] Move types, `streamItems`, entry model, composer parsing, filters, source registry into core; Vitest for them (first tests in the repo)
-- [ ] `Repository` interface (`entries`, `links`, `notes`, `tasks`, `spaces`, `tags`, `views`, `auth`); Supabase becomes one adapter
-- [ ] Remove direct `supabase` imports from components into the auth adapter
-- [ ] Design tokens exported as TS from core
+- [x] npm workspaces with `packages/core` ✓ 2026-11-01. The web app stays at the repo root (moving it to `apps/web` is churn with no v1 payoff); `api/`, `scraper/`, `extension/` keep their own installs for now
+- [x] Move types, `streamItems`, entry model, composer parsing, filters, source registry into core; Vitest for them (first tests in the repo) ✓ 2026-11-01, CI runs them on every push
+- [x] `Repository` interface (`auth`, `links`, `notes`, `tasks`, `tags`, `spaces`, `jots`, space membership, `apiTokens`, legacy `projects`); Supabase is its one adapter (`@memex/core/supabase`) ✓ 2026-11-01. `views` waits for 15A
+- [x] Remove direct `supabase` imports from components into the auth adapter ✓ 2026-11-01 (none left anywhere in `src/` outside `src/data/repository.ts`)
+- [x] Design tokens exported as TS from core ✓ 2026-11-01 (`tokens/`; a test keeps them matched to `pastel-sky.css`)
 - [ ] `docs/vault-format.md` v1 + fixture vault + a parser in core with a round-trip test
 - [ ] **Export script** (`scripts/export-vault.mjs`): Supabase → vault folder, including downloaded images. Run it on demand or nightly. From here on, walk-away is real and agents can analyze the folder (§3.6 files path)
 
@@ -248,7 +248,7 @@ Re-sync only needs `/api/capture`, so 5b–5d can start after Phase 3, before th
 - [ ] 5e Mirror `~/memex` from the change feed (after Phase 4); optional nightly git commit; later, folder watching for Obsidian edits
 
 ### Phase 6 — React Native app (Expo) · **v1 on TestFlight**
-*2026-11-01: v1 ships to TestFlight on today's backend; offline replicas + sync wait for the v2 vault backend. How the app reaches data in v1 is open (decision 20).*
+*2026-11-01: v1 ships to TestFlight on today's backend; offline replicas + sync wait for the v2 vault backend. It reaches data through `@memex/core`'s Supabase adapter (decision 20, resolved 2026-11-01).*
 - [ ] App shell: Expo Router tabs (Journal · Library · Tasks), theme from core tokens, dark mode
 - [ ] Journal feed + composer (keyboard-avoiding, chat-style list), entry cards per type
 - [ ] Share extension (iOS) / share target (Android) → entry, optional space
@@ -274,7 +274,8 @@ Encryption at rest for the vault, two-way Obsidian edits, more sources (Are.na, 
 - **Avoid Supabase-only features** (RPC functions, triggers that carry business logic, realtime channels). Each one is something to port.
 - **New schema must map to the vault cleanly:** a stable id, plain fields, membership that could live on the item (`spaces: [...]`). If a feature stores something the user made or chose, it needs a home in §3.3, or it breaks the walk-away guarantee.
 - **Logic that isn't UI goes in plain TS modules** (`src/utils`), free of React DOM, so it can move to `packages/core` unchanged.
-- **The extension, desktop app and any new client talk to `memex-api`, never to Supabase.**
+- **The extension and the desktop app talk to `memex-api`, never to Supabase.** The Expo app is the exception (decision 20): it uses `@memex/core`'s Supabase adapter like the web app.
+- **Data access goes through the `Repository` in `packages/core`.** Add a method to the interface and the adapter; nothing in `src/` imports supabase-js.
 - **UI work on the stream should assume it becomes the Library**, and Journal work should assume it becomes home.
 - **Use the words in `CONTEXT.md`** in code, copy and docs.
 - **Follow the safety rules in `CLAUDE.md`** (added 2026-11-01): back up before any migration, additive migrations only without Ryan's sign-off, never delete or bulk-modify Ryan's data unless he asks, never commit secrets, label test data.
@@ -306,4 +307,4 @@ The primitives (note, link, task), spaces as cross-cutting contexts, one tag voc
 | 17 | Desktop Journal layout | 17A as shipped · 17B notebook page + grouped jots · 17C + time gutter · 17D + today column | Open (mocks round 6, `/mocks`, 2026-10-28); recommended **17B** |
 | 18 | Release split | One line of phases toward the vault · v1 on today's stack, then v2 | **v1 / v2** (2026-11-01, approved by Ryan). v1 on Supabase + Cloudflare Workers: Journal-first desktop web, live capture (extension + memex-api), hosted MCP on memex-api for Grok Bots (headline), Expo app on TestFlight, walk-away export. v2: vault backend (leave Supabase), Tauri desktop, embeddings. v1 is single-user; its screens go on Ryan's public portfolio |
 | 19 | Where v1's MCP server runs | memex-api Worker over Supabase · wait for the vault index | **memex-api over Supabase** (2026-11-01, follows from 18); tools keep the §3.6 shape so they move to the vault index in v2 unchanged |
-| 20 | How the v1 Expo app reaches data | Through memex-api (§6: new clients never talk to Supabase) · Supabase adapter in `packages/core` | Open (2026-11-01). §6 points to memex-api |
+| 20 | How the v1 Expo app reaches data | Through memex-api (§6: new clients never talk to Supabase) · Supabase adapter in `packages/core` | **Supabase directly via `packages/core`** (2026-11-01, Ryan). Web and Expo share one client factory (`createMemexClient`, injectable auth storage: web storage vs. Expo SecureStore) and the same Repository; RLS protects each user's rows. memex-api stays focused on capture and the hosted MCP |

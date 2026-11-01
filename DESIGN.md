@@ -114,7 +114,7 @@ User picks a canvas swatch in **Settings** (grey, blue, cyan, green, gold, orang
 - `--bookmark-prominent-bg` / `--bookmark-prominent-fg` / `--bookmark-prominent-text` — primary CTAs and "new tag/profile" links
 - `--bookmark-row-hover-bg` — list row hover tint (`color-mix` from active bg)
 
-Implementation: `src/utils/canvasColor.ts`, `src/constants/canvasColors.ts`.
+Implementation: `src/utils/canvasColor.ts` (applies it), with the swatches and OKLCH maths in `@memex/core` (`packages/core/src/tokens/`).
 
 Dark mode: `[data-theme='dark']` token swap + dark swatch variants.
 
