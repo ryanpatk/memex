@@ -1,0 +1,22 @@
+{
+  // Core runs in the browser, React Native and Cloudflare Workers, so it is
+  // checked against plain ES2022 with no DOM and no Node types. The few
+  // platform globals it relies on (URL, URLSearchParams) are declared in
+  // src/runtime.d.ts; every target runtime provides them.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "types": [],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
+}

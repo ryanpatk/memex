@@ -4,10 +4,14 @@
   "license": "MIT",
   "private": true,
   "version": "0.0.0",
+  "workspaces": [
+    "packages/*"
+  ],
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "npm run typecheck && vite build",
+    "typecheck": "tsc && tsc -p packages/core",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy"
@@ -23,6 +27,7 @@
     "@fontsource/nunito": "^5.3.0",
     "@lezer/common": "^1.5.3",
     "@lezer/markdown": "^1.8.0",
+    "@memex/core": "*",
     "@supabase/supabase-js": "^2.49.4",
     "@tailwindcss/postcss": "^4.1.11",
     "@tailwindcss/typography": "^0.5.16",

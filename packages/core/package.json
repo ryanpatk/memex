@@ -1,0 +1,23 @@
+{
+  "name": "@memex/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "memex logic shared by the web app, the Expo app and the Workers: domain types, the Journal model, composer parsing, filters, the filing suggester, design tokens and the Repository (data access) layer. No React, no DOM.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./supabase": "./src/supabase/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "@supabase/supabase-js": "^2.49.4"
+  },
+  "peerDependenciesMeta": {
+    "@supabase/supabase-js": {
+      "optional": true
+    }
+  }
+}
