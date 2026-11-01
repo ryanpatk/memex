@@ -1,55 +1,33 @@
 # Connect the memex capture extension
 
-Status as of 2026-11-01. The API Worker is deployed but **not yet connected to the
-database**: steps 1–2 need your Supabase credentials. After that it's load,
-paste a token, test.
+Status 2026-11-01: the server side is done and smoke-tested. You only need to make a
+token, load the extension and paste the token in.
 
 | What | Value |
 | --- | --- |
-| API address | `https://memex-api.joyfulsystems.workers.dev` (the extension's default now) |
+| API address | `https://memex-api.joyfulsystems.workers.dev` (the extension's default) |
 | App address | `https://memex.joyfulsystems.workers.dev` (default) or `https://memoryextension.app` |
 | Extension build | `extension/.output/chrome-mv3` (in whichever checkout you built it) |
 
-## 1. Bring the database up to date (once)
+## Already done
 
-The API writes `links.source` (migration `20261018120000_add_link_source.sql`,
-purely additive: one nullable column + an index). Check, back up, then apply.
-Each command asks for the **database password** (Dashboard → Project Settings →
-Database), or reads it from `SUPABASE_DB_PASSWORD`.
+- [x] **Database up to date.** All 10 repo migrations are applied in production,
+      including `20261018120000_add_link_source.sql` (`links.source`). A backup was
+      taken first: `~/memex-backups/2026-11-01T223417Z/` (3.1 MB, checksums OK)
+- [x] **API connected to the database.** memex-api has its `SUPABASE_SERVICE_KEY`
+      secret (the project's `service_role` key, set via `wrangler secret put`)
+- [x] **Smoke test.** `GET /api/tags`, `/api/spaces`, `/api/lookup` and
+      `POST /api/capture` all pass, with CORS headers for extension and app origins
 
-```bash
-cd "<repo>"
-supabase migration list --linked          # Remote column empty for 20261018120000 → pending
-mkdir -p ~/memex-backups
-supabase db dump --linked -f ~/memex-backups/$(date +%Y%m%d-%H%M)-schema.sql
-supabase db dump --linked --data-only -f ~/memex-backups/$(date +%Y%m%d-%H%M)-data.sql
-supabase db push --linked --dry-run       # should list only additive migrations
-supabase db push --linked
-```
-
-If `scripts/backup-supabase.sh` (from the safety-rails work) is on `main`, use it in
-place of the two `db dump` lines.
-
-## 2. Give the API its database key (once)
-
-```bash
-cd api
-npx wrangler secret put SUPABASE_SERVICE_KEY   # paste the service_role key when prompted
-```
-
-The key is under Dashboard → Project Settings → API → `service_role`. It's the same
-value as `SUPABASE_SERVICE_ROLE_KEY` in your gitignored `.env.migrate`. Setting the
-secret takes effect right away; you don't need to redeploy.
-
-Check: `curl -s https://memex-api.joyfulsystems.workers.dev/api/tags -H "Authorization: Bearer mx_wrong"`
-should now say `Missing or invalid token` (401) instead of `Auth backend unavailable` (502).
-
-## 3. Make a token
+## 1. Make a token
 
 memex → Settings (sidebar foot) → **Access tokens…** → create one named after this
-browser (e.g. `chrome-macbook`). Copy it now; it's shown once.
+browser (e.g. `chrome-macbook`). Copy it now; it's shown once. (There's an unused
+“Chrome Extension” token from 2026-10-20. Use a new one unless you still have it.)
 
-## 4. Load the extension
+While you're there, revoke **`agent-smoke-test`**: an agent made it for the smoke test.
+
+## 2. Load the extension
 
 ```bash
 cd extension && npm install && npm run build
@@ -58,7 +36,7 @@ cd extension && npm install && npm run build
 Chrome → `chrome://extensions` → turn on **Developer mode** → **Load unpacked** →
 choose `extension/.output/chrome-mv3`. Pin the memex icon to the toolbar.
 
-## 5. Connect
+## 3. Connect
 
 Right-click the memex icon → **Options** (or **Settings…** in the popup):
 
@@ -69,7 +47,7 @@ Right-click the memex icon → **Options** (or **Settings…** in the popup):
 
 Then reload any open X and Pinterest tabs so the content scripts attach.
 
-## 6. Check it on real sites
+## 4. Check it on real sites
 
 - [ ] **⌘⇧S** on an article → toast + sound, saved with title/image; it appears at the
       bottom of the Journal. Undo removes it; saving again says “already in memex”
@@ -84,7 +62,11 @@ Then reload any open X and Pinterest tabs so the content scripts attach.
 
 If something fails, `cd api && npx wrangler tail` streams the Worker's logs live.
 
-## Optional: smoke test from the terminal
+The Journal also has a link titled “memex capture test (agent smoke test, safe to
+delete)” (`https://example.com/memex-capture-test-2026-11-01`) from the smoke test.
+Delete it whenever you like.
+
+## Smoke test from the terminal (optional, any time)
 
 With a token in your shell (`read -s MX` then paste it, so it stays out of history):
 
@@ -92,10 +74,6 @@ With a token in your shell (`read -s MX` then paste it, so it stays out of histo
 B=https://memex-api.joyfulsystems.workers.dev
 curl -s $B/api/tags -H "Authorization: Bearer $MX"
 curl -s "$B/api/lookup?url=https://example.com/memex-capture-test-2026-11-01" -H "Authorization: Bearer $MX"
-curl -s -X POST $B/api/capture -H "Authorization: Bearer $MX" -H 'Content-Type: application/json' \
-  -d '{"url":"https://example.com/memex-capture-test-2026-11-01","title":"memex capture test (safe to delete)"}'
 ```
 
-Expect `success: true` from all three. The capture returns 201 the first time and
-200 with `duplicate: true` after that, and the link shows in the Journal. Delete it
-whenever you like.
+Both should return `success: true`; the lookup finds the test link.

@@ -36,12 +36,14 @@ Save anything to memex without copy-paste:
 
 ## Ops checklist — get v0.2 running (needs your accounts)
 
-- [ ] `supabase db push` — applies `20261018120000_add_link_source.sql` (and anything else pending)
-- [ ] Deploy the API worker:
-  - [ ] `cd api && npm install && npx wrangler login`
-  - [ ] `npx wrangler secret put SUPABASE_SERVICE_KEY` (service-role key)
-  - [ ] Set `SCRAPER_URL` in `api/wrangler.jsonc` → `https://memex-scraper.joyfulsystems.workers.dev`
-  - [ ] `npm run deploy` → note the `memex-api.<account>.workers.dev` URL
+Server side done 2026-11-01 (API at `https://memex-api.joyfulsystems.workers.dev`); the rest, step by step: `docs/extension-setup.md`.
+
+- [x] `supabase db push` — applies `20261018120000_add_link_source.sql` (and anything else pending)
+- [x] Deploy the API worker:
+  - [x] `cd api && npm install && npx wrangler login`
+  - [x] `npx wrangler secret put SUPABASE_SERVICE_KEY` (service-role key)
+  - [x] Set `SCRAPER_URL` in `api/wrangler.jsonc` → `https://memex-scraper.joyfulsystems.workers.dev`
+  - [x] `npm run deploy` → note the `memex-api.<account>.workers.dev` URL
 - [ ] memex → Settings → Access tokens → create a token (name it after the device)
 - [ ] `cd extension && npm install && npm run build` → `chrome://extensions` → Developer mode → Load unpacked → `extension/.output/chrome-mv3`
 - [ ] Extension settings: API address + token (+ app address if not the workers.dev one) → Test connection → Save
