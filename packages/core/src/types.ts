@@ -150,6 +150,33 @@ export interface Profile {
   updated_at: string
 }
 
+/**
+ * A saved Library view (CONTEXT.md: Saved view): a named set of filters with
+ * a layout and sort. `definition` is JSON read forgivingly by
+ * `parseViewDefinition` (stream/views.ts); `position` orders the tabs.
+ */
+export interface SavedView {
+  id: string
+  user_id: string
+  name: string
+  definition: Record<string, unknown>
+  position: number
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateSavedViewData {
+  name: string
+  definition: Record<string, unknown>
+  position?: number
+}
+
+export interface UpdateSavedViewData {
+  name?: string
+  definition?: Record<string, unknown>
+  position?: number
+}
+
 /** One "Notes to Self" message. profile_id null = the Home (general) feed. */
 export interface SelfMessage {
   id: string
@@ -414,6 +441,16 @@ export interface Database {
           last_used_at?: string | null
         }
         Update: Partial<Omit<ApiToken, 'id' | 'user_id' | 'created_at'>>
+      }
+      saved_views: {
+        Row: SavedView
+        Insert: Omit<SavedView, 'id' | 'created_at' | 'updated_at' | 'position'> & {
+          id?: string
+          position?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Omit<SavedView, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
       }
     }
   }

@@ -4,6 +4,7 @@ import type {
   CreateNoteData,
   CreateProfileData,
   CreateProjectData,
+  CreateSavedViewData,
   CreateSelfMessageData,
   CreateTagData,
   CreateTaskData,
@@ -16,6 +17,7 @@ import type {
   ProfileLinkWithLink,
   Project,
   ProjectWithCounts,
+  SavedView,
   SelfMessage,
   Tag,
   Task,
@@ -24,6 +26,7 @@ import type {
   UpdateNoteData,
   UpdateProfileData,
   UpdateProjectData,
+  UpdateSavedViewData,
   UpdateTagData,
   UpdateTaskData,
 } from './types';
@@ -178,6 +181,18 @@ export interface ApiTokensRepository {
   delete(id: string): Promise<void>;
 }
 
+/**
+ * Saved Library views (decision 15A): named filters with a layout and sort.
+ * The built-in tabs (Everything, Unfiled, From X…) live in code, not here.
+ */
+export interface SavedViewsRepository {
+  /** Every saved view, in tab order (position, then oldest first). Empty if the table isn't there yet. */
+  getAll(): Promise<SavedView[]>;
+  create(data: CreateSavedViewData): Promise<SavedView>;
+  update(id: string, updates: UpdateSavedViewData): Promise<SavedView>;
+  delete(id: string): Promise<void>;
+}
+
 /** Legacy pre-spaces projects (original PRD); slated for retirement. */
 export interface ProjectsRepository {
   getAll(): Promise<ProjectWithCounts[]>;
@@ -199,5 +214,6 @@ export interface Repository {
   spaceNotes: SpaceNotesRepository;
   spaceTasks: SpaceTasksRepository;
   apiTokens: ApiTokensRepository;
+  views: SavedViewsRepository;
   projects: ProjectsRepository;
 }

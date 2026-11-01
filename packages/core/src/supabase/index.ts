@@ -17,6 +17,7 @@ import { createSpacesRepository } from './spaces'
 import { createSpaceTasksRepository } from './spaceTasks'
 import { createTagsRepository } from './tags'
 import { createTasksRepository } from './tasks'
+import { createSavedViewsRepository } from './views'
 
 export { createMemexClient } from './client'
 export type { AuthStorage, MemexClientOptions, MemexSupabaseClient } from './client'
@@ -34,5 +35,6 @@ export const createSupabaseRepository = (client: MemexSupabaseClient): Repositor
   spaceNotes: createSpaceNotesRepository(client),
   spaceTasks: createSpaceTasksRepository(client),
   apiTokens: createApiTokensRepository(client),
+  views: createSavedViewsRepository(client),
   projects: createProjectsRepository(client),
 })
