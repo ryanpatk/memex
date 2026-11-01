@@ -10,7 +10,7 @@ v1 stays on Supabase + Cloudflare Workers. Details and phase mapping: `ROADMAP.m
 - [ ] **Hosted MCP on memex-api** (headline) — Grok Bots read and store project context; token auth first (ROADMAP Phase 7a, 7d)
 - [ ] **Journal-first web for desktop** — finish Phase 1 (space board, Library views, drag to space, Tasks view)
 - [ ] **Live capture** — extension + memex-api deployed and verified on the real sites (Phase 3; memex-api first deploy ✓ 2026-11-01, `docs/extension-setup.md`)
-- [ ] **Walk-away export** — `scripts/export-vault.mjs` + `docs/vault-format.md` (Phase 2)
+- [x] **Walk-away export** ✓ 2026-11-01 — `scripts/export-vault.mjs` writes everything (images included) to `~/memex-vault/` as an Obsidian-ready vault; format + fixture in `docs/vault-format.md` / `docs/vault-fixture/`; nightly at 03:30 via launchd (`scripts/install-export-agent.sh`, log `~/Library/Logs/memex-export.log`). Next: a parser + round-trip test in `packages/core` (Phase 2)
 - [ ] **React Native (Expo) app on TestFlight** (Phase 6, on `packages/core`; data path is decision 20)
 - [ ] **Portfolio-ready screens** — v1 screens will appear on Ryan's public portfolio; plan demo data so screenshots don't show real jots
 
@@ -29,6 +29,7 @@ These unlock everything built this session. Roughly 10 minutes total, in order:
 - [ ] **Browser extension v0.2 setup** — server side done ✓ 2026-11-01 (`links.source` applied, memex-api deployed with its service key, smoke-tested). Left for you, in `docs/extension-setup.md`: create an access token (and revoke `agent-smoke-test`), `cd extension && npm install && npm run build`, load `extension/.output/chrome-mv3` unpacked, paste the token, Test connection
 - [ ] **Backfill old links** — `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… SCRAPER_URL=… node scripts/backfill-metadata.mjs --dry-run` (then without `--dry-run`)
 - [ ] **Rotate the GitHub OAuth secret** — `.env` has `VITE_GITHUB_CLIENT_SECRET` in it; `VITE_`-prefixed vars are bundled into the client, so treat it as exposed. Rotate it in GitHub and keep the secret out of frontend env. *2026-11-01: `.env` no longer has the variable and the gitleaks history scan is clean, but any build made while it was set shipped it, so rotation still stands unless it's already done*
+- [ ] **Walk-away drill** — open `~/memex-vault` in Obsidian once (File → Open folder as vault) and spot-check; after pulling changes to the export scripts, re-run `scripts/install-export-agent.sh install`
 - [ ] **Back up regularly** — `scripts/backup-supabase.sh` (needs Docker Desktop running; 2026-11-01 run took ~1 min, 2.1 MB). Always before `supabase db push`. Consider a weekly reminder or launchd job
 - [ ] **Migration history doesn't replay from scratch** — found 2026-11-01: a fresh local `supabase start` stops at `20260204134500_add_tags_and_profiles.sql`, so a local stack can't be built from `supabase/migrations/` alone (production is fine; restoring a backup's `schema.sql` works). Decide whether to squash into a baseline migration
 

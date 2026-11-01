@@ -29,6 +29,7 @@ memex holds Ryan's real data in one production Supabase project; there is no sta
 - `SETUP.md` — local development setup.
 - `docs/ex_p02_prd.md` — original PRD, superseded by `VISION.md` (kept for history).
 - `docs/database-migrations.md` — Supabase CLI migration workflow.
+- `docs/vault-format.md` — the vault format (schema 1: Markdown + YAML frontmatter, daily Journal notes, spaces, assets, manifest), the walk-away export (`scripts/export-vault.mjs` → `~/memex-vault/`, read-only through the Supabase CLI) and its nightly launchd job. Fixture vault with fake data: `docs/vault-fixture/`.
 - `docs/backups.md` — production backups (`scripts/backup-supabase.sh` → `~/memex-backups/`) and tested restore commands.
 - `docs/browser-extension-plan.md` — planned browser extension (one-click capture) and the `memex-api` worker/token auth approach that decouples it from Supabase.
 - `scraper/README.md` — memex-scraper Cloudflare Worker (link metadata: title/description/preview image); deploy + backfill instructions.
