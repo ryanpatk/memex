@@ -8,7 +8,7 @@ import { useProfileLinkMembership } from './useProfileLinks';
 import { useProfileNoteMembership } from './useProfileNotes';
 import { useProfileTaskMembership } from './useProfileTasks';
 import { useSpaceColors } from './useSpaceColors';
-import { buildEntries, createFiler, inboxOf, toJournalSpaces } from '../utils/journalFeed';
+import { buildEntries, createFiler, inboxOf, toJournalSpaces } from '@memex/core';
 
 /**
  * The Journal's data: every entry (jots + links + notes + tasks, oldest

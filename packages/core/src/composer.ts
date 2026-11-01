@@ -1,4 +1,4 @@
-import { normalizeUrlInput } from '@memex/core';
+import { normalizeUrlInput } from './url';
 
 /*
  * The Journal composer's syntax (ROADMAP.md Phase 1). One field, and what you
@@ -8,7 +8,7 @@ import { normalizeUrlInput } from '@memex/core';
  *   "[] " or "[ ] "     → a task
  *   ⌘/Ctrl+Enter        → a note (first line is the title)
  *   "@Space" anywhere   → files the result in that space
- * Plain TS, no React, so it can move to packages/core.
+ * Plain TS, no React: shared by every client through @memex/core.
  */
 
 export interface ComposerSpace {

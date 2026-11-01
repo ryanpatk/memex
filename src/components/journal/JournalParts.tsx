@@ -7,9 +7,6 @@ import {
   getHostname,
   getLinkTitle,
   stripMarkdown,
-} from '@memex/core';
-import { getInitials } from '../../utils/streamCardFormat';
-import {
   isVisualLink,
   type Entry,
   type FileableEntry,
@@ -17,7 +14,8 @@ import {
   type JournalSpace,
   type Part,
   type Run,
-} from '../../utils/journalFeed';
+} from '@memex/core';
+import { getInitials } from '../../utils/streamCardFormat';
 
 /*
  * Journal entry renderers, decision 11D: jots are bubbles, tasks are lines,

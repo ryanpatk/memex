@@ -15,9 +15,16 @@ import JournalComposer from '../components/journal/JournalComposer';
 import { PartView, type JournalHandlers } from '../components/journal/JournalParts';
 import { FeedbackToast } from '../components/ui';
 import { INBOX_PARAM, LIBRARY_PATH, NOTE_PARAM } from '../constants/modules';
-import { toParts, type FileableEntry, type Suggestion } from '../utils/journalFeed';
-import type { ComposerResult } from '../utils/composer';
-import { type SelfMessage, type TaskWithTags, getHostname, getLinkTitle } from '@memex/core';
+import {
+  toParts,
+  type FileableEntry,
+  type Suggestion,
+  type ComposerResult,
+  type SelfMessage,
+  type TaskWithTags,
+  getHostname,
+  getLinkTitle,
+} from '@memex/core';
 import { cue } from '../utils/sound';
 import '../styles/journal.css';
 

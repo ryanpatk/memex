@@ -13,3 +13,7 @@ export * from './tlds';
 export * from './links';
 export * from './stream/items';
 export * from './stream/filters';
+export * from './composer';
+export * from './sources';
+export * from './journal/feed';
+export * from './journal/filer';

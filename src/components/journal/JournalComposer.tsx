@@ -1,7 +1,6 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { ArrowUp } from 'lucide-react';
-import { mentionQuery, parseComposer, type ComposerResult } from '../../utils/composer';
-import type { JournalSpace } from '../../utils/journalFeed';
+import { mentionQuery, parseComposer, type ComposerResult, type JournalSpace } from '@memex/core';
 
 /*
  * The Journal composer: one field at the bottom of the feed. What you type
