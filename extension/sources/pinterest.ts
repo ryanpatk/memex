@@ -42,7 +42,9 @@ export function pinterestPayload(id: string): CapturePayload {
   const src = img?.currentSrc || img?.src;
   return {
     url,
-    source: 'pinterest:save',
+    source: 'pinterest',
+    sourceId: id,
+    list: 'saved',
     // Title and description come from the scraper, which reads the pin's
     // own metadata; grid alt text is too generic to win over it.
     image: src ? largest(src) : undefined,

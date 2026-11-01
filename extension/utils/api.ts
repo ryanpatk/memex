@@ -1,4 +1,4 @@
-import type { CapturePayload, SavedLink } from './types';
+import type { CapturePayload, SavedLink, Space } from './types';
 import type { Settings } from './settings';
 
 export type ApiOutcome =
@@ -55,4 +55,35 @@ export async function testConnection(s: Pick<Settings, 'apiUrl' | 'token'>): Pro
   const body = (await res.json().catch(() => null)) as { success?: boolean; error?: string } | null;
   if (!body?.success) throw new Error(body?.error || `HTTP ${res.status}`);
   return 'Connected';
+}
+
+type Envelope<T> = { success?: boolean; error?: string; data?: T } | null;
+
+async function getJson<T>(s: Settings, path: string, init: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${s.apiUrl}${path}`, {
+    ...init,
+    headers: { ...authHeaders(s), ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
+    signal: AbortSignal.timeout(10_000),
+  });
+  const body = (await res.json().catch(() => null)) as Envelope<T>;
+  if (!res.ok || !body?.success || body.data === undefined) throw new Error(body?.error || `memex-api returned ${res.status}`);
+  return body.data;
+}
+
+/** Read-only: is this page already in memex? (`GET /api/lookup`, same matching as capture.) */
+export async function lookupUrl(s: Settings, url: string): Promise<SavedLink | null> {
+  const data = await getJson<{ found: boolean; link?: SavedLink }>(s, `/api/lookup?url=${encodeURIComponent(url)}`);
+  return data.found && data.link ? { id: data.link.id, url: data.link.url, title: data.link.title ?? null } : null;
+}
+
+export const listSpaces = (s: Settings) => getJson<Space[]>(s, '/api/spaces');
+
+/** File a saved link into a space (idempotent). */
+export async function addToSpace(s: Settings, linkId: string, spaceId: string): Promise<boolean> {
+  try {
+    await getJson(s, `/api/links/${encodeURIComponent(linkId)}/spaces`, { method: 'POST', body: JSON.stringify({ spaceId }) });
+    return true;
+  } catch {
+    return false;
+  }
 }

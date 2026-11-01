@@ -1,8 +1,9 @@
 import { browser, type Browser } from 'wxt/browser';
 import { defineBackground } from 'wxt/utils/define-background';
-import { deleteLink, postCapture } from '@/utils/api';
+import { addToSpace, deleteLink, listSpaces, postCapture } from '@/utils/api';
 import { flashBadge, updateBadge } from '@/utils/badge';
 import { enqueue, flushQueue, FLUSH_ALARM } from '@/utils/queue';
+import { forgetMarks, refreshActiveMark, refreshMark, rememberSaved } from '@/utils/savedMark';
 import {
   getSettings,
   isConfigured,
@@ -20,14 +21,19 @@ const MENU_LINK = 'memex-save-link';
 const MENU_SITE = 'memex-auto-';
 const SITES = Object.keys(SITE_LABEL) as WatchedSite[];
 
-/** Every save — popup, context menu, X, Pinterest — goes through here. */
-async function capture(payload: CapturePayload): Promise<CaptureResult> {
+const CLIENT = `memex-extension/${browser.runtime.getManifest().version}`;
+
+/** Every save — popup, context menu, X, Pinterest, YouTube — goes through here. */
+async function capture(input: CapturePayload): Promise<CaptureResult> {
   const settings = await getSettings();
   if (!isConfigured(settings)) return { status: 'setup' };
 
+  const payload: CapturePayload = { ...input, capturedBy: 'extension', client: CLIENT };
   const outcome = await postCapture(settings, payload);
   if (outcome.ok) {
-    void flashBadge(outcome.duplicate ? 'duplicate' : 'saved');
+    rememberSaved(payload.url, true);
+    rememberSaved(outcome.link.url, true);
+    void flashBadge(outcome.duplicate ? 'duplicate' : 'saved').then(refreshActiveMark);
     return { status: outcome.duplicate ? 'duplicate' : 'saved', link: outcome.link };
   }
   if (outcome.retry) {
@@ -74,7 +80,15 @@ export default defineBackground(() => {
   });
 
   browser.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === FLUSH_ALARM) void flushQueue().then(updateBadge);
+    if (alarm.name === FLUSH_ALARM) void flushQueue().then(updateBadge).then(refreshActiveMark);
+  });
+
+  // “Already in memex” ✓ on the toolbar icon (settings → savedBadge).
+  browser.tabs.onActivated.addListener(({ tabId }) => {
+    void browser.tabs.get(tabId).then(refreshMark, () => {});
+  });
+  browser.tabs.onUpdated.addListener((_tabId, change, tab) => {
+    if (tab.active && (change.status === 'complete' || change.url)) void refreshMark(tab);
   });
 
   const captureFromMenu = (payload: CapturePayload) =>
@@ -84,6 +98,7 @@ export default defineBackground(() => {
 
   // Keep the menu checkmarks in step with the popup and settings page.
   browser.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && (changes.settings || changes.queue)) void refreshActiveMark();
     const sites = (changes.settings?.newValue as Settings | undefined)?.sites;
     if (area !== 'local' || !sites) return;
     for (const site of SITES) {
@@ -102,11 +117,10 @@ export default defineBackground(() => {
         url: info.pageUrl,
         title: tab?.title,
         favicon: tab?.favIconUrl,
-        source: 'extension',
       });
     }
     if (info.menuItemId === MENU_LINK && isHttp(info.linkUrl)) {
-      void captureFromMenu({ url: info.linkUrl, source: 'extension' });
+      void captureFromMenu({ url: info.linkUrl });
     }
   });
 
@@ -126,6 +140,22 @@ export default defineBackground(() => {
       if (message.type === 'undo') {
         getSettings()
           .then((s) => deleteLink(s, message.linkId))
+          .then((ok) => {
+            if (ok) forgetMarks();
+            void refreshActiveMark();
+            sendResponse(ok);
+          }, () => sendResponse(false));
+        return true;
+      }
+      if (message.type === 'spaces') {
+        getSettings()
+          .then(listSpaces)
+          .then(sendResponse, () => sendResponse(null));
+        return true;
+      }
+      if (message.type === 'file') {
+        getSettings()
+          .then((s) => addToSpace(s, message.linkId, message.spaceId))
           .then(sendResponse, () => sendResponse(false));
         return true;
       }

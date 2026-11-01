@@ -2,7 +2,7 @@
 import { browser } from 'wxt/browser';
 import { getSettings, linkInAppUrl, setSiteEnabled } from '@/utils/settings';
 import { playBlip } from '@/utils/sound';
-import type { CaptureResult, ExtensionMessage, WatchedSite } from '@/utils/types';
+import type { CaptureResult, ExtensionMessage, Space, WatchedSite } from '@/utils/types';
 
 type State = 'setup' | 'saving' | 'saved' | 'duplicate' | 'queued' | 'error';
 
@@ -35,7 +35,7 @@ async function capture(): Promise<void> {
   try {
     result = await send<CaptureResult>({
       type: 'capture',
-      payload: { url, title: tab?.title || undefined, favicon: tab?.favIconUrl, source: 'extension' },
+      payload: { url, title: tab?.title || undefined, favicon: tab?.favIconUrl },
     });
   } catch (err) {
     result = { status: 'error', message: String(err) };
@@ -52,6 +52,7 @@ async function capture(): Promise<void> {
     if (settings.sound) playBlip();
     wireUndo(result.link.id, url);
   }
+  if (result.status === 'saved' || result.status === 'duplicate') void offerFiling(result.link.id);
   if (result.status === 'queued' || result.status === 'error') {
     field(state, 'message').textContent = result.message;
   }
@@ -67,12 +68,41 @@ function wireUndo(linkId: string, url: string): void {
       undo.textContent = 'Undo failed — retry';
       return;
     }
+    document.getElementById('filing')!.hidden = true;
     const state = show('error');
     const headline = field(state, 'headline');
     headline.textContent = 'removed';
     headline.classList.remove('error');
     field(state, 'message').textContent = url;
     document.getElementById('retry')!.textContent = 'Save again';
+  };
+}
+
+/** After a save: an optional space picker. Ignoring it leaves the link in Home. */
+async function offerFiling(linkId: string): Promise<void> {
+  const section = document.getElementById('filing')!;
+  const select = document.getElementById('space') as HTMLSelectElement;
+  const status = document.getElementById('filing-status')!;
+  const spaces = await send<Space[] | null>({ type: 'spaces' }).catch(() => null);
+  if (!spaces?.length) return;
+
+  select.replaceChildren(
+    new Option('Choose a space…', ''),
+    ...spaces.map((space) => new Option(space.name, space.id)),
+  );
+  section.hidden = false;
+  const added: string[] = [];
+  select.onchange = async () => {
+    const spaceId = select.value;
+    const name = select.selectedOptions[0]?.textContent ?? 'space';
+    if (!spaceId) return;
+    select.disabled = true;
+    status.textContent = `Adding to ${name}…`;
+    const ok = await send<boolean>({ type: 'file', linkId, spaceId }).catch(() => false);
+    select.disabled = false;
+    select.value = '';
+    if (ok && !added.includes(name)) added.push(name);
+    status.textContent = ok ? `Added to ${added.join(', ')} ✓` : `Couldn’t add to ${name}. Try again.`;
   };
 }
 

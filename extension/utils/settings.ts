@@ -9,8 +9,10 @@ export interface Settings {
   /** memex web app origin, for “Open in memex”. */
   appUrl: string;
   sound: boolean;
-  /** Save to memex when you bookmark on X / save on Pinterest. */
+  /** Save to memex when you bookmark on X / save on Pinterest / like on YouTube. */
   sites: Record<WatchedSite, boolean>;
+  /** Show ✓ on the toolbar icon when the current page is already in memex (asks memex-api about each page you open). */
+  savedBadge: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -18,7 +20,8 @@ export const DEFAULT_SETTINGS: Settings = {
   token: '',
   appUrl: 'https://memex.joyfulsystems.workers.dev',
   sound: true,
-  sites: { x: true, pinterest: true },
+  sites: { x: true, pinterest: true, youtube: true },
+  savedBadge: true,
 };
 
 const trimUrl = (value: string) => value.trim().replace(/\/+$/, '');
@@ -77,4 +80,5 @@ export async function setSiteEnabled(site: WatchedSite, enabled: boolean): Promi
 export const SITE_LABEL: Record<WatchedSite, string> = {
   x: 'X bookmarks',
   pinterest: 'Pinterest saves',
+  youtube: 'YouTube likes',
 };

@@ -35,7 +35,7 @@ export function xPayload(id: string): CapturePayload {
   const handle = href.match(/^\/([A-Za-z0-9_]{1,15})\/status\//)?.[1];
   const url = handle ? `https://x.com/${handle}/status/${id}` : `https://x.com/i/web/status/${id}`;
   const article = time?.closest('article');
-  if (!article) return { url, source: 'x:bookmark' };
+  if (!article) return { url, source: 'x', sourceId: id, list: 'bookmarked' };
 
   const own = ownedBy(article);
   const first = (selector: string) => [...article.querySelectorAll(selector)].find(own) ?? null;
@@ -49,7 +49,9 @@ export function xPayload(id: string): CapturePayload {
 
   return {
     url,
-    source: 'x:bookmark',
+    source: 'x',
+    sourceId: id,
+    list: 'bookmarked',
     title: name ? `${name}${handle ? ` (@${handle})` : ''} on X` : handle ? `@${handle} on X` : undefined,
     description: text || undefined,
     image,

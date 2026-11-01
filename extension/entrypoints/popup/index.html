@@ -52,6 +52,13 @@
       </div>
     </div>
   </main>
+  <section id="filing" class="filing" hidden>
+    <label for="space">Add to a space <span class="optional">(optional)</span></label>
+    <select id="space">
+      <option value="">Choose a space…</option>
+    </select>
+    <p id="filing-status" class="detail" role="status" aria-live="polite"></p>
+  </section>
   <section class="auto" aria-labelledby="auto-heading">
     <h2 id="auto-heading">Auto-save</h2>
     <label class="switch-row">
@@ -61,6 +68,10 @@
     <label class="switch-row">
       <span>Pinterest saves</span>
       <input id="site-pinterest" type="checkbox" role="switch" />
+    </label>
+    <label class="switch-row">
+      <span>YouTube likes</span>
+      <input id="site-youtube" type="checkbox" role="switch" />
     </label>
   </section>
   <script type="module" src="./main.ts"></script>

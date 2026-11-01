@@ -25,6 +25,8 @@ Save anything to memex without copy-paste:
 | X trigger | **Bookmarks only** — likes ignored | User decision 2026-10-18 |
 | Where automatic saves land | **Home, untagged** | User decision 2026-10-18 |
 | Provenance | `links.source` column (`extension`, `x:bookmark`, `pinterest:save`; NULL = saved in the app) | Lets us filter by origin later; user OK'd the migration |
+| Provenance, v0.3 (2026-11-01) | `links.source` = platform (`x` · `pinterest` · `youtube` · `web`) plus `source_id`, `lists`, `captured_by`, `captured_client`, `url_key` (additive migration `20261101120000`). Unique on (user, source, source_id); normalized-URL fallback. Older rows keep their tag; readers understand both | ROADMAP Phase 3 data model; the same rules (`@memex/core/capture`) serve the MCP write tools |
+| YouTube | **Likes only** (`/youtubei/v1/like/like`), no Watch later | Decision 9 |
 | Duplicates | Server-side: return the existing link (`duplicate: true`) instead of inserting. X/Pinterest match on post/pin id | Passive capture would otherwise create duplicates; Undo must never delete an older link |
 | Detecting saves | Watch the site's own network call (`CreateBookmark`, `*Resource/create`), not its buttons | Survives redesigns and non-English UIs; borrowed from pond |
 | Metadata for pages behind a login | Read from the page by the extension; client values win over the scraper | The scraper hits X's login wall |
@@ -77,8 +79,10 @@ Server side done 2026-11-01 (API at `https://memex-api.joyfulsystems.workers.dev
 
 ## Next
 
-- [ ] **Already-saved badge** — `GET /api/lookup?url=` on the worker; the badge shows a dot when the current tab is already in memex, and the popup opens to that link instead of saving
-- [ ] **Post-capture editing in the popup** — pick a space and tags after saving (the API already accepts `spaceId`/`tagIds`; needs a `PATCH /api/links/:id` for after-the-fact changes)
+- [x] **Already-saved badge** ✓ 2026-11-01 (v0.3.0) — blue ✓ on the toolbar icon for tabs already in memex (`GET /api/lookup`, cached, off in incognito, toggle in Options). The popup still opens to “already in memex” via the deduping capture
+- [x] **Post-capture space** ✓ 2026-11-01 (v0.3.0) — “Add to a space” picker in the popup after a save (`POST /api/links/:id/spaces`). Tags after the fact still need a route
+- [x] **YouTube likes** ✓ 2026-11-01 (v0.3.0) — thumbnail, title, “Channel · length”
+- [x] **Source ids** ✓ 2026-11-01 — X / Pinterest / YouTube captures send `source` + `sourceId` + `list`; the server dedupes on them
 - [ ] **“Why I saved this” note** in the popup — needs the `links.note` column (see `TODO.md`); until then `note` is stored as the description
 - [ ] **Show `source` in the app** — a small “from X” / “from Pinterest” mark on cards, and possibly a filter
 - [ ] **Save the selection as a note** (right-click on selected text → markdown note with the source URL) — needs a `POST /api/notes` route
@@ -89,7 +93,7 @@ Server side done 2026-11-01 (API at `https://memex-api.joyfulsystems.workers.dev
 
 ## Later / maybe
 
-- [ ] YouTube likes moved up to `ROADMAP.md` Phase 3. More sites, cheapest first: Are.na, Cosmos, Reddit save — pond has working matchers for each (`apps/extension/sources/*` in raphaelsalaja/pond, MIT)
+- [ ] More sites, cheapest first: Are.na, Cosmos, Reddit save — pond has working matchers for each (`apps/extension/sources/*` in raphaelsalaja/pond, MIT)
 - [ ] Instagram / Threads save — pond supports them, but they rely on Meta's internal operation names and English labels; brittle
 - [ ] One-time import of existing X bookmarks / Pinterest boards from the sites' data exports
 - [ ] Popup search across links/notes/tasks (mini command palette)

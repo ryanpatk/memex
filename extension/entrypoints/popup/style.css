@@ -154,6 +154,56 @@ body {
   }
 }
 
+/* Optional filing after a save: one native select, no extra step if ignored. */
+.filing {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 16px 14px;
+}
+
+.filing[hidden] {
+  display: none;
+}
+
+.filing label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.filing .optional {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.filing select {
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background-color: var(--bg);
+  color: var(--text);
+  font: inherit;
+  touch-action: manipulation;
+}
+
+.filing select:hover {
+  border-color: var(--blue);
+}
+
+.filing select:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.filing select:disabled {
+  opacity: 0.6;
+}
+
+.filing .detail:empty {
+  display: none;
+}
+
 /* Auto-save switches: always visible under whatever state the save is in. */
 .auto {
   padding: 10px 16px 12px;

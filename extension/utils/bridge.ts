@@ -5,6 +5,7 @@ import { getSettings } from './settings';
 import { showCaptureToast } from './toast';
 import {
   SAVE_EVENT,
+  SITE_ID_PATTERN,
   type CapturePayload,
   type CaptureResult,
   type ExtensionMessage,
@@ -17,9 +18,9 @@ export function bridgeSaves(site: WatchedSite, toPayload: (id: string) => Captur
   window.addEventListener('message', async (event: MessageEvent<SiteSaveEvent>) => {
     if (event.source !== window || event.origin !== location.origin) return;
     const data = event.data;
-    // The page could forge this message, so accept nothing but a numeric id
-    // and build the URL ourselves.
-    if (data?.type !== SAVE_EVENT || data.site !== site || !/^\d{1,25}$/.test(String(data.id))) return;
+    // The page could forge this message, so accept nothing but a well-formed
+    // id for this site and build the URL ourselves.
+    if (data?.type !== SAVE_EVENT || data.site !== site || !SITE_ID_PATTERN[site].test(String(data.id))) return;
     if (seen.has(data.id)) return;
 
     const settings = await getSettings();

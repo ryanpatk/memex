@@ -16,7 +16,11 @@ const SOURCE_LABEL: Record<string, string> = {
   extension: 'Saved from the toolbar',
   'x:bookmark': 'X bookmark',
   'pinterest:save': 'Pinterest save',
+  x: 'X bookmark',
+  pinterest: 'Pinterest save',
+  youtube: 'YouTube like',
 };
+const sourceLabel = (source?: string) => (source ? (SOURCE_LABEL[source] ?? source) : SOURCE_LABEL.extension);
 
 function readForm(current: Settings): Settings {
   return {
@@ -25,7 +29,8 @@ function readForm(current: Settings): Settings {
     token: $('token').value,
     appUrl: $('appUrl').value,
     sound: $('sound').checked,
-    sites: { x: $('site-x').checked, pinterest: $('site-pinterest').checked },
+    sites: { x: $('site-x').checked, pinterest: $('site-pinterest').checked, youtube: $('site-youtube').checked },
+    savedBadge: $('savedBadge').checked,
   };
 }
 
@@ -37,6 +42,8 @@ async function load(): Promise<void> {
   $('sound').checked = s.sound;
   $('site-x').checked = s.sites.x;
   $('site-pinterest').checked = s.sites.pinterest;
+  $('site-youtube').checked = s.sites.youtube;
+  $('savedBadge').checked = s.savedBadge;
   await renderQueue();
 }
 
@@ -58,12 +65,12 @@ async function renderQueue(): Promise<void> {
   $('queue-section').hidden = queue.length === 0;
   $('queue').replaceChildren(
     ...queue.map((q) =>
-      listItem(q.payload.url, `${SOURCE_LABEL[q.payload.source] ?? q.payload.source} · ${q.lastError} · ${q.attempts} ${q.attempts === 1 ? 'try' : 'tries'}`),
+      listItem(q.payload.url, `${sourceLabel(q.payload.source)} · ${q.lastError} · ${q.attempts} ${q.attempts === 1 ? 'try' : 'tries'}`),
     ),
   );
   $('failed-section').hidden = failed.length === 0;
   $('failed').replaceChildren(
-    ...failed.map((f) => listItem(f.payload.url, `${SOURCE_LABEL[f.payload.source] ?? f.payload.source} · ${f.error}`)),
+    ...failed.map((f) => listItem(f.payload.url, `${sourceLabel(f.payload.source)} · ${f.error}`)),
   );
 }
 
@@ -113,6 +120,7 @@ browser.storage.onChanged.addListener((changes, area) => {
   if (sites) {
     $('site-x').checked = sites.x;
     $('site-pinterest').checked = sites.pinterest;
+    $('site-youtube').checked = sites.youtube !== false;
   }
 });
 
