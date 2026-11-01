@@ -6,6 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 EX_P02 is the codebase for **memex**, a personal working-memory system built as a React web app with a Supabase backend. The app is a single **mixed stream** of notes, links, and tasks rendered as one grid of cards inside a frosted-glass stack, with element-type and tag filter chips above the grid and omnibar capture. The left sidebar is **Home** (everything) followed by the list of **spaces**; selecting a space scopes the stream and the header's super favorites to that space. Notes/links/tasks are data primitives; spaces are the cross-cutting contexts that filter and compose them (see `VISION.md`).
 
+## Safety rules for agents
+
+memex holds Ryan's real data in one production Supabase project; there is no staging copy. These rules apply to every agent and every task, whatever the permission mode:
+
+1. **Back up before any migration.** Run `scripts/backup-supabase.sh` and confirm it finished (folder path + row counts) before `supabase db push` or any SQL against production. Restore steps: `docs/backups.md`.
+2. **Only additive migrations without Ryan's sign-off.** New tables, columns, indexes and policies are fine. Dropping or renaming anything, changing a column's type, rewriting rows, or tightening a constraint that existing rows might break needs Ryan's explicit OK in the conversation first.
+3. **Never delete or bulk-modify Ryan's data unless he asks.** That covers the app, scripts, the SQL editor and the API. Backfills and data fixes run with `--dry-run` first, and the real run needs his go-ahead.
+4. **Never commit secrets.** Keys, tokens and passwords live in gitignored env files (`.env`, `.env.*`, `.dev.vars`) or `wrangler secret`, never in code, docs or commit messages. Inspect env files by variable name only; don't print values. CI runs gitleaks on every push and PR; run `gitleaks git --redact --log-opts="--all" .` locally when unsure (`SETUP.md` → “Secrets and backups”).
+5. **Label any test data clearly.** Anything an agent creates in production (jots, links, notes, tasks, spaces, tokens) starts with `[test]` in its title or text so Ryan can find and remove it, and the agent says what it created in its report. Prefer a local Supabase stack for anything heavier.
+
 ## Documentation Map
 
 - `TODO.md` — living checklist: the user's pending ops steps (deploys, migrations, secrets) and next build tasks. Check it at session start; update it as work lands.
@@ -19,6 +29,7 @@ EX_P02 is the codebase for **memex**, a personal working-memory system built as 
 - `SETUP.md` — local development setup.
 - `docs/ex_p02_prd.md` — original PRD, superseded by `VISION.md` (kept for history).
 - `docs/database-migrations.md` — Supabase CLI migration workflow.
+- `docs/backups.md` — production backups (`scripts/backup-supabase.sh` → `~/memex-backups/`) and tested restore commands.
 - `docs/browser-extension-plan.md` — planned browser extension (one-click capture) and the `memex-api` worker/token auth approach that decouples it from Supabase.
 - `scraper/README.md` — memex-scraper Cloudflare Worker (link metadata: title/description/preview image); deploy + backfill instructions.
 - `api/README.md` — memex-api Cloudflare Worker: token-authenticated capture API for the extension (routes, deploy, security model). Tokens are managed in Settings → Access tokens (`api_tokens` migration).

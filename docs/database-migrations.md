@@ -56,6 +56,8 @@ CREATE POLICY "Users can manage their own preferences" ON user_preferences
 
 ### To Remote Database (Production)
 
+**Back up first** (`scripts/backup-supabase.sh`, see `docs/backups.md`), and only push additive migrations without Ryan's sign-off (`CLAUDE.md` → “Safety rules for agents”).
+
 ```bash
 # Push all pending migrations to your remote Supabase database
 supabase db push
