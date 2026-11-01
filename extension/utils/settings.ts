@@ -14,7 +14,7 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  apiUrl: '',
+  apiUrl: 'https://memex-api.joyfulsystems.workers.dev',
   token: '',
   appUrl: 'https://memex.joyfulsystems.workers.dev',
   sound: true,

@@ -14,6 +14,7 @@ All routes require `Authorization: Bearer mx_…` (create tokens in memex under
 | ---------------------- | ------ | ------------------------------------------------------ |
 | `/api/capture`         | POST   | `{ url, title?, description?, image?, favicon?, note?, source?, spaceId?, tagIds? }` → created link (201), or the existing link with `duplicate: true` (200). Client metadata wins; memex-scraper fills the gaps when `SCRAPER_URL` is set |
 | `/api/links/:id`       | DELETE | undo a capture (scoped to the token's user)            |
+| `/api/lookup?url=`     | GET    | `{ found: false }` or `{ found: true, link: { id, url, title, source, created_at } }` — read-only check using the same matching as capture (± trailing slash; X status / Pinterest pin ids) |
 | `/api/spaces`          | GET    | `[{ id, name }]`                                       |
 | `/api/tags`            | GET    | `[{ id, name }]`                                       |
 

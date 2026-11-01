@@ -9,6 +9,9 @@
  *                               source?, spaceId?, tagIds? } → created (201) or
  *                               existing (200, duplicate: true) link
  *   DELETE /api/links/:id    undo a capture
+ *   GET    /api/lookup?url=  { found: false } or { found: true, link } — the
+ *                               saved link that is the same thing as `url`
+ *                               (read-only; same matching as capture)
  *   GET    /api/spaces       [{ id, name }]
  *   GET    /api/tags         [{ id, name }]
  *
@@ -283,7 +286,7 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
-    const { pathname } = new URL(request.url);
+    const { pathname, searchParams } = new URL(request.url);
 
     let auth: TokenRow | null;
     try {
@@ -303,6 +306,16 @@ export default {
       if (request.method === 'DELETE' && linkMatch) {
         const res = await db(env).delete(`links?id=eq.${linkMatch[1]}&user_id=eq.${userId}`);
         return res.ok ? json({ success: true }) : error('Delete failed', 502);
+      }
+
+      if (request.method === 'GET' && pathname === '/api/lookup') {
+        const url = httpUrl(searchParams.get('url') ?? undefined);
+        if (!url) return error('A valid http(s) url is required', 400);
+        const rows = await db(env).select<Record<string, unknown>[]>(
+          `links?user_id=eq.${userId}&${sameLinkFilter(url)}` +
+            '&select=id,url,title,source,created_at&order=created_at.asc&limit=1',
+        );
+        return json({ success: true, data: rows[0] ? { found: true, link: rows[0] } : { found: false } });
       }
 
       if (request.method === 'GET' && pathname === '/api/spaces') {
