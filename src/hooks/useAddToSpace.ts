@@ -3,7 +3,7 @@ import { useAddLinksToProfile, useProfileLinkMembership } from './useProfileLink
 import { useAddNotesToProfile, useProfileNoteMembership } from './useProfileNotes';
 import { useAddTasksToProfile, useProfileTaskMembership } from './useProfileTasks';
 import { useProfiles } from './useProfiles';
-import { parseItemKey } from '../utils/streamItems';
+import { parseItemKey } from '@memex/core';
 import { cue } from '../utils/sound';
 
 type Flash = (message: string) => void;

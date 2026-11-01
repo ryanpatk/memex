@@ -11,3 +11,5 @@ export * from './time';
 export * from './url';
 export * from './tlds';
 export * from './links';
+export * from './stream/items';
+export * from './stream/filters';

@@ -5,8 +5,9 @@ import {
   noteDisplayTitle,
   noteAsUrl,
   relativeTime,
+  itemKey,
+  mergeTags,
 } from '@memex/core';
-import { itemKey, mergeTags } from '../utils/streamItems';
 import StreamCard from './StreamCard';
 import { NoteGlyph } from './StreamGlyphs';
 import { Link, X } from 'lucide-react';

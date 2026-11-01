@@ -20,7 +20,6 @@ import StreamFilterBar from '../components/StreamFilterBar';
 import { EmptyState, FeedbackToast, FrostedStack } from '../components/ui';
 import {
   ITEM_TYPES,
-  isItemType,
   type ItemType,
   LinkWithTag,
   NoteWithTags,
@@ -38,6 +37,24 @@ import {
   groupByTime,
   relativeTime,
   toDayKey,
+  StreamItem,
+  buildStreamItems,
+  byUpdatedDesc,
+  isPendingItem,
+  itemKey,
+  itemMatchesSearch,
+  mergeTags,
+  countByType,
+  countTags,
+  countUntagged,
+  isDoneTask,
+  itemKeysInSpace,
+  matchesTagFilter,
+  matchesTypeFilter,
+  orderTagsForRow,
+  parseList,
+  parseTypeFilter,
+  pinnedLinks,
 } from '@memex/core';
 import {
   LIBRARY_PATH,
@@ -71,15 +88,6 @@ import { urlScraperApi } from '../hooks/useUrlScraper';
 import { useAppStore } from '../store';
 import { handleBackgroundLinkClick, openUrlInBackgroundTab } from '../utils/openUrlInBackgroundTab';
 import { cue } from '../utils/sound';
-import {
-  StreamItem,
-  buildStreamItems,
-  byUpdatedDesc,
-  isPendingItem,
-  itemKey,
-  itemMatchesSearch,
-  mergeTags,
-} from '../utils/streamItems';
 import { useSpaceColors } from '../hooks/useSpaceColors';
 import type { RescrapeResult } from '../components/stream/LinkExpandedCard';
 import {
@@ -122,9 +130,6 @@ const readStoredView = (): StreamView => {
     return 'grid';
   }
 };
-
-const parseList = (value: string | null) =>
-  value ? value.split(',').map((v) => v.trim()).filter(Boolean) : [];
 
 /**
  * The Library: a mixed stream of notes, links, and tasks — everything at
@@ -195,7 +200,7 @@ const StreamPage = () => {
   /* ---------- URL state: type filter, tag filter, open note ---------- */
 
   const selectedTypes = useMemo(
-    () => parseList(searchParams.get(TYPE_PARAM)).filter(isItemType) as ItemType[],
+    () => parseTypeFilter(searchParams.get(TYPE_PARAM)),
     [searchParams],
   );
   const selectedTagIds = useMemo(
@@ -401,20 +406,13 @@ const StreamPage = () => {
   }, [allItems]);
 
   /** Keys of items that belong to the current space. */
-  const spaceKeys = useMemo(() => {
-    const set = new Set<string>();
-    if (!spaceId) return set;
-    (linkMembership ?? []).forEach((row) => {
-      if (row.profile_id === spaceId) set.add(itemKey('link', row.link_id));
-    });
-    (noteMembership ?? []).forEach((row) => {
-      if (row.profile_id === spaceId) set.add(itemKey('note', row.note_id));
-    });
-    (taskMembership ?? []).forEach((row) => {
-      if (row.profile_id === spaceId) set.add(itemKey('task', row.task_id));
-    });
-    return set;
-  }, [linkMembership, noteMembership, spaceId, taskMembership]);
+  const spaceKeys = useMemo(
+    () =>
+      spaceId
+        ? itemKeysInSpace({ links: linkMembership, notes: noteMembership, tasks: taskMembership }, spaceId)
+        : new Set<string>(),
+    [linkMembership, noteMembership, spaceId, taskMembership],
+  );
 
   const isPendingMatch = useCallback(
     (item: StreamItem) => {
@@ -437,7 +435,7 @@ const StreamPage = () => {
   );
 
   const matchesType = useCallback(
-    (item: StreamItem) => selectedTypes.length === 0 || selectedTypes.includes(item.type),
+    (item: StreamItem) => matchesTypeFilter(item.type, selectedTypes),
     [selectedTypes],
   );
 
@@ -447,8 +445,7 @@ const StreamPage = () => {
       const tagIds = isPendingMatch(item)
         ? (pendingAdd?.tagIds ?? [])
         : item.tags.map((tag) => tag.id);
-      const matches = selectedTagIds.some((id) => tagIds.includes(id));
-      return matches || (includeUntagged && tagIds.length === 0);
+      return matchesTagFilter(tagIds, selectedTagIds, includeUntagged);
     },
     [includeUntagged, isPendingMatch, pendingAdd, selectedTagIds],
   );
@@ -469,88 +466,45 @@ const StreamPage = () => {
   );
 
   const openItems = useMemo(
-    () => filteredItems.filter((item) => !(item.type === 'task' && item.task.is_done)),
+    () => filteredItems.filter((item) => !isDoneTask(item)),
     [filteredItems],
   );
 
   const doneTasks = useMemo(
-    () => filteredItems.filter((item) => item.type === 'task' && item.task.is_done),
+    () => filteredItems.filter(isDoneTask),
     [filteredItems],
   );
 
   // Type chip counts respect tag + search filters; tag chip counts respect
   // type + search filters — each row describes what the other would show.
-  const typeCounts = useMemo(() => {
-    const counts: Record<ItemType, number> = { note: 0, link: 0, task: 0 };
-    scopedItems.forEach((item) => {
-      if (matchesTags(item) && matchesSearch(item)) counts[item.type] += 1;
-    });
-    return counts;
-  }, [matchesSearch, matchesTags, scopedItems]);
+  const typeCounts = useMemo(
+    () => countByType(scopedItems.filter((item) => matchesTags(item) && matchesSearch(item))),
+    [matchesSearch, matchesTags, scopedItems],
+  );
 
   // Unfiltered per-type totals for the current scope drive the chip order
-  const typeTotals = useMemo(() => {
-    const counts: Record<ItemType, number> = { note: 0, link: 0, task: 0 };
-    scopedItems.forEach((item) => {
-      counts[item.type] += 1;
-    });
-    return counts;
-  }, [scopedItems]);
+  const typeTotals = useMemo(() => countByType(scopedItems), [scopedItems]);
 
   const itemsForTagRow = useMemo(
     () => scopedItems.filter((item) => matchesType(item) && matchesSearch(item)),
     [matchesSearch, matchesType, scopedItems],
   );
 
-  const tagCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    itemsForTagRow.forEach((item) => {
-      item.tags.forEach((tag) => {
-        counts[tag.id] = (counts[tag.id] ?? 0) + 1;
-      });
-    });
-    return counts;
-  }, [itemsForTagRow]);
+  const tagCounts = useMemo(() => countTags(itemsForTagRow), [itemsForTagRow]);
 
-  const untaggedCount = useMemo(
-    () => itemsForTagRow.filter((item) => item.tags.length === 0).length,
-    [itemsForTagRow],
+  const untaggedCount = useMemo(() => countUntagged(itemsForTagRow), [itemsForTagRow]);
+
+  const tagsForRow = useMemo(
+    () => orderTagsForRow(tags ?? [], tagCounts, { inSpace: Boolean(spaceId), selectedTagIds }),
+    [selectedTagIds, spaceId, tagCounts, tags],
   );
-
-  // Inside a space only tags actually used there are offered; on Home every
-  // tag is, so a fresh tag can be applied straight away. Selected tags stay
-  // visible even at zero so they can be cleared.
-  const tagsForRow = useMemo(() => {
-    const all = tags ?? [];
-    const visible = spaceId
-      ? all.filter((tag) => (tagCounts[tag.id] ?? 0) > 0 || selectedTagIds.includes(tag.id))
-      : all;
-    return [...visible].sort((a, b) => {
-      const diff = (tagCounts[b.id] ?? 0) - (tagCounts[a.id] ?? 0);
-      return diff !== 0 ? diff : a.name.localeCompare(b.name);
-    });
-  }, [selectedTagIds, spaceId, tagCounts, tags]);
 
   /* ---------- Super favorites (header) ---------- */
 
-  const superFavoriteLinks = useMemo(() => {
-    const pinnedInSpace = new Set<string>();
-    const pinnedAnywhere = new Set<string>();
-    (linkMembership ?? []).forEach((row) => {
-      if (!row.is_super_favorite) return;
-      pinnedAnywhere.add(row.link_id);
-      if (row.profile_id === spaceId) pinnedInSpace.add(row.link_id);
-    });
-    return allItems
-      .filter((item): item is Extract<StreamItem, { type: 'link' }> => item.type === 'link')
-      .map((item) => item.link)
-      .filter((link) =>
-        spaceId
-          ? pinnedInSpace.has(link.id)
-          : Boolean(link.is_super_favorite) || pinnedAnywhere.has(link.id),
-      )
-      .sort((a, b) => (a.title || a.url).toLowerCase().localeCompare((b.title || b.url).toLowerCase()));
-  }, [allItems, linkMembership, spaceId]);
+  const superFavoriteLinks = useMemo(
+    () => pinnedLinks(allItems, linkMembership ?? [], spaceId),
+    [allItems, linkMembership, spaceId],
+  );
 
   /* ---------- Selection ---------- */
 

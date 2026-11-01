@@ -18,8 +18,8 @@ import {
   dayKeyOf,
   shiftDay,
   toDayKey,
+  type StreamItem,
 } from '@memex/core';
-import type { StreamItem } from '../../utils/streamItems';
 import { cue } from '../../utils/sound';
 
 const MAX_COMPOSER_ROWS = 6;

@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
-import { LinkWithTag, getTagsForLink, getHostname, getLinkTitle } from '@memex/core';
+import { LinkWithTag, getTagsForLink, getHostname, getLinkTitle, itemKey } from '@memex/core';
 import StreamCard from './StreamCard';
 import { getInitials } from '../utils/streamCardFormat';
-import { itemKey } from '../utils/streamItems';
 import { handleBackgroundLinkClick } from '../utils/openUrlInBackgroundTab';
 import { ExternalLink } from 'lucide-react';
 

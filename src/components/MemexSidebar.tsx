@@ -17,7 +17,7 @@ import { FeedbackToast } from './ui';
 import ApiTokensModal from './ApiTokensModal';
 import SettingsMenu from './SettingsMenu';
 import { userDisplayName } from '../utils/userDisplay';
-import { parseItemKey } from '../utils/streamItems';
+import { parseItemKey } from '@memex/core';
 import NewSpaceModal from './NewSpaceModal';
 import { InboxIcon, JournalIcon, LibraryIcon, PlusIcon, TasksIcon } from './icons';
 import Wordmark from './ui/Wordmark';

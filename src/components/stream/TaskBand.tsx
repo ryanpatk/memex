@@ -1,7 +1,6 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Check, ChevronRight, Plus, X } from 'lucide-react';
-import { type TaskWithTags, dueDateIso } from '@memex/core';
-import { itemKey } from '../../utils/streamItems';
+import { type TaskWithTags, dueDateIso, itemKey } from '@memex/core';
 
 interface TaskBandProps {
   openTasks: TaskWithTags[];

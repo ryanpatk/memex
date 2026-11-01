@@ -1,11 +1,6 @@
-import {
-  type ItemType,
-  type LinkWithTag,
-  type NoteWithTags,
-  type Tag,
-  type TaskWithTags,
-  stripMarkdown,
-} from '@memex/core';
+import type { ItemType } from '../itemTypes';
+import { stripMarkdown } from '../markdown';
+import type { LinkWithTag, NoteWithTags, Tag, TaskWithTags } from '../types';
 
 /**
  * One row of the mixed stream. Every primitive is normalized to the same
