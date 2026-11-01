@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "type": "legacy-projects",
+  "note": "Pre-spaces grouping from the original PRD; every link still points at one (legacyProjectId). Superseded by spaces.",
+  "projects": [
+    {
+      "id": "9a000000-0000-4000-8000-000000000001",
+      "name": "Sample project",
+      "description": "Fixture legacy project",
+      "starred": false,
+      "created": "2026-08-01T12:00:00+00:00",
+      "updated": "2026-08-01T12:00:00+00:00",
+      "lastModified": "2026-08-01T12:00:00+00:00"
+    }
+  ]
+}

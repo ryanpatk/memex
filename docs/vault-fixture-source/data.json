@@ -1,0 +1,57 @@
+{
+  "counts": { "links": 4, "notes": 2, "tasks": 2, "jots": 5, "spaces": 2, "tags": 3, "legacyProjects": 1 },
+  "spaces": [
+    { "id": "5a000000-0000-4000-8000-000000000001", "name": "Home reno", "created_at": "2026-09-01T14:00:00+00:00", "updated_at": "2026-09-01T14:00:00+00:00" },
+    { "id": "5a000000-0000-4000-8000-000000000002", "name": "Inspiration", "created_at": "2026-09-02T14:00:00+00:00", "updated_at": "2026-10-20T09:30:00+00:00" }
+  ],
+  "tags": [
+    { "id": "7a000000-0000-4000-8000-000000000001", "name": "design", "color": "#2f55d6", "created_at": "2026-09-01T14:05:00+00:00", "updated_at": "2026-09-01T14:05:00+00:00" },
+    { "id": "7a000000-0000-4000-8000-000000000002", "name": "To Read", "color": "#e98a4e", "created_at": "2026-09-01T14:06:00+00:00", "updated_at": "2026-09-01T14:06:00+00:00" },
+    { "id": "7a000000-0000-4000-8000-000000000003", "name": "2026", "color": "#4caf50", "created_at": "2026-09-01T14:07:00+00:00", "updated_at": "2026-09-01T14:07:00+00:00" }
+  ],
+  "projects": [
+    { "id": "9a000000-0000-4000-8000-000000000001", "name": "Sample project", "description": "Fixture legacy project", "is_starred": false, "created_at": "2026-08-01T12:00:00+00:00", "updated_at": "2026-08-01T12:00:00+00:00", "last_modified": "2026-08-01T12:00:00+00:00" }
+  ],
+  "links": [
+    { "id": "1a1f3c9e-0000-4000-8000-000000000001", "project_id": "9a000000-0000-4000-8000-000000000001", "url": "https://x.com/example_designer/status/1850000000000000001", "title": "The best interfaces feel like a desk you already know (fake post)", "description": "A made-up post used as fixture data.", "favicon_url": "fixture:favicon.svg", "preview_image_url": "fixture:preview-desk.svg", "created_at": "2026-10-24T13:40:00.123456+00:00", "updated_at": "2026-10-24T13:40:00.123456+00:00", "order_index": 0, "tag_id": "7a000000-0000-4000-8000-000000000001", "is_super_favorite": false, "source": "x:bookmark" },
+    { "id": "1a2f3c9e-0000-4000-8000-000000000002", "project_id": "9a000000-0000-4000-8000-000000000001", "url": "https://www.pinterest.com/pin/000000000000000002/", "title": "Warm kitchen with open shelves (fake pin)", "description": null, "favicon_url": null, "preview_image_url": "fixture:preview-kitchen.svg", "created_at": "2026-10-24T15:02:00+00:00", "updated_at": "2026-10-24T15:02:00+00:00", "order_index": 1, "tag_id": null, "is_super_favorite": false, "source": "pinterest:save" },
+    { "id": "1a3f3c9e-0000-4000-8000-000000000003", "project_id": "9a000000-0000-4000-8000-000000000001", "url": "https://example.com/articles/joyful-utility", "title": "Joyful utility | an example article [draft]", "description": "Example site whose preview image no longer exists.", "favicon_url": "fixture:favicon.svg", "preview_image_url": "fixture:missing.png", "created_at": "2026-10-25T01:30:00+00:00", "updated_at": "2026-10-26T10:00:00+00:00", "order_index": 2, "tag_id": "7a000000-0000-4000-8000-000000000002", "is_super_favorite": true, "source": null },
+    { "id": "1a4f3c9e-0000-4000-8000-000000000004", "project_id": "9a000000-0000-4000-8000-000000000001", "url": "https://www.youtube.com/watch?v=00000000000", "title": null, "description": null, "favicon_url": null, "preview_image_url": null, "created_at": "2026-10-26T18:00:00+00:00", "updated_at": "2026-10-26T18:00:00+00:00", "order_index": 3, "tag_id": null, "is_super_favorite": false, "source": "extension" }
+  ],
+  "notes": [
+    { "id": "2a1f3c9e-0000-4000-8000-000000000001", "title": "Kitchen layout options", "body": "# Kitchen layout options\n\nTwo layouts to compare (fixture text):\n\n- **Galley**: cheaper, keeps the window\n- **L-shape**: room for a table\n\n- [ ] Measure the north wall\n- [x] Ask about the gas line\n\nSee also the pin saved on the 24th.\n", "created_at": "2026-10-24T16:10:00+00:00", "updated_at": "2026-10-25T09:00:00+00:00", "order_index": 0 },
+    { "id": "2a2f3c9e-0000-4000-8000-000000000002", "title": "Reading list", "body": "Short note with no trailing newline: Lorem ipsum.", "created_at": "2026-10-26T12:00:00+00:00", "updated_at": "2026-10-26T12:00:00+00:00", "order_index": 1 }
+  ],
+  "tasks": [
+    { "id": "3a1f3c9e-0000-4000-8000-000000000001", "title": "Email the contractor about the quote", "detail": null, "is_done": false, "due_date": "2026-10-30", "order_index": 0, "created_at": "2026-10-24T14:05:00+00:00", "updated_at": "2026-10-24T14:05:00+00:00" },
+    { "id": "3a2f3c9e-0000-4000-8000-000000000002", "title": "Pick a paint colour", "detail": "Shortlist:\n\n1. Warm white\n2. Pale sky", "is_done": true, "due_date": null, "order_index": 1, "created_at": "2026-10-25T13:00:00+00:00", "updated_at": "2026-10-27T13:00:00+00:00" }
+  ],
+  "jots": [
+    { "id": "4a1f3c9e-0000-4000-8000-000000000001", "profile_id": null, "body": "idea: the journal is the front door. everything else is the back office. #product", "legacy_id": null, "created_at": "2026-10-24T13:12:00+00:00", "updated_at": "2026-10-24T13:12:00+00:00" },
+    { "id": "4a2f3c9e-0000-4000-8000-000000000002", "profile_id": null, "body": "Multi-line jot (fixture):\n\n- first thought\n- second thought\n\n```\ncode stays verbatim\n```", "legacy_id": "6a000000-0000-4000-8000-000000000002", "created_at": "2026-10-24T17:45:00+00:00", "updated_at": "2026-10-24T18:00:00+00:00" },
+    { "id": "4a3f3c9e-0000-4000-8000-000000000003", "profile_id": "5a000000-0000-4000-8000-000000000001", "body": "Filed into Home reno: call the tile shop", "legacy_id": null, "created_at": "2026-10-25T02:15:00+00:00", "updated_at": "2026-10-25T02:15:00+00:00" },
+    { "id": "4a4f3c9e-0000-4000-8000-000000000004", "profile_id": null, "body": "  leading spaces and a trailing blank line\n", "legacy_id": null, "created_at": "2026-10-26T11:00:00+00:00", "updated_at": "2026-10-26T11:00:00+00:00" },
+    { "id": "4a5f3c9e-0000-4000-8000-000000000005", "profile_id": null, "body": "Late-night jot: 23:30 New York time is already tomorrow in UTC", "legacy_id": null, "created_at": "2026-10-27T03:30:00+00:00", "updated_at": "2026-10-27T03:30:00+00:00" }
+  ],
+  "link_tags": [
+    { "id": "8a000000-0000-4000-8000-000000000001", "link_id": "1a1f3c9e-0000-4000-8000-000000000001", "tag_id": "7a000000-0000-4000-8000-000000000001", "created_at": "2026-10-24T13:41:00+00:00" },
+    { "id": "8a000000-0000-4000-8000-000000000002", "link_id": "1a3f3c9e-0000-4000-8000-000000000003", "tag_id": "7a000000-0000-4000-8000-000000000002", "created_at": "2026-10-25T01:31:00+00:00" },
+    { "id": "8a000000-0000-4000-8000-000000000003", "link_id": "1a3f3c9e-0000-4000-8000-000000000003", "tag_id": "7a000000-0000-4000-8000-000000000001", "created_at": "2026-10-25T01:32:00+00:00" }
+  ],
+  "note_tags": [
+    { "id": "8b000000-0000-4000-8000-000000000001", "note_id": "2a1f3c9e-0000-4000-8000-000000000001", "tag_id": "7a000000-0000-4000-8000-000000000003", "created_at": "2026-10-24T16:11:00+00:00" }
+  ],
+  "task_tags": [],
+  "profile_links": [
+    { "id": "8c000000-0000-4000-8000-000000000001", "profile_id": "5a000000-0000-4000-8000-000000000002", "link_id": "1a1f3c9e-0000-4000-8000-000000000001", "order_index": 0, "created_at": "2026-10-24T13:42:00+00:00", "is_super_favorite": true },
+    { "id": "8c000000-0000-4000-8000-000000000002", "profile_id": "5a000000-0000-4000-8000-000000000001", "link_id": "1a2f3c9e-0000-4000-8000-000000000002", "order_index": 0, "created_at": "2026-10-24T15:03:00+00:00", "is_super_favorite": false },
+    { "id": "8c000000-0000-4000-8000-000000000003", "profile_id": "5a000000-0000-4000-8000-000000000002", "link_id": "1a2f3c9e-0000-4000-8000-000000000002", "order_index": 1, "created_at": "2026-10-24T15:04:00+00:00", "is_super_favorite": false }
+  ],
+  "profile_notes": [
+    { "id": "8d000000-0000-4000-8000-000000000001", "profile_id": "5a000000-0000-4000-8000-000000000001", "note_id": "2a1f3c9e-0000-4000-8000-000000000001", "order_index": 0, "created_at": "2026-10-24T16:12:00+00:00" }
+  ],
+  "profile_tasks": [
+    { "id": "8e000000-0000-4000-8000-000000000001", "profile_id": "5a000000-0000-4000-8000-000000000001", "task_id": "3a1f3c9e-0000-4000-8000-000000000001", "order_index": 0, "created_at": "2026-10-24T14:06:00+00:00" },
+    { "id": "8e000000-0000-4000-8000-000000000002", "profile_id": "5a000000-0000-4000-8000-000000000001", "task_id": "3a2f3c9e-0000-4000-8000-000000000002", "order_index": 1, "created_at": "2026-10-25T13:01:00+00:00" }
+  ]
+}

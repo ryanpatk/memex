@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "format": "memex-vault",
+  "id": "00000000-0000-4000-8000-000000000000",
+  "created": "2026-11-01T12:00:00.000Z",
+  "timezone": "America/New_York",
+  "spec": "https://github.com/ryanpatk/memex/blob/main/docs/vault-format.md"
+}

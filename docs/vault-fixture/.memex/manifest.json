@@ -1,0 +1,177 @@
+{
+  "schema": 1,
+  "type": "manifest",
+  "format": "memex-vault",
+  "generator": "scripts/export-vault.mjs",
+  "exportedAt": "2026-11-01T12:00:00.000Z",
+  "source": {
+    "kind": "fixture"
+  },
+  "timezone": "America/New_York",
+  "counts": {
+    "links": 4,
+    "notes": 2,
+    "tasks": 2,
+    "jots": 5,
+    "spaces": 2,
+    "tags": 3,
+    "legacyProjects": 1,
+    "journalDays": 3
+  },
+  "databaseCounts": {
+    "links": 4,
+    "notes": 2,
+    "tasks": 2,
+    "jots": 5,
+    "spaces": 2,
+    "tags": 3,
+    "legacyProjects": 1
+  },
+  "images": {
+    "total": 5,
+    "ok": 4,
+    "failed": 1,
+    "skipped": 0
+  },
+  "files": {
+    "journal/2026/2026-10-24.md": {
+      "type": "journal-day",
+      "id": "2026-10-24",
+      "sha256": "5b95f3eaf6d90a3960e8d7b3063376fb575a7e2df535257e9f6dcb9c8ada0bd7"
+    },
+    "journal/2026/2026-10-25.md": {
+      "type": "journal-day",
+      "id": "2026-10-25",
+      "sha256": "52365c60adabc3ee2e8a9d3a67854356b7d092faad2890c5c24a63c87af8bfb2"
+    },
+    "journal/2026/2026-10-26.md": {
+      "type": "journal-day",
+      "id": "2026-10-26",
+      "sha256": "dce55fea540c4584fbf0ae98b0737dc8093607b101d90110dbf26b441d8b02c7"
+    },
+    "legacy/projects.json": {
+      "type": "legacy-projects",
+      "id": null,
+      "sha256": "35c4b3f6e4a27089e7615eb86d795aef4a00562783bef935cc8cb7051ede7634"
+    },
+    "links/joyful-utility-an-example-article-draft-1a3f3c9e.md": {
+      "type": "link",
+      "id": "1a3f3c9e-0000-4000-8000-000000000003",
+      "sha256": "9e933bafa04491894b43e846bb613341275fd02d054541c182162b59d1fa0cb8"
+    },
+    "links/the-best-interfaces-feel-like-a-desk-you-already-know-fake-1a1f3c9e.md": {
+      "type": "link",
+      "id": "1a1f3c9e-0000-4000-8000-000000000001",
+      "sha256": "3f3383e207351e312d12b5ef5b589920f926c406f2bc70e05a92b7e3426e9731"
+    },
+    "links/warm-kitchen-with-open-shelves-fake-pin-1a2f3c9e.md": {
+      "type": "link",
+      "id": "1a2f3c9e-0000-4000-8000-000000000002",
+      "sha256": "2e79c97bf642bef827573736850790ee1fc1c3da4c725418d34037b4fc31dbdf"
+    },
+    "links/youtube-com-1a4f3c9e.md": {
+      "type": "link",
+      "id": "1a4f3c9e-0000-4000-8000-000000000004",
+      "sha256": "9bc24c92bb7d1ad8c3834ea7a777978a1088816dbd19f99bdccdaba8a221a84b"
+    },
+    "notes/kitchen-layout-options-2a1f3c9e.md": {
+      "type": "note",
+      "id": "2a1f3c9e-0000-4000-8000-000000000001",
+      "sha256": "fdf064efa37a2125488222b563b625750bfd53cb7f82697a42ea28888a132972"
+    },
+    "notes/reading-list-2a2f3c9e.md": {
+      "type": "note",
+      "id": "2a2f3c9e-0000-4000-8000-000000000002",
+      "sha256": "6af52c29b645e52b81d39e9dc98cc34a31502f1cf660e9aa311058f5206b1f23"
+    },
+    "settings/tags.json": {
+      "type": "tags",
+      "id": null,
+      "sha256": "459edf2a44e1a2c4e445e7e9a866cf05fe1582901f3c10d8ac4cd44258e1dff1"
+    },
+    "spaces/home-reno.board.json": {
+      "type": "space-board",
+      "id": "5a000000-0000-4000-8000-000000000001",
+      "sha256": "879292d54329dcf6aeab11981caf64b29705dbde7bf278a6d3a1d2678c136d4e"
+    },
+    "spaces/home-reno.md": {
+      "type": "space",
+      "id": "5a000000-0000-4000-8000-000000000001",
+      "sha256": "11b3592a406fd12b38e248cf5e97d95140c5d5ea8cc7c7cef44db2c0f2664c2a"
+    },
+    "spaces/inspiration.board.json": {
+      "type": "space-board",
+      "id": "5a000000-0000-4000-8000-000000000002",
+      "sha256": "ee6619cde615ccf1aca0cae589fa1a06730a2d03800bcf1c2b6bbd7da0269aeb"
+    },
+    "spaces/inspiration.md": {
+      "type": "space",
+      "id": "5a000000-0000-4000-8000-000000000002",
+      "sha256": "e913bdda99c076bfaeb75a4a0d6dee7935165757a561ca730c2a6e7ad5c78cfb"
+    },
+    "tasks/email-the-contractor-about-the-quote-3a1f3c9e.md": {
+      "type": "task",
+      "id": "3a1f3c9e-0000-4000-8000-000000000001",
+      "sha256": "a64b79ee88235a3df16f6b4f2a44faa793bc98f2c129eae8063c78ab9fcac865"
+    },
+    "tasks/pick-a-paint-colour-3a2f3c9e.md": {
+      "type": "task",
+      "id": "3a2f3c9e-0000-4000-8000-000000000002",
+      "sha256": "d5e025de9df65df9c4698ee9b34415f79ee5f5dcf3c38c19fce0ef3ec6177d06"
+    }
+  },
+  "assets": [
+    {
+      "item": "1a1f3c9e-0000-4000-8000-000000000001",
+      "role": "favicon",
+      "url": "fixture:favicon.svg",
+      "status": "ok",
+      "file": "assets/1a1f3c9e/favicon.svg",
+      "bytes": 238,
+      "contentType": "image/svg+xml",
+      "sha256": "2339a03b15b3e8d222f11252f4c6b9ee25d86f686700448f83e8a3831f7285a1",
+      "fetched": "2026-11-01T12:00:00.000Z"
+    },
+    {
+      "item": "1a1f3c9e-0000-4000-8000-000000000001",
+      "role": "preview",
+      "url": "fixture:preview-desk.svg",
+      "status": "ok",
+      "file": "assets/1a1f3c9e/preview.svg",
+      "bytes": 417,
+      "contentType": "image/svg+xml",
+      "sha256": "05fea526b49913af351885f00a193fb76f325c404f3ab4050818e56bba9c28b2",
+      "fetched": "2026-11-01T12:00:00.000Z"
+    },
+    {
+      "item": "1a2f3c9e-0000-4000-8000-000000000002",
+      "role": "preview",
+      "url": "fixture:preview-kitchen.svg",
+      "status": "ok",
+      "file": "assets/1a2f3c9e/preview.svg",
+      "bytes": 333,
+      "contentType": "image/svg+xml",
+      "sha256": "5330d8d1b6c568aec2c143008dc5c53c6aecede3af0dc9cf9198031602317b5a",
+      "fetched": "2026-11-01T12:00:00.000Z"
+    },
+    {
+      "item": "1a3f3c9e-0000-4000-8000-000000000003",
+      "role": "favicon",
+      "url": "fixture:favicon.svg",
+      "status": "ok",
+      "file": "assets/1a3f3c9e/favicon.svg",
+      "bytes": 238,
+      "contentType": "image/svg+xml",
+      "sha256": "2339a03b15b3e8d222f11252f4c6b9ee25d86f686700448f83e8a3831f7285a1",
+      "fetched": "2026-11-01T12:00:00.000Z"
+    },
+    {
+      "item": "1a3f3c9e-0000-4000-8000-000000000003",
+      "role": "preview",
+      "url": "fixture:missing.png",
+      "status": "failed",
+      "error": "not found",
+      "attempted": "2026-11-01T12:00:00.000Z"
+    }
+  ]
+}
