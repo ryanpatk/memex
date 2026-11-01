@@ -1,4 +1,27 @@
-const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+/*
+ * Intl.RelativeTimeFormat is missing on some runtimes (Hermes, React Native's
+ * engine), so it's created on first use and falls back to plain English.
+ */
+type RelativeUnit = 'minute' | 'hour' | 'day';
+let rtf: { format(value: number, unit: RelativeUnit): string } | undefined;
+
+/** English relative time without Intl: "in 2 hours", "3 days ago", "yesterday". */
+export const formatRelativeFallback = (value: number, unit: RelativeUnit): string => {
+  if (unit === 'day' && value === -1) return 'yesterday';
+  if (unit === 'day' && value === 1) return 'tomorrow';
+  if (value === 0) return unit === 'day' ? 'today' : `this ${unit}`;
+  const n = Math.abs(value);
+  const words = `${n} ${unit}${n === 1 ? '' : 's'}`;
+  return value < 0 ? `${words} ago` : `in ${words}`;
+};
+
+const relative = (value: number, unit: RelativeUnit) => {
+  if (!rtf) {
+    const Rtf = (Intl as { RelativeTimeFormat?: typeof Intl.RelativeTimeFormat }).RelativeTimeFormat;
+    rtf = Rtf ? new Rtf(undefined, { numeric: 'auto' }) : { format: formatRelativeFallback };
+  }
+  return rtf.format(value, unit);
+};
 const shortDate = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
 const shortDateYear = new Intl.DateTimeFormat(undefined, {
   month: 'short',
@@ -12,9 +35,9 @@ export const relativeTime = (iso: string, now = Date.now()) => {
   const seconds = (then - now) / 1000;
   const abs = Math.abs(seconds);
   if (abs < 60) return 'just now';
-  if (abs < 3600) return rtf.format(Math.round(seconds / 60), 'minute');
-  if (abs < 86400) return rtf.format(Math.round(seconds / 3600), 'hour');
-  if (abs < 86400 * 7) return rtf.format(Math.round(seconds / 86400), 'day');
+  if (abs < 3600) return relative(Math.round(seconds / 60), 'minute');
+  if (abs < 86400) return relative(Math.round(seconds / 3600), 'hour');
+  if (abs < 86400 * 7) return relative(Math.round(seconds / 86400), 'day');
   const date = new Date(iso);
   return date.getFullYear() === new Date(now).getFullYear()
     ? shortDate.format(date)
