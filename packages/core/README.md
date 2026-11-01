@@ -40,22 +40,22 @@ The logic every memex client shares: the web app today, the Expo app (Phase 6) a
 
 The v1 adapter. It's kept out of the main entry point so pure consumers never load supabase-js (`@supabase/supabase-js` is an optional peer dependency).
 
-- `createMemexClient({ url, anonKey, auth? })` is the one way to create memex's Supabase client. Leave out `auth` on the web to keep supabase-js's browser defaults (localStorage, OAuth callback detection). In Expo, pass `auth: { storage, detectSessionInUrl: false }` with a SecureStore-backed `AuthStorage`. Only ever pass the anon key; RLS limits every query to the signed-in user's rows.
+- `createMemexClient({ url, anonKey, auth? })` is the one way to create memex's Supabase client. Leave out `auth` on the web to keep supabase-js's browser defaults (localStorage, OAuth callback detection). In Expo, pass `auth: { storage, detectSessionInUrl: false, flowType: 'pkce' }` with an encrypted `AuthStorage` (see `apps/mobile`). Only ever pass the anon key; RLS limits every query to the signed-in user's rows.
+- Native OAuth (Expo): create the client with `flowType: 'pkce'`, call `auth.signInWithOAuth(provider, { redirectTo, skipBrowserRedirect: true })`, open the returned `url` in an auth browser session, then pass the redirect's `code` to `auth.exchangeCodeForSession`. `auth.setAutoRefresh(active)` pauses token refresh while the app is backgrounded.
 - `createSupabaseRepository(client)` returns a `Repository`. Its queries are the ones the web app's hooks ran before 2026-11-01, moved over unchanged.
 
 ```ts
 // Web (src/data/repository.ts)
 export const repository = createSupabaseRepository(createMemexClient({ url, anonKey }));
 
-// Expo (sketch)
-import * as SecureStore from 'expo-secure-store';
-const storage = {
-  getItem: SecureStore.getItemAsync,
-  setItem: SecureStore.setItemAsync,
-  removeItem: SecureStore.deleteItemAsync,
-};
+// Expo (apps/mobile/src/data/repository.ts): SecureStore holds a key per
+// value, AsyncStorage the encrypted session (SecureStore caps values at 2 KB).
 export const repository = createSupabaseRepository(
-  createMemexClient({ url, anonKey, auth: { storage, detectSessionInUrl: false } }),
+  createMemexClient({
+    url,
+    anonKey,
+    auth: { storage: encryptedStorage, detectSessionInUrl: false, flowType: 'pkce' },
+  }),
 );
 ```
 
@@ -63,7 +63,7 @@ export const repository = createSupabaseRepository(
 
 ```ts
 interface Repository {
-  auth: AuthRepository;              // getSession, onAuthStateChange, signInWithPassword, signUp, signInWithOAuth, signOut
+  auth: AuthRepository;              // getSession, onAuthStateChange, signInWithPassword, signUp, signInWithOAuth, exchangeCodeForSession, setAutoRefresh, signOut
   links: LinksRepository;            // getAll, getById, getByTag, create, update, delete, reorder, setTags (+ legacy getByProject(s))
   notes: NotesRepository;            // getAll, create, update, delete, setTags
   tasks: TasksRepository;            // getAll, create, update, delete, setTags

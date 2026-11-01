@@ -71,6 +71,9 @@ export type AuthResult = { error: { message: string } | null };
 
 export type OAuthProvider = 'github';
 
+/** Starting OAuth: on native, `url` is the provider page to open in an auth browser session. */
+export type OAuthStartResult = AuthResult & { url?: string };
+
 export interface AuthRepository {
   /** The stored session, or null when signed out. */
   getSession(): Promise<AuthSession | null>;
@@ -78,8 +81,23 @@ export interface AuthRepository {
   onAuthStateChange(listener: (session: AuthSession | null) => void): () => void;
   signInWithPassword(credentials: { email: string; password: string }): Promise<AuthResult>;
   signUp(credentials: { email: string; password: string }): Promise<AuthResult>;
-  /** Starts an OAuth redirect; on web the page navigates away. */
-  signInWithOAuth(provider: OAuthProvider, options: { redirectTo: string }): Promise<AuthResult>;
+  /**
+   * Starts an OAuth redirect; on web the page navigates away. Native apps pass
+   * `skipBrowserRedirect: true`, open the returned `url` in an auth browser
+   * session, then hand the `code` from the redirect to `exchangeCodeForSession`
+   * (needs a client created with `flowType: 'pkce'`).
+   */
+  signInWithOAuth(
+    provider: OAuthProvider,
+    options: { redirectTo: string; skipBrowserRedirect?: boolean },
+  ): Promise<OAuthStartResult>;
+  /** Finishes a PKCE OAuth sign-in with the `code` from the redirect URL. */
+  exchangeCodeForSession(code: string): Promise<AuthResult>;
+  /**
+   * Native apps pause token refresh while backgrounded and resume it in the
+   * foreground (browsers handle this themselves). No-op where unsupported.
+   */
+  setAutoRefresh(active: boolean): void;
   signOut(): Promise<AuthResult>;
 }
 

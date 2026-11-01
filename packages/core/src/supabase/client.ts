@@ -30,13 +30,15 @@ export interface MemexClientOptions {
   /**
    * Auth overrides. Omit on web to keep supabase-js's browser defaults
    * (localStorage, refresh timers, OAuth callback detection in the URL).
-   * Expo: `{ storage, detectSessionInUrl: false }`.
+   * Expo: `{ storage, detectSessionInUrl: false, flowType: 'pkce' }` (PKCE
+   * lets a native app finish OAuth with `exchangeCodeForSession`).
    */
   auth?: {
     storage?: AuthStorage
     persistSession?: boolean
     autoRefreshToken?: boolean
     detectSessionInUrl?: boolean
+    flowType?: 'pkce' | 'implicit'
   }
 }
 

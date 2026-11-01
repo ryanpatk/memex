@@ -30,9 +30,21 @@ export const createAuthRepository = (client: MemexSupabaseClient): AuthRepositor
     return result(error)
   },
 
-  signInWithOAuth: async (provider, { redirectTo }) => {
-    const { error } = await client.auth.signInWithOAuth({ provider, options: { redirectTo } })
+  signInWithOAuth: async (provider, { redirectTo, skipBrowserRedirect }) => {
+    const { data, error } = await client.auth.signInWithOAuth({
+      provider,
+      options: skipBrowserRedirect ? { redirectTo, skipBrowserRedirect } : { redirectTo },
+    })
+    return data?.url ? { error, url: data.url } : result(error)
+  },
+
+  exchangeCodeForSession: async (code) => {
+    const { error } = await client.auth.exchangeCodeForSession(code)
     return result(error)
+  },
+
+  setAutoRefresh: (active) => {
+    void (active ? client.auth.startAutoRefresh() : client.auth.stopAutoRefresh())
   },
 
   signOut: async () => {
