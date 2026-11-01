@@ -1,0 +1,46 @@
+# Typecheck, lint, unit tests and production build on every push and PR.
+# Runs alongside secret-scan.yml (gitleaks). Local equivalent:
+#   npm run typecheck && npm run lint && npm test && npm run build
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck (web app + @memex/core)
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        # The build needs no secrets: Supabase settings are read at runtime in
+        # the browser, and the bundle is never deployed from CI.
+        run: npm run build

@@ -13,6 +13,8 @@
     "build": "npm run typecheck && vite build",
     "typecheck": "tsc && tsc -p packages/core",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy"
   },
@@ -59,6 +61,7 @@
     "eslint-plugin-react-refresh": "^0.4.18",
     "typescript": "^5.7.3",
     "vite": "^6.2.6",
+    "vitest": "^3.2.7",
     "wrangler": "^4.129.1"
   }
 }
