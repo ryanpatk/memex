@@ -17,3 +17,7 @@ export * from './composer';
 export * from './sources';
 export * from './journal/feed';
 export * from './journal/filer';
+export * from './tokens/canvasColors';
+export * from './tokens/color';
+export * from './tokens/spaceColors';
+export * from './tokens/pastelSky';

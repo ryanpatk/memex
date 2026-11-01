@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  CANVAS_COLOR_OPTIONS,
-  type CanvasColorId,
-} from '../constants/canvasColors';
+import { CANVAS_COLOR_OPTIONS, type CanvasColorId } from '@memex/core';
 import {
   applyCanvasColor,
   getStoredCanvasColorId,

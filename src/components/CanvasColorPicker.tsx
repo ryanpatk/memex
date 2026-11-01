@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useCanvasColor } from '../hooks/useCanvasColor';
-import { buildCanvasGradient } from '../utils/canvasColor';
+import { buildCanvasGradient } from '@memex/core';
 
 const CanvasColorPicker = () => {
   const { colorId, setColorId, options, darkMode } = useCanvasColor();

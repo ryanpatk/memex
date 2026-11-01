@@ -62,7 +62,7 @@
  * Each one now points at a Pastel Sky token by role, so the theme owns every
  * value and dark mode follows automatically. The one memex exception: the
  * user's canvas swatch drives the page canvas and color-1 (accent), written
- * at runtime by src/utils/canvasColor.ts.
+ * at runtime by src/utils/canvasColor.ts (maths in @memex/core tokens/color.ts).
  */
 :root {
   color-scheme: light;

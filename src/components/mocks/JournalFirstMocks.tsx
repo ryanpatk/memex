@@ -28,16 +28,7 @@ import { useAllSelfMessages } from '../../hooks/useSelfMessages';
 import { useProfileLinkMembership } from '../../hooks/useProfileLinks';
 import { useProfileNoteMembership } from '../../hooks/useProfileNotes';
 import { useProfileTaskMembership } from '../../hooks/useProfileTasks';
-import { buildSpaceColors } from '../../utils/spaceColor';
-import {
-  getHostname,
-  getLinkTitle,
-  stripMarkdown,
-  type LinkWithTag,
-  type NoteWithTags,
-  type SelfMessage,
-  type TaskWithTags,
-} from '@memex/core';
+import { buildSpaceColors, getHostname, getLinkTitle, stripMarkdown, type LinkWithTag, type NoteWithTags, type SelfMessage, type TaskWithTags } from '@memex/core';
 import { Artboard, Fav, Section, Thumb } from './primitives';
 import Wordmark from '../ui/Wordmark';
 import '../../styles/mocks-journal.css';
