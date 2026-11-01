@@ -49,10 +49,12 @@ id: "1a1f3c9e-0000-4000-8000-000000000001"
 title: "The best interfaces feel like a desk you already know (fake post)"   # null if never fetched
 url: "https://x.com/example_designer/status/1850000000000000001"
 source: "x"                    # platform: x · pinterest · youtube · web (from the URL and sourceTag)
-capturedBy: "extension"        # app · extension (later: resync · share · api · agent)
+sourceId: "1850000000000000001"  # links.source_id: the post / pin / video id (omitted when null)
+capturedBy: "extension"        # app · extension · resync · share · api · agent (links.captured_by, else from sourceTag)
+capturedClient: "memex-extension/0.3.0"  # links.captured_client (omitted when null)
 lists:                         # which of your lists on the source held it: bookmarked · saved · liked
   - "bookmarked"
-sourceTag: "x:bookmark"        # links.source verbatim (omitted when null = saved in the app)
+sourceTag: "x:bookmark"        # links.source verbatim (omitted when null = saved in the app); "x" on links captured since 2026-11-01
 created: "2026-10-24T13:40:00.123456+00:00"
 updated: "2026-10-24T13:40:00.123456+00:00"
 spaces:
@@ -73,7 +75,7 @@ legacyProjectId: "9a000000-…"            # links.project_id → legacy/project
 <!-- memex:generated … --> title, embedded image, description, link <!-- /memex:generated -->
 ```
 
-Defaults: `title` null, `lists` `[]`, `sourceTag` null, `spaces`/`pinnedIn`/`tags` `[]`, `superFavorite` false, `order` 0. A link's image is shown in the body as an Obsidian embed (`![[assets/…/preview.jpg]]`).
+Defaults: `title` null, `sourceId` null, `capturedClient` null, `lists` `[]`, `sourceTag` null, `spaces`/`pinnedIn`/`tags` `[]`, `superFavorite` false, `order` 0. A link's image is shown in the body as an Obsidian embed (`![[assets/…/preview.jpg]]`).
 
 ## Notes
 

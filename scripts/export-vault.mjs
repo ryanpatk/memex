@@ -142,24 +142,33 @@ function hostOf(url) {
   }
 }
 
-/** Platform a link came from (mirrors sourceOf in src/utils/journalFeed.ts). */
+/** Platform a link came from (mirrors sourceOf in packages/core/src/sources.ts). */
 export function platformOf(link) {
   const host = hostOf(link.url);
-  const tag = link.source ?? '';
-  if (tag.startsWith('pinterest') || /(^|\.)pinterest\.|^pin\.it$/.test(host)) return 'pinterest';
-  if (tag.startsWith('x:') || /^(x|twitter)\.com$/.test(host)) return 'x';
-  if (/(^|\.)youtube\.com$|^youtu\.be$/.test(host)) return 'youtube';
+  // links.source is the platform since 2026-11-01 ('x', 'pinterest', 'youtube', 'web'),
+  // or an older '<platform>:<list>' tag.
+  const platform = (link.source ?? '').split(':')[0];
+  if (platform === 'pinterest' || /(^|\.)pinterest\.|^pin\.it$/.test(host)) return 'pinterest';
+  if (platform === 'x' || /^(x|twitter)\.com$/.test(host)) return 'x';
+  if (platform === 'youtube' || /(^|\.)youtube\.com$|^youtu\.be$/.test(host)) return 'youtube';
   return 'web';
 }
 
-/** How it arrived and which of your lists on the source held it, from links.source. */
-function captureOf(sourceTag) {
-  if (!sourceTag) return { capturedBy: 'app', lists: [] };
-  const lists = [];
-  if (sourceTag === 'x:bookmark') lists.push('bookmarked');
-  if (sourceTag === 'pinterest:save') lists.push('saved');
-  if (/:like$/.test(sourceTag)) lists.push('liked');
-  return { capturedBy: 'extension', lists };
+/**
+ * How it arrived and which of your lists on the source held it: the
+ * captured_by / lists columns when set (2026-11-01 on), else read from the
+ * older links.source tag (mirrors parseSourceTag in packages/core/src/capture/input.ts).
+ */
+function captureOf(link) {
+  const sourceTag = link.source ?? null;
+  const fromTag = { capturedBy: sourceTag ? 'extension' : 'app', lists: [] };
+  if (sourceTag === 'x:bookmark') fromTag.lists.push('bookmarked');
+  if (sourceTag === 'pinterest:save') fromTag.lists.push('saved');
+  if (/:like$/.test(sourceTag ?? '')) fromTag.lists.push('liked');
+  return {
+    capturedBy: link.captured_by ?? fromTag.capturedBy,
+    lists: Array.isArray(link.lists) && link.lists.length ? link.lists : fromTag.lists,
+  };
 }
 
 // ───────────────────────────── YAML (a small, strict emitter) ─────────────────────────────
@@ -493,7 +502,7 @@ function itemTypeLabel(item) {
 
 function renderLink(item, model, assets) {
   const link = item.row;
-  const { capturedBy, lists } = captureOf(link.source);
+  const { capturedBy, lists } = captureOf(link);
   const preview = assets.get(`${link.id}:preview`);
   const favicon = assets.get(`${link.id}:favicon`);
   const fm = {
@@ -503,7 +512,9 @@ function renderLink(item, model, assets) {
     title: link.title ?? null,
     url: link.url,
     source: platformOf(link),
+    sourceId: link.source_id ?? undefined,
     capturedBy,
+    capturedClient: link.captured_client ?? undefined,
     lists,
     sourceTag: link.source ?? undefined,
     created: link.created_at,
