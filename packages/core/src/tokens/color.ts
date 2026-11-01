@@ -207,3 +207,40 @@ export function buildCanvasGradient(
 
   return `linear-gradient(180deg, ${top} 0%, ${base} ${fadeEndPercent}%, ${base} 100%)`;
 }
+
+/**
+ * An `oklch(L C H [/ A])` string as sRGB hex (`#rrggbb`, or `#rrggbbaa` with
+ * alpha), gamut-clipped. For renderers without OKLCH support: React Native,
+ * image generation. Returns null for anything that isn't OKLCH.
+ */
+export function oklchToHex(color: string): string | null {
+  const match = color.match(
+    /oklch\(\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+)\s*)?\)/i,
+  );
+  if (!match) return null;
+  const l = parseFloat(match[1]);
+  const c = parseFloat(match[2]);
+  const hRad = (parseFloat(match[3]) * Math.PI) / 180;
+  const a = c * Math.cos(hRad);
+  const b = c * Math.sin(hRad);
+
+  // OKLab → LMS (cubed) → linear sRGB (Björn Ottosson's matrices)
+  const l_ = (l + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+  const m_ = (l - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+  const s_ = (l - 0.0894841775 * a - 1.291485548 * b) ** 3;
+  const linear = [
+    4.0767416621 * l_ - 3.3077115913 * m_ + 0.2309699292 * s_,
+    -1.2684380046 * l_ + 2.6097574011 * m_ - 0.3413193965 * s_,
+    -0.0041960863 * l_ - 0.7034186147 * m_ + 1.707614701 * s_,
+  ];
+  const hex = (unit: number) =>
+    Math.round(clamp(unit, 0, 1) * 255)
+      .toString(16)
+      .padStart(2, '0');
+  const channels = linear.map((v) => {
+    const x = clamp(v, 0, 1);
+    return hex(x <= 0.0031308 ? 12.92 * x : 1.055 * x ** (1 / 2.4) - 0.055);
+  });
+  const alpha = match[4] === undefined ? '' : hex(parseFloat(match[4]));
+  return `#${channels.join('')}${alpha}`;
+}

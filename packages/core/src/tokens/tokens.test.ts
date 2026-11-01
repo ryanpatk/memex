@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { profile } from '../testing/fixtures';
 import { CANVAS_COLOR_OPTIONS, DEFAULT_CANVAS_COLOR_ID, getCanvasColorOption, isCanvasColorId } from './canvasColors';
-import { buildCanvasGradient, buildThemeSurfaceColors, formatOklch, getCanvasGradientStops, parseOklch } from './color';
+import { buildCanvasGradient, buildThemeSurfaceColors, formatOklch, getCanvasGradientStops, oklchToHex, parseOklch } from './color';
 import { buildSpaceColors } from './spaceColors';
 
 describe('canvas swatches', () => {
@@ -70,5 +70,28 @@ describe('buildSpaceColors', () => {
 
   it('is empty without spaces', () => {
     expect(buildSpaceColors(undefined).size).toBe(0);
+  });
+});
+
+describe('oklchToHex', () => {
+  it('converts the endpoints and a primary exactly', () => {
+    expect(oklchToHex('oklch(1 0 0)')).toBe('#ffffff');
+    expect(oklchToHex('oklch(0 0 0)')).toBe('#000000');
+    expect(oklchToHex('oklch(0.62796 0.25768 29.234)')).toBe('#ff0000');
+  });
+
+  it('lands near the JOYFUL_SYSTEMS palette hexes their OKLCH approximations name', () => {
+    const near = (hex: string, target: string) => {
+      const ch = (h: string, i: number) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16);
+      return [0, 1, 2].every((i) => Math.abs(ch(hex, i) - ch(target, i)) <= 12);
+    };
+    expect(near(oklchToHex('oklch(0.62 0.21 268)')!, '#5077ff')).toBe(true);
+    expect(near(oklchToHex('oklch(0.69 0.20 17)')!, '#ff5a6f')).toBe(true);
+  });
+
+  it('keeps alpha and clips out-of-gamut colours', () => {
+    expect(oklchToHex('oklch(1 0 0 / 0.5)')).toBe('#ffffff80');
+    expect(oklchToHex('oklch(0.9 0.4 140)')).toMatch(/^#[0-9a-f]{6}$/);
+    expect(oklchToHex('#123456')).toBeNull();
   });
 });

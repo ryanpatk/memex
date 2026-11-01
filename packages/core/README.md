@@ -28,7 +28,7 @@ The logic every memex client shares: the web app today, the Expo app (Phase 6) a
 | `markdown.ts` | `stripMarkdown`, `markdownExcerpt`, `noteDisplayTitle` |
 | `time.ts` | `relativeTime`, `timeGroupFor`, `groupByTime`, `dueDateIso`, `toDayKey` / `fromDayKey` / `shiftDay` / `dayKeyOf` |
 | `errors.ts` | `getErrorMessage` |
-| `tokens/` | Canvas swatches (`CANVAS_COLOR_OPTIONS`, `getCanvasColorOption`, …), OKLCH maths (`buildThemeSurfaceColors`, `buildCanvasGradient`, `parseOklch`, …), `buildSpaceColors`, and Pastel Sky constants (`PASTEL_SKY_COLORS`, `TYPE_SCALE`, `SPACE`, `RADIUS`, `FONT_WEIGHTS`, `MOTION`, `DEPTH`, `WORDMARK_INK`). `src/styles/pastelSky.test.ts` in the web app fails if these drift from `pastel-sky.css` |
+| `tokens/` | Canvas swatches (`CANVAS_COLOR_OPTIONS`, `getCanvasColorOption`, …), OKLCH maths (`buildThemeSurfaceColors`, `buildCanvasGradient`, `parseOklch`, `oklchToHex` for renderers without OKLCH, …), `buildSpaceColors`, and Pastel Sky constants (`PASTEL_SKY_COLORS`, `TYPE_SCALE`, `SPACE`, `RADIUS`, `FONT_WEIGHTS`, `MOTION`, `DEPTH`, `WORDMARK_INK`). `src/styles/pastelSky.test.ts` in the web app fails if these drift from `pastel-sky.css` |
 | `repository.ts` | The `Repository` interface and its parts (below), plus `AuthUser` / `AuthSession` |
 | `capture/` | Capture rules shared by memex-api and the MCP write tools (below; also at `@memex/core/capture`) |
 
