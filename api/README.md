@@ -8,24 +8,54 @@ changes — clients keep the same contract.
 ## Routes
 
 All routes require `Authorization: Bearer mx_…` (create tokens in memex under
-**Settings → Access tokens**).
+**Settings → Access tokens**). Responses are `{ success: true, data }` or
+`{ success: false, error }`.
 
-| Route                  | Method | Body / result                                          |
-| ---------------------- | ------ | ------------------------------------------------------ |
-| `/api/capture`         | POST   | `{ url, title?, description?, image?, favicon?, note?, source?, spaceId?, tagIds? }` → created link (201), or the existing link with `duplicate: true` (200). Client metadata wins; memex-scraper fills the gaps when `SCRAPER_URL` is set |
-| `/api/links/:id`       | DELETE | undo a capture (scoped to the token's user)            |
-| `/api/lookup?url=`     | GET    | `{ found: false }` or `{ found: true, link: { id, url, title, source, created_at } }` — read-only check using the same matching as capture (± trailing slash; X status / Pinterest pin ids) |
-| `/api/spaces`          | GET    | `[{ id, name }]`                                       |
-| `/api/tags`            | GET    | `[{ id, name }]`                                       |
+| Route                      | Method | Body / result |
+| -------------------------- | ------ | ------------- |
+| `/api/capture`             | POST   | `{ url, title?, description?, image?, favicon?, note?, source?, sourceId?, list? \| lists?, capturedBy?, client?, spaceId?, tagIds? }` → `{ link, duplicate, listsAdded, attached: { space, tags } }`: 201 when new, 200 with `duplicate: true` when the same item was already saved. Client metadata wins; memex-scraper fills the gaps when `SCRAPER_URL` is set |
+| `/api/links/:id`           | DELETE | undo a capture (the token's user only); 404 if there's nothing to delete |
+| `/api/links/:id/spaces`    | POST   | `{ spaceId }` → file a saved link into a space (idempotent) |
+| `/api/lookup?url=`         | GET    | `{ found: false }` or `{ found: true, link }`, read-only, same matching as capture |
+| `/api/spaces`              | GET    | `[{ id, name }]` |
+| `/api/tags`                | GET    | `[{ id, name }]` |
 
-**Dedupe:** before inserting, the worker looks for the same URL (± trailing
-slash). For X posts and Pinterest pins it matches on the post/pin id, so
-`x.com/a/status/1` and `twitter.com/i/web/status/1` count as one link.
-`source` is stored on `links.source` (`extension`, `x:bookmark`,
-`pinterest:save`; NULL = saved in the app).
+A `link` is `{ id, url, title, description, favicon_url, preview_image_url,
+source, source_id, lists, captured_by, captured_client, url_key, created_at }`.
 
-CORS is wide open (`*`) by design — access control is the token, so clients
-(extension pages, scripts) work from any origin without preregistration.
+**Capture fields** (vocabulary in `CONTEXT.md` → Sources):
+
+- `source`: `x` · `pinterest` · `youtube` · `web`. The server works it out from
+  the URL; a value the client sends must agree. v0.2 tags (`x:bookmark`,
+  `pinterest:save`, `extension`) are still accepted and translated.
+- `sourceId`: the post / pin / video id. Must match the URL.
+- `list` / `lists`: `bookmarked` · `saved` · `liked`. Merged into an existing link.
+- `capturedBy`: `extension` · `resync` · `share` · `api` (default `api`). `app`
+  and `agent` are set by servers, never claimed by a client.
+- `client`: free-form client name, e.g. `memex-extension/0.3.0`.
+- `spaceId`, `tagIds`: UUIDs, checked for ownership before anything is written
+  (404 if not the user's). Applied to duplicates too.
+
+**Dedupe**, in order: the same `(source, source_id)` (unique in the database),
+the same item under another URL (`twitter.com/i/web/status/1` ≡
+`x.com/a/status/1`; `youtu.be/ID` ≡ `watch?v=ID` ≡ `/shorts/ID`), then the same
+normalized URL (no scheme, `www.`, trailing slash, fragment or tracking
+parameters like `utm_*` / `fbclid`). Platform items are stored at their
+canonical URL. Links saved before 2026-11-01 have no `source_id`/`url_key`
+and are still matched by URL.
+
+## Code layout
+
+- `src/index.ts`: routing, auth, rate limit, error mapping
+- `src/db.ts`: PostgREST client and `userScope(db, userId)`, the one door to
+  user data: it adds `user_id=eq.<token's user>` to every read, update and
+  delete and stamps `user_id` on every insert
+- `src/store.ts`: the `CaptureStore` adapter over `userScope`
+- `src/scraper.ts`: memex-scraper enrichment
+- The rules themselves (identify, normalize, validate, dedupe) are
+  `@memex/core/capture` (`packages/core/src/capture/`), so the hosted MCP
+  server's write tools call the same `createCaptureService`
+- Tests: `src/*.test.ts`, run by the root `npm test`
 
 ## Deploy
 
@@ -41,13 +71,14 @@ Set `SCRAPER_URL` in `wrangler.jsonc` to your deployed memex-scraper URL so
 captures get titles/descriptions/preview images. Apply the token table first:
 
 ```bash
-supabase db push   # applies api_tokens + links.source migrations
+supabase db push   # applies api_tokens, links.source and capture provenance migrations
 ```
 
 ## Local dev
 
 ```bash
-npm run dev   # http://localhost:8788
+npm run dev   # http://localhost:8788 — still talks to the production database,
+              # so label anything you create with [test] (CLAUDE.md → Safety rules)
 # secrets for dev go in api/.dev.vars (gitignored):
 #   SUPABASE_SERVICE_KEY=...
 curl -X POST http://localhost:8788/api/capture \
@@ -61,5 +92,13 @@ curl -X POST http://localhost:8788/api/capture \
   (`api_tokens` table). Revocation = deleting the row (Settings UI).
 - The service-role key exists only as a Cloudflare secret — never in the repo
   or any client.
-- The worker verifies row ownership explicitly (`user_id` scoping on every
-  query) since the service role bypasses RLS.
+- The service role bypasses RLS, so every user-data query goes through
+  `userScope` (`src/db.ts`), and join rows (space membership, tags) are only
+  written after both ids are ownership-checked.
+- Every id that reaches a filter is validated first: UUIDs for links, spaces
+  and tags; platform patterns for source ids; tokens must look like `mx_…`
+  before they're hashed and looked up.
+- Bodies over 64 KB are refused. Each token is rate-limited to about 120
+  requests a minute (`ratelimits` in `wrangler.jsonc`; per Cloudflare
+  location, so a brake rather than a quota).
+- Database errors are logged and returned as a generic 502, never echoed.

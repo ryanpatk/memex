@@ -9,5 +9,7 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Tests run under the root Vitest (npm test); they import vitest, which api/ doesn't install.
+  "exclude": ["src/**/*.test.ts"]
 }
