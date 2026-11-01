@@ -20,6 +20,13 @@ describe('sourceOf', () => {
     expect(sourceOf({ url: 'https://t.co/abc', source: 'x:bookmark' })).toBe(SOURCES.x);
   });
 
+  it('reads the platform memex-api writes since 2026-11-01', () => {
+    expect(sourceOf({ url: 'https://t.co/abc', source: 'x' })).toBe(SOURCES.x);
+    expect(sourceOf({ url: 'https://i.pinimg.com/a.jpg', source: 'pinterest' })).toBe(SOURCES.pinterest);
+    expect(sourceOf({ url: 'https://example.com/v', source: 'youtube' })).toBe(SOURCES.youtube);
+    expect(sourceOf({ url: 'https://example.com/a', source: 'web' }).key).toBe('web');
+  });
+
   it('treats extension captures and lookalike hosts as the web', () => {
     expect(sourceOf({ url: 'https://example.com', source: 'extension' }).key).toBe('web');
     expect(sourceOf({ url: 'https://notx.com/a', source: null }).key).toBe('web');

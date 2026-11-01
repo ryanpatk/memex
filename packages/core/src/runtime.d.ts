@@ -12,6 +12,7 @@ declare class URL {
   href: string;
   readonly origin: string;
   pathname: string;
+  port: string;
   protocol: string;
   search: string;
   readonly searchParams: URLSearchParams;

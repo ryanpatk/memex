@@ -5,9 +5,9 @@ import type { LinkWithTag } from './types';
  * The source registry (CONTEXT.md: Source): which platform a saved link came
  * from. The Journal folds back-to-back saves from one platform into a run and
  * shows platform saves as pictures; the filing suggester ignores aggregator
- * hosts. Captures from memex-api tag `links.source` (`extension`,
- * `x:bookmark`, `pinterest:save`); links saved in the app have no tag, so the
- * host decides.
+ * hosts. memex-api writes the platform to `links.source` (`x`, `pinterest`,
+ * `youtube`, `web`; older captures hold a tag like `x:bookmark`); links saved
+ * in the app have none, so the host decides.
  */
 
 export type SourceKey = 'x' | 'pinterest' | 'youtube' | 'web';
@@ -23,12 +23,13 @@ export const SOURCES: Readonly<Record<Exclude<SourceKey, 'web'>, Source>> = {
 /** A URL's host without `www.`. */
 export const hostOf = (url: string) => getHostname(url).replace(/^www\./, '');
 
-/** Which platform a link came from: the capture tag when present, else its host. */
+/** Which platform a link came from: `links.source` (platform or legacy tag) when present, else its host. */
 export const sourceOf = (link: Pick<LinkWithTag, 'url' | 'source'>): Source => {
   const host = hostOf(link.url);
-  const tag = link.source ?? '';
-  if (tag.startsWith('pinterest') || /(^|\.)pinterest\.|^pin\.it$/.test(host)) return SOURCES.pinterest;
-  if (tag.startsWith('x:') || /^(x|twitter)\.com$/.test(host)) return SOURCES.x;
-  if (/(^|\.)youtube\.com$|^youtu\.be$/.test(host)) return SOURCES.youtube;
+  // 'x' / 'pinterest' / 'youtube', or the legacy '<platform>:<list>' tag.
+  const platform = (link.source ?? '').split(':')[0];
+  if (platform === 'pinterest' || /(^|\.)pinterest\.|^pin\.it$/.test(host)) return SOURCES.pinterest;
+  if (platform === 'x' || /^(x|twitter)\.com$/.test(host)) return SOURCES.x;
+  if (platform === 'youtube' || /(^|\.)youtube\.com$|^youtu\.be$/.test(host)) return SOURCES.youtube;
   return { key: 'web', label: host, one: 'link', many: 'links' };
 };

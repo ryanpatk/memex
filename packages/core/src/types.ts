@@ -57,8 +57,22 @@ export interface Link {
   preview_image_url?: string
   tag_id?: string
   is_super_favorite?: boolean
-  /** Capture origin set by memex-api ('extension', 'x:bookmark', 'pinterest:save'); null = saved in the app. */
+  /**
+   * Platform the link came from: 'x' · 'pinterest' · 'youtube' · 'web' (set by
+   * memex-api since 2026-11-01). Older captures hold a legacy tag ('extension',
+   * 'x:bookmark', 'pinterest:save'; read it with parseSourceTag); null = saved in the app.
+   */
   source?: string | null
+  /** The platform's own id (post / pin / video id); with source, the dedupe key. */
+  source_id?: string | null
+  /** Which of your lists on the source held it: 'bookmarked' · 'saved' · 'liked'. */
+  lists?: string[]
+  /** How it arrived: 'app' · 'extension' · 'resync' · 'share' · 'api' · 'agent'; null = before 2026-11-01. */
+  captured_by?: string | null
+  /** Client name, e.g. 'memex-extension/0.3.0'. */
+  captured_client?: string | null
+  /** Normalized URL (normalizeUrlKey), the dedupe fallback; null on older rows. */
+  url_key?: string | null
   created_at: string
   updated_at: string
   order_index: number
@@ -223,6 +237,12 @@ export interface UpdateProfileData {
 export interface CreateLinkData {
   project_id?: string
   url: string
+  source?: string | null
+  source_id?: string | null
+  lists?: string[]
+  captured_by?: string | null
+  captured_client?: string | null
+  url_key?: string | null
   title?: string
   description?: string
   favicon_url?: string

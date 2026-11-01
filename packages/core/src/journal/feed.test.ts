@@ -193,6 +193,21 @@ describe('toParts', () => {
     expect(run.kind === 'run' && run.source.key).toBe('x');
   });
 
+  it('folds new-style captures (platform in source) with older tagged ones', () => {
+    const parts = toParts(
+      linkEntries([
+        xLink('1', local(2026, 10, 25, 9)),
+        xLink('2', local(2026, 10, 25, 9, 1), { source: 'x', source_id: '2', lists: ['bookmarked'], captured_by: 'extension' }),
+        link('3', { url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', source: 'youtube', created_at: local(2026, 10, 25, 9, 2), preview_image_url: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg' }),
+        link('4', { url: 'https://www.youtube.com/watch?v=aaaaaaaaaaa', source: 'youtube', created_at: local(2026, 10, 25, 9, 3) }),
+      ]),
+      now,
+    );
+    expect(kinds(parts)).toEqual(['day', 'run(2)', 'run(2)']);
+    const yt = parts[2];
+    expect(yt.kind === 'run' && `${yt.source.label} ${yt.source.many}`).toBe('YouTube videos');
+  });
+
   it('leaves a single platform save as a plain entry', () => {
     expect(kinds(toParts(linkEntries([xLink('1', local(2026, 10, 25, 9))]), now))).toEqual(['day', 'link']);
   });
