@@ -12,6 +12,10 @@ import { RouterProvider } from 'react-router-dom';
 import { initCanvasColor } from './utils/canvasColor';
 import { initSound } from './utils/sound';
 import { initLinkCaptions } from './utils/linkCaptions';
+import { installChunkReloadHandler } from './utils/chunkReload';
+
+// First, so a stale tab after a deploy reloads instead of going blank
+installChunkReloadHandler();
 
 initCanvasColor();
 initLinkCaptions();
