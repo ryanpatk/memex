@@ -1,6 +1,18 @@
 # TODO
 
-Working checklist to keep memex moving. Updated 2026-10-18 — prune freely as things land.
+Working checklist to keep memex moving. Updated 2026-11-01 — prune freely as things land.
+
+## 🚀 v1 (scope approved 2026-11-01)
+
+v1 stays on Supabase + Cloudflare Workers. Details and phase mapping: `ROADMAP.md` §5 “Releases” and decisions 18–20. v2 (later): leave Supabase for the vault backend, Tauri desktop app, embeddings.
+
+- [x] **Safety rails** ✓ 2026-11-01 — `scripts/backup-supabase.sh` (first backup in `~/memex-backups/`, restore tested locally, `docs/backups.md`); gitleaks on every push/PR + local command (`SETUP.md`); “Safety rules for agents” in `CLAUDE.md`; signed-out app routes go to sign-in and come back
+- [ ] **Hosted MCP on memex-api** (headline) — Grok Bots read and store project context; token auth first (ROADMAP Phase 7a, 7d)
+- [ ] **Journal-first web for desktop** — finish Phase 1 (space board, Library views, drag to space, Tasks view)
+- [ ] **Live capture** — extension + memex-api deployed and verified on the real sites (Phase 3; memex-api first deploy ✓ 2026-11-01, `docs/extension-setup.md`)
+- [ ] **Walk-away export** — `scripts/export-vault.mjs` + `docs/vault-format.md` (Phase 2)
+- [ ] **React Native (Expo) app on TestFlight** (Phase 6, on `packages/core`; data path is decision 20)
+- [ ] **Portfolio-ready screens** — v1 screens will appear on Ryan's public portfolio; plan demo data so screenshots don't show real jots
 
 ## 🔑 Your action items (need your credentials / accounts — code is ready and waiting)
 
@@ -16,7 +28,9 @@ These unlock everything built this session. Roughly 10 minutes total, in order:
   - [ ] Re-test a Pinterest pin through the *deployed* worker (worked locally; datacenter IPs can differ — fallback plan is in `scraper/README.md`)
 - [ ] **Browser extension v0.2 setup** — full checklist in `docs/browser-extension-plan.md` → “Ops checklist”: `supabase db push` (adds `links.source`), deploy `api/` (service key secret + `SCRAPER_URL`), create an access token, `cd extension && npm install && npm run build`, load `extension/.output/chrome-mv3` unpacked, paste API address + token
 - [ ] **Backfill old links** — `SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… SCRAPER_URL=… node scripts/backfill-metadata.mjs --dry-run` (then without `--dry-run`)
-- [ ] **Rotate the GitHub OAuth secret** — `.env` has `VITE_GITHUB_CLIENT_SECRET` in it; `VITE_`-prefixed vars are bundled into the client, so treat it as exposed. Rotate it in GitHub and keep the secret out of frontend env
+- [ ] **Rotate the GitHub OAuth secret** — `.env` has `VITE_GITHUB_CLIENT_SECRET` in it; `VITE_`-prefixed vars are bundled into the client, so treat it as exposed. Rotate it in GitHub and keep the secret out of frontend env. *2026-11-01: `.env` no longer has the variable and the gitleaks history scan is clean, but any build made while it was set shipped it, so rotation still stands unless it's already done*
+- [ ] **Back up regularly** — `scripts/backup-supabase.sh` (needs Docker Desktop running; 2026-11-01 run took ~1 min, 2.1 MB). Always before `supabase db push`. Consider a weekly reminder or launchd job
+- [ ] **Migration history doesn't replay from scratch** — found 2026-11-01: a fresh local `supabase start` stops at `20260204134500_add_tags_and_profiles.sql`, so a local stack can't be built from `supabase/migrations/` alone (production is fine; restoring a backup's `schema.sql` works). Decide whether to squash into a baseline migration
 
 ## ✅ Verify after setup
 
@@ -73,14 +87,14 @@ These unlock everything built this session. Roughly 10 minutes total, in order:
 
 ## 🗺 Standing roadmap — now lives in `ROADMAP.md` (2026-10-24)
 
-Phases there: 1 Journal-first web → 2 `packages/core` seam + vault export → 3 extension (parallel) → 4 vault backend (leave Supabase) → 5 Tauri desktop (re-sync + mirror) → 6 React Native app → 7 agents (MCP). Older items, re-homed:
+Phases there: 1 Journal-first web → 2 `packages/core` seam + vault export → 3 extension (parallel) → 4 vault backend (leave Supabase) → 5 Tauri desktop (re-sync + mirror) → 6 React Native app → 7 agents (MCP). *2026-11-01: split into releases. v1 = 1 (desktop), 2, 3, 6 (TestFlight), 7a–7d; v2 = 4, 5, offline sync, 7e embeddings.* Older items, re-homed:
 
 - [ ] Profiles → spaces rename: **UI copy only**. Skip the DB rename; the tables go away in Phase 4 and the vault uses `spaces/` from the start
 - [ ] Attach-to-space modals → replaced by filing in the Journal + Inbox (Phase 1); retire legacy project views
 - [x] Cross-primitive search — inherent to the stream / Library
-- [ ] Supabase exit → `ROADMAP.md` Phase 4 (local-first event log + markdown vault in R2, not D1/Neon tables)
-- [ ] Encryption → Later; mobile polish → the PWA bridges until the Expo app (Phase 6). PWA hardening landed 2026-09-19: re-add to home screen to pick up the new manifest/meta; test bottom bar, safe areas, and input zoom on device
-- [ ] Testing setup → Vitest arrives with `packages/core` (Phase 2); Playwright later
+- [ ] Supabase exit → `ROADMAP.md` Phase 4 (local-first event log + markdown vault in R2, not D1/Neon tables) — **v2** (2026-11-01)
+- [ ] Encryption → Later; mobile polish → the PWA bridges until the Expo app (Phase 6, v1 on TestFlight). PWA hardening landed 2026-09-19: re-add to home screen to pick up the new manifest/meta; test bottom bar, safe areas, and input zoom on device
+- [ ] Testing setup → Vitest arrives with `packages/core` (Phase 2); Playwright later. First candidate: `src/utils/authRedirect.ts` (`safeNextPath`)
 
 ## 📌 Parking lot / open questions
 

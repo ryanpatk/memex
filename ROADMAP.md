@@ -4,6 +4,8 @@
 
 Mockups for the UI direction: `docs/mocks/2026-10-24-journal-first.html` (open it in a browser).
 
+**2026-11-01 — scope split into v1 and v2 (approved by Ryan).** v1 stays on Supabase + Cloudflare Workers and ships: Journal-first web for desktop, live capture (extension + memex-api), a hosted MCP server on memex-api so Grok Bots can read and store project context (the headline goal), a React Native (Expo) app on TestFlight, and the walk-away export. v2: leaving Supabase (the vault backend), the Tauri desktop app, embeddings. The requirements and architecture below are unchanged as the destination; §5 says which release each phase belongs to, and decision 18 records the split. v1 is single-user, but its screens will appear on Ryan's public portfolio.
+
 ---
 
 ## 1. What memex is for
@@ -182,9 +184,20 @@ Rough effort, biggest first: vault backend ≈ 2× mobile v1 ≈ 2× desktop re-
 
 Each phase ships something usable. Tracks marked **parallel** don't block the main line.
 
+### Releases (2026-11-01)
+
+The phases below were written as one line toward the vault. On 2026-11-01 they were split into two releases (decision 18). The phase text is kept as written; each heading now says where it lands.
+
+| Release | Phases | What it means |
+| --- | --- | --- |
+| **v1** — on Supabase + Cloudflare Workers | 1 (desktop web), 2, 3, 6 (TestFlight), 7a–7d | Journal-first desktop web · live capture via extension + memex-api · hosted MCP on memex-api (headline: Grok Bots read and store project context) · Expo app on TestFlight · walk-away export |
+| **v2** | 4, 5, 6 offline sync, 7e | Vault backend (leave Supabase) · Tauri desktop (re-sync, mirror, shortcut) · offline replicas · embeddings / semantic search |
+
+Done for v1 so far: safety rails ✓ 2026-11-01 (production backups with a tested restore, gitleaks in CI, safety rules for agents in `CLAUDE.md`). Suggested order for the rest, not yet confirmed by Ryan: MCP on memex-api (7a, 7d, the headline) → finish Phase 1 desktop → Phase 2 export → Expo app → TestFlight, with Phase 3 in parallel.
+
 ### Phase 0 — Plan ✓ 2026-10-24
 
-### Phase 1 — Journal-first web, on today's stack
+### Phase 1 — Journal-first web, on today's stack · **v1 (desktop)**
 Validate the product direction before rebuilding the plumbing.
 - [x] Round 5 `/mocks` with real data: Journal home (chat order, §8 #1), space board, Library table ✓ 2026-10-24 — picks in §8 #11–16
 - [x] Feed derived from existing tables: jots (`self_messages`) interleaved with links/notes/tasks by `created_at`; auto-saves grouped (“3 pins saved on Pinterest”) using `links.source` ✓ 2026-10-25 (`src/utils/journalFeed.ts`, 11D entries in `components/journal/`)
@@ -194,9 +207,10 @@ Validate the product direction before rebuilding the plumbing.
 - [x] ~~Back-office rail~~ → decision 12B: Inbox in the sidebar and a header button, both only while suggestions wait; the tray opens beside the feed (`/?inbox=1`); Tasks in the sidebar (Library filtered to tasks for now) ✓ 2026-10-25
 - [ ] Space page becomes a board (pinned sites · tasks · notes · saves) with a scoped Journal column
 - [ ] Library: Table view and saved views (Unfiled, From X, From YouTube)
-- [ ] Mobile web gets the same Journal-first layout (bridge until Phase 6)
+- [ ] Mobile web gets the same Journal-first layout (bridge until Phase 6) — *2026-11-01: not a v1 goal; v1 is desktop web and the phone gets the Expo app. Keep mobile web usable, no new layout work*
 
-### Phase 2 — The seam + walk-away export
+### Phase 2 — The seam + walk-away export · **v1**
+*2026-11-01: the export script is the v1 walk-away guarantee; `packages/core` is what the Expo app shares with the web. The `Repository` interface keeps Supabase as the only adapter in v1.*
 - [ ] npm workspaces: `apps/web`, `packages/core`; `api/`, `scraper/`, `extension/` join the workspace
 - [ ] Move types, `streamItems`, entry model, composer parsing, filters, source registry into core; Vitest for them (first tests in the repo)
 - [ ] `Repository` interface (`entries`, `links`, `notes`, `tasks`, `spaces`, `tags`, `views`, `auth`); Supabase becomes one adapter
@@ -205,14 +219,16 @@ Validate the product direction before rebuilding the plumbing.
 - [ ] `docs/vault-format.md` v1 + fixture vault + a parser in core with a round-trip test
 - [ ] **Export script** (`scripts/export-vault.mjs`): Supabase → vault folder, including downloaded images. Run it on demand or nightly. From here on, walk-away is real and agents can analyze the folder (§3.6 files path)
 
-### Phase 3 — Capture: extension (parallel)
+### Phase 3 — Capture: extension (parallel) · **v1**
+*2026-11-01: memex-api's first deploy and `GET /api/lookup` landed (commit `28f283c`, guide in `docs/extension-setup.md`).*
 - [ ] Ops: deploy v0.2 for real (checklist in `docs/browser-extension-plan.md`)
 - [ ] Data model: `source` (platform) + `sourceId` + `lists` + `capturedBy` instead of the single `links.source` string; dedupe on `(source, sourceId)`; keep the raw `capture` block
 - [ ] YouTube: likes → link with thumbnail, channel, duration (port pond's hooks, keep MIT attribution)
 - [ ] Already-saved badge (`GET /api/lookup`), post-capture space/tags in the popup, per-source and per-board default space
 - [ ] Captures appear in the Journal as grouped auto-save entries (falls out of Phase 1)
 
-### Phase 4 — Vault backend (leave Supabase)
+### Phase 4 — Vault backend (leave Supabase) · **v2**
+*2026-11-01: moved to v2. Until then, production backups are `scripts/backup-supabase.sh` → `~/memex-backups/` (restore tested, `docs/backups.md`), which covers 4g's intent for v1.*
 - [ ] 4a Spike (time-boxed): custom outbox/change-feed on a Durable Object vs LiveStore, on web + Expo, with 5k fake items. Pick one
 - [ ] 4b Writer: Durable Object applies changes in order, journals multi-file writes to R2, emits the change feed, maintains the SQLite/FTS index; “rebuild index from vault” command + CI test
 - [ ] 4c `api/` grows into the backend; `/api/capture` keeps its contract so the extension doesn't change
@@ -222,7 +238,8 @@ Validate the product direction before rebuilding the plumbing.
 - [ ] 4g Backups: R2 versioning or nightly snapshot; document restore and test it once
 - [ ] 4h Retire Supabase: delete the adapter, the migrations folder becomes history, cancel the project
 
-### Phase 5 — Desktop app (Tauri)
+### Phase 5 — Desktop app (Tauri) · **v2**
+*2026-11-01: moved to v2, including the re-sync safety net (5b–5d) that could have started after Phase 3.*
 Re-sync only needs `/api/capture`, so 5b–5d can start after Phase 3, before the backend move. The mirror needs Phase 4.
 - [ ] 5a Tauri shell around the web build; device pairing; tray + global jot shortcut; auto-update from GitHub Releases
 - [ ] 5b Re-sync engine: scheduler, per-account scope, watermark + early stop, rate governor with persisted cooldowns, challenge detection, status line + history
@@ -230,21 +247,23 @@ Re-sync only needs `/api/capture`, so 5b–5d can start after Phase 3, before th
 - [ ] 5d Collections → spaces mapping (Pinterest board → space)
 - [ ] 5e Mirror `~/memex` from the change feed (after Phase 4); optional nightly git commit; later, folder watching for Obsidian edits
 
-### Phase 6 — React Native app (Expo)
+### Phase 6 — React Native app (Expo) · **v1 on TestFlight**
+*2026-11-01: v1 ships to TestFlight on today's backend; offline replicas + sync wait for the v2 vault backend. How the app reaches data in v1 is open (decision 20).*
 - [ ] App shell: Expo Router tabs (Journal · Library · Tasks), theme from core tokens, dark mode
 - [ ] Journal feed + composer (keyboard-avoiding, chat-style list), entry cards per type
 - [ ] Share extension (iOS) / share target (Android) → entry, optional space
 - [ ] Library: spaces row + masonry grid; link detail; open in browser
 - [ ] Note view/edit via a DOM component wrapping the web `MarkdownEditor`
-- [ ] Offline + sync via core; TestFlight
+- [ ] Offline + sync via core (**v2**, needs Phase 4); TestFlight (**v1**)
 
-### Phase 7 — Agents (MCP)
+### Phase 7 — Agents (MCP) · **v1 (7a–7d), v2 (7e)**
 The files path works from Phase 2. The server path:
+*2026-11-01: this is v1's headline goal: a hosted MCP server on memex-api so Grok Bots (and Claude) can read and store project context. In v1 it runs on memex-api over Supabase rather than the vault index (decision 19). 7b only if a client needs OAuth; Grok Bots and Claude Code use bearer tokens.*
 - [ ] 7a Remote MCP on the Worker with read tools (§3.6), bearer-token auth; test from Claude Code
 - [ ] 7b OAuth so it works as a claude.ai / Claude Desktop custom connector (reuse passkey sign-in)
 - [ ] 7c `get_images` returning thumbnails; canned prompts (weekly review, recent themes, space summary)
 - [ ] 7d Write tools: `add_jot` direct; everything else lands as Inbox proposals you approve
-- [ ] 7e Semantic search: embeddings (Workers AI + Vectorize, or local in the desktop app), `similar` / `clusters` / `themes`
+- [ ] 7e (**v2**) Semantic search: embeddings (Workers AI + Vectorize, or local in the desktop app), `similar` / `clusters` / `themes`
 
 ### Later
 Encryption at rest for the vault, two-way Obsidian edits, more sources (Are.na, Reddit, Instagram, Cosmos: pond has harvesters for each), new-tab page, opt-in AI filing suggestions powered by the same embeddings.
@@ -258,6 +277,7 @@ Encryption at rest for the vault, two-way Obsidian edits, more sources (Are.na, 
 - **The extension, desktop app and any new client talk to `memex-api`, never to Supabase.**
 - **UI work on the stream should assume it becomes the Library**, and Journal work should assume it becomes home.
 - **Use the words in `CONTEXT.md`** in code, copy and docs.
+- **Follow the safety rules in `CLAUDE.md`** (added 2026-11-01): back up before any migration, additive migrations only without Ryan's sign-off, never delete or bulk-modify Ryan's data unless he asks, never commit secrets, label test data.
 
 ## 7. What stays true from VISION.md
 
@@ -268,9 +288,9 @@ The primitives (note, link, task), spaces as cross-cutting contexts, one tag voc
 | # | Decision | Options | Status |
 | --- | --- | --- | --- |
 | 1 | Feed direction | Newest at bottom, composer below (chat) · newest at top (today's Journal) | **Newest at bottom, composer below** (2026-10-24) |
-| 2 | Where the vault lives | R2 in your Cloudflare account + desktop mirror · synced folder only · git | **R2 + mirror** (2026-10-24) |
-| 3 | Desktop app | Browser only · Tauri | **Tauri**, for re-sync, mirror and global shortcut (2026-10-24) |
-| 4 | Sync engine | Custom outbox/change feed on the writer · LiveStore | Open, decided in the 4a spike. Leaning custom |
+| 2 | Where the vault lives | R2 in your Cloudflare account + desktop mirror · synced folder only · git | **R2 + mirror** (2026-10-24). Lands in v2 (2026-11-01) |
+| 3 | Desktop app | Browser only · Tauri | **Tauri**, for re-sync, mirror and global shortcut (2026-10-24). Lands in v2 (2026-11-01) |
+| 4 | Sync engine | Custom outbox/change feed on the writer · LiveStore | Open, decided in the 4a spike (v2). Leaning custom |
 | 5 | Web platform | Keep Vite + React DOM · Expo web | Keep Vite |
 | 6 | AI in filing | None · rules · opt-in AI | Rules first; AI later, on the MCP/embeddings work |
 | 7 | Tasks tab on mobile | Own tab · saved view in Library | Leaning own tab |
@@ -284,3 +304,6 @@ The primitives (note, link, task), spaces as cross-cutting contexts, one tag voc
 | 15 | Library views | 15A tabs over the content · 15B nested in the sidebar | **15A**; the Table ships as a toggle in either view (2026-10-24) |
 | 16 | Phone layout | 16A tab bar · others | **16A tab bar**: Journal, Library, Spaces, Inbox; composer above the tab bar (2026-10-24) |
 | 17 | Desktop Journal layout | 17A as shipped · 17B notebook page + grouped jots · 17C + time gutter · 17D + today column | Open (mocks round 6, `/mocks`, 2026-10-28); recommended **17B** |
+| 18 | Release split | One line of phases toward the vault · v1 on today's stack, then v2 | **v1 / v2** (2026-11-01, approved by Ryan). v1 on Supabase + Cloudflare Workers: Journal-first desktop web, live capture (extension + memex-api), hosted MCP on memex-api for Grok Bots (headline), Expo app on TestFlight, walk-away export. v2: vault backend (leave Supabase), Tauri desktop, embeddings. v1 is single-user; its screens go on Ryan's public portfolio |
+| 19 | Where v1's MCP server runs | memex-api Worker over Supabase · wait for the vault index | **memex-api over Supabase** (2026-11-01, follows from 18); tools keep the §3.6 shape so they move to the vault index in v2 unchanged |
+| 20 | How the v1 Expo app reaches data | Through memex-api (§6: new clients never talk to Supabase) · Supabase adapter in `packages/core` | Open (2026-11-01). §6 points to memex-api |
