@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useSession } from '../../context/SessionContext';
 import supabase from '../../supabase';
 import AppLogo from '../../components/AppLogo';
 import DarkModeToggle from '../../components/DarkModeToggle';
-import { DEFAULT_MODULE_PATH } from '../../constants/modules';
+import { nextPathFromSearch, rememberNextPath } from '../../utils/authRedirect';
 
 const GitHubIcon = () => (
   <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
@@ -18,6 +18,9 @@ const GitHubIcon = () => (
 
 const SignInPage = () => {
   const { session } = useSession();
+  const location = useLocation();
+  // The page that sent you here (`?next=`); signing in returns to it.
+  const nextPath = nextPathFromSearch(location.search);
   const [status, setStatus] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formValues, setFormValues] = useState({
@@ -25,7 +28,7 @@ const SignInPage = () => {
     password: '',
   });
 
-  if (session) return <Navigate to={DEFAULT_MODULE_PATH} replace />;
+  if (session) return <Navigate to={nextPath} replace />;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormValues({ ...formValues, [e.target.name]: e.target.value });
@@ -51,6 +54,7 @@ const SignInPage = () => {
   const handleGitHubSignIn = async () => {
     setIsSubmitting(true);
     setStatus('Redirecting to GitHub…');
+    rememberNextPath(nextPath);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'github',
       options: {
@@ -72,12 +76,6 @@ const SignInPage = () => {
     <div className="app-surface page-shell">
       <div className="page-center">
         <div className="page-card">
-          <div className="page-card-section">
-            <Link to="/" className="btn-secondary btn-compact">
-              ← Back
-            </Link>
-          </div>
-
           <header className="page-card-header">
             <div className="page-card-header-row">
               <div>

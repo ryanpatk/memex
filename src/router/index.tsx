@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { createBrowserRouter } from "react-router-dom";
 import RootRoute from "./RootRoute.tsx";
 import SignInPage from "../pages/auth/SignInPage.tsx";
 import SignUpPage from "../pages/auth/SignUpPage.tsx";
@@ -10,9 +10,10 @@ import MocksPage from "../pages/MocksPage.tsx";
 import NotFoundPage from "../pages/404Page.tsx";
 import AuthProtectedRoute from "./AuthProtectedRoute.tsx";
 import LegacyModuleRedirect from "./LegacyModuleRedirect.tsx";
+import OAuthLanding from "./OAuthLanding.tsx";
 import MemexShell from "../components/MemexShell.tsx";
 import Providers from "../Providers.tsx";
-import { JOURNAL_PATH, LEGACY_HOME_PATH, LIBRARY_PATH } from "../constants/modules.ts";
+import { LEGACY_HOME_PATH, LIBRARY_PATH } from "../constants/modules.ts";
 
 const router = createBrowserRouter([
   // I recommend you reflect the routes here in the pages folder
@@ -20,7 +21,7 @@ const router = createBrowserRouter([
     path: "/",
     element: <Providers />,
     children: [
-      // `/`: the Journal when signed in (home), the landing page otherwise
+      // `/`: the Journal when signed in (home), sign-in otherwise
       {
         path: "/",
         element: <RootRoute />,
@@ -33,7 +34,7 @@ const router = createBrowserRouter([
         path: "/auth/sign-up",
         element: <SignUpPage />,
       },
-      // Auth Protected routes
+      // Auth Protected routes: signed out → /auth/sign-in?next=<requested page>
       {
         path: "/",
         element: <AuthProtectedRoute />,
@@ -84,10 +85,10 @@ const router = createBrowserRouter([
             path: "/mocks",
             element: <MocksPage />,
           },
-          // Legacy dashboard URL (OAuth redirects still target it)
+          // GitHub OAuth returns here; continues to the page sign-in started from
           {
             path: "/dashboard",
-            element: <Navigate to={JOURNAL_PATH} replace />,
+            element: <OAuthLanding />,
           },
           {
             path: "/project/:projectId",

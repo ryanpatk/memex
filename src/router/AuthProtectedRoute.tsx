@@ -1,15 +1,17 @@
-import { Outlet } from "react-router-dom";
-import NotFoundPage from "../pages/404Page";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useSession } from "../context/SessionContext";
+import { signInPathFor } from "../utils/authRedirect";
 
+/** Signed out → sign-in, which brings you back to the page you asked for. */
 const AuthProtectedRoute = () => {
   const { session, authHydrated } = useSession();
+  const location = useLocation();
   if (!authHydrated) {
     return null;
   }
   if (!session) {
-    // or you can redirect to a different page and show a message
-    return <NotFoundPage />;
+    const requested = `${location.pathname}${location.search}${location.hash}`;
+    return <Navigate to={signInPathFor(requested)} replace />;
   }
   return <Outlet />;
 };
