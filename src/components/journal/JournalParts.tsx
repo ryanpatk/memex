@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
-import { Check, Ellipsis, FileText, FolderInput, ListTodo, StickyNote, Trash2 } from 'lucide-react';
+import { Bot, Check, Ellipsis, FileText, FolderInput, ListTodo, StickyNote, Trash2 } from 'lucide-react';
 import {
   type LinkWithTag,
   type SelfMessage,
@@ -240,11 +240,26 @@ const SpaceChip = ({ space }: { space: JournalSpace }) => (
   </span>
 );
 
+/** The agent client that wrote an entry (MCP write tools), or null when the user did. */
+const agentClient = (entry: Entry): string | null => {
+  const row = entry.kind === 'jot' ? entry.jot : entry.kind === 'link' ? entry.link : entry.kind === 'note' ? entry.note : entry.task;
+  return row.captured_by === 'agent' ? row.captured_client || 'an agent' : null;
+};
+
 const Filing = ({ entry, filer, handlers }: { entry: Entry; filer: Filer; handlers: JournalHandlers }) => {
   const suggestion = filer.suggest(entry);
-  if (!entry.spaces.length && !suggestion) return null;
+  const via = agentClient(entry);
+  if (!entry.spaces.length && !suggestion && !via) return null;
   return (
     <div className="jr-filing">
+      {via && (
+        <span className="jr-via" title={`Written by ${via} through memex’s MCP server`}>
+          <Bot aria-hidden="true" />
+          <span className="jr-ellipsis" translate="no">
+            via {via}
+          </span>
+        </span>
+      )}
       {entry.spaces.map((s) => (
         <SpaceChip key={s.id} space={s} />
       ))}

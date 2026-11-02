@@ -8,12 +8,14 @@ import { userDisplayName } from '../utils/userDisplay';
 interface SettingsMenuProps {
   user: AuthUser | null;
   onOpenTokens: () => void;
+  /** Settings → Agent tokens (MCP). */
+  onOpenAgentTokens: () => void;
   onLogout: () => void;
 }
 
 
 /** Account + appearance settings, shared by the sidebar popover and the phone drawer. */
-const SettingsMenu = ({ user, onOpenTokens, onLogout }: SettingsMenuProps) => {
+const SettingsMenu = ({ user, onOpenTokens, onOpenAgentTokens, onLogout }: SettingsMenuProps) => {
   const label = userDisplayName(user);
   const [captionMode, setCaptionMode] = useLinkCaptionMode();
   return (
@@ -50,6 +52,9 @@ const SettingsMenu = ({ user, onOpenTokens, onLogout }: SettingsMenuProps) => {
         </div>
         <button type="button" className="bookmark-account-menu-action" onClick={onOpenTokens}>
           Access tokens…
+        </button>
+        <button type="button" className="bookmark-account-menu-action" onClick={onOpenAgentTokens}>
+          Agent tokens…
         </button>
         <button type="button" className="bookmark-account-menu-action" onClick={onLogout}>
           Log out

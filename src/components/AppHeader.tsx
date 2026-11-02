@@ -2,6 +2,7 @@ import type { AuthUser } from '@memex/core';
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import AgentTokensModal from './AgentTokensModal';
 import ApiTokensModal from './ApiTokensModal';
 import SettingsMenu from './SettingsMenu';
 import { CloseIcon } from './icons';
@@ -65,6 +66,7 @@ const AppHeader = ({
 }: AppHeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isTokensOpen, setIsTokensOpen] = useState(false);
+  const [agentTokensOpen, setAgentTokensOpen] = useState(false);
   const [isNarrow, setIsNarrow] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 899px)').matches,
   );
@@ -179,6 +181,10 @@ const AppHeader = ({
                     setIsMenuOpen(false);
                     setIsTokensOpen(true);
                   }}
+                  onOpenAgentTokens={() => {
+                    setIsMenuOpen(false);
+                    setAgentTokensOpen(true);
+                  }}
                   onLogout={handleLogout}
                 />
               </div>
@@ -188,6 +194,7 @@ const AppHeader = ({
         )}
 
       <ApiTokensModal isOpen={isTokensOpen} onClose={() => setIsTokensOpen(false)} />
+      <AgentTokensModal isOpen={agentTokensOpen} onClose={() => setAgentTokensOpen(false)} />
     </header>
   );
 };

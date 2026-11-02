@@ -14,6 +14,7 @@ import { useSpaceColors } from '../hooks/useSpaceColors';
 import { useSession } from '../context/SessionContext';
 import { repository } from '../data/repository';
 import { FeedbackToast } from './ui';
+import AgentTokensModal from './AgentTokensModal';
 import ApiTokensModal from './ApiTokensModal';
 import SettingsMenu from './SettingsMenu';
 import { userDisplayName } from '../utils/userDisplay';
@@ -67,6 +68,7 @@ const MemexSidebar = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tokensOpen, setTokensOpen] = useState(false);
+  const [agentTokensOpen, setAgentTokensOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const footRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -109,7 +111,7 @@ const MemexSidebar = () => {
   }, [location.pathname]);
 
   const spaces = useMemo(() => profiles ?? [], [profiles]);
-  const { inbox } = useJournal();
+  const { inboxCount } = useJournal();
   const searchParams = new URLSearchParams(location.search);
   const onInbox = location.pathname === JOURNAL_PATH && searchParams.get(INBOX_PARAM) === '1';
 
@@ -212,14 +214,14 @@ const MemexSidebar = () => {
             </span>
             <span className="memex-sidebar-item-label">Library</span>
           </NavLink>
-          {inbox.length > 0 && (
+          {inboxCount > 0 && (
             <NavLink to={`${JOURNAL_PATH}?${INBOX_PARAM}=1`} className={() => itemClass({ isActive: onInbox })}>
               <span className="memex-sidebar-item-icon">
                 <InboxIcon />
               </span>
               <span className="memex-sidebar-item-label">Inbox</span>
-              <span className="memex-sidebar-item-count" aria-label={`${inbox.length} waiting`}>
-                {inbox.length}
+              <span className="memex-sidebar-item-count" aria-label={`${inboxCount} waiting`}>
+                {inboxCount}
               </span>
             </NavLink>
           )}
@@ -345,6 +347,10 @@ const MemexSidebar = () => {
                 setSettingsOpen(false);
                 setTokensOpen(true);
               }}
+              onOpenAgentTokens={() => {
+                setSettingsOpen(false);
+                setAgentTokensOpen(true);
+              }}
               onLogout={handleLogout}
             />
           </div>
@@ -364,6 +370,7 @@ const MemexSidebar = () => {
       </div>
 
       <ApiTokensModal isOpen={tokensOpen} onClose={() => setTokensOpen(false)} />
+      <AgentTokensModal isOpen={agentTokensOpen} onClose={() => setAgentTokensOpen(false)} />
 
       <NewSpaceModal
         isOpen={isCreating}

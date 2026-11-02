@@ -8,12 +8,14 @@ import { useProfileLinkMembership } from './useProfileLinks';
 import { useProfileNoteMembership } from './useProfileNotes';
 import { useProfileTaskMembership } from './useProfileTasks';
 import { useSpaceColors } from './useSpaceColors';
+import { usePendingProposals } from './useProposals';
 import { buildEntries, createFiler, inboxOf, toJournalSpaces } from '@memex/core';
 
 /**
  * The Journal's data: every entry (jots + links + notes + tasks, oldest
- * first), the spaces, the filing suggester and the Inbox. Reads only; the
- * page owns the writes. Shared by the Journal page and the sidebar's Inbox
+ * first), the spaces, the filing suggester and the Inbox: filing
+ * suggestions plus agents' pending proposals (`inboxCount` counts both).
+ * Reads only; the page owns the writes. Shared by the Journal page and the sidebar's Inbox
  * count (React Query dedupes the fetches).
  */
 export const useJournal = () => {
@@ -26,6 +28,7 @@ export const useJournal = () => {
   const { data: noteRows } = useProfileNoteMembership();
   const { data: taskRows } = useProfileTaskMembership();
   const colors = useSpaceColors();
+  const { data: proposalRows } = usePendingProposals();
 
   const isLoading = links.isLoading || notes.isLoading || tasks.isLoading || jots.isLoading;
 
@@ -41,6 +44,7 @@ export const useJournal = () => {
     });
     const filer = createFiler(entries, spaces);
     const inbox = inboxOf(entries, filer);
-    return { isLoading, spaces, entries, filer, inbox };
-  }, [colors, isLoading, jots.data, linkRows, links.data, noteRows, notes.data, profiles, taskRows, tasks.data]);
+    const proposals = proposalRows ?? [];
+    return { isLoading, spaces, entries, filer, inbox, proposals, inboxCount: inbox.length + proposals.length };
+  }, [colors, isLoading, jots.data, linkRows, links.data, noteRows, notes.data, profiles, proposalRows, taskRows, tasks.data]);
 };

@@ -11,13 +11,18 @@ import { useCreateTask, useUpdateTask } from '../hooks/useTasks';
 import { useAddLinksToProfile } from '../hooks/useProfileLinks';
 import { useAddNotesToProfile } from '../hooks/useProfileNotes';
 import { useAddTasksToProfile } from '../hooks/useProfileTasks';
+import { useDecideProposal } from '../hooks/useProposals';
 import JournalComposer from '../components/journal/JournalComposer';
 import { PartView, type JournalHandlers } from '../components/journal/JournalParts';
+import { ProposalRow } from '../components/journal/ProposalRow';
+import { proposalTarget } from '../components/journal/proposalTarget';
 import { FeedbackToast } from '../components/ui';
 import { INBOX_PARAM, LIBRARY_PATH, NOTE_PARAM } from '../constants/modules';
 import {
   toParts,
+  type Entry,
   type FileableEntry,
+  type InboxProposal,
   type Suggestion,
   type ComposerResult,
   type SelfMessage,
@@ -32,7 +37,8 @@ import '../styles/journal.css';
  * The Journal, memex's home (ROADMAP.md Phase 1; decisions 11D, 12B, 13B).
  * Everything you write, save and do, in one chronological feed that reads
  * like a chat: newest at the bottom, composer below. The Inbox tray opens
- * beside it only when a filing suggestion is waiting.
+ * beside it only when something waits: agents' proposals (approve or
+ * reject; docs/mcp.md) and filing suggestions.
  */
 
 const PAGE = 150;
@@ -47,7 +53,7 @@ const JournalPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const inboxOpen = searchParams.get(INBOX_PARAM) === '1';
-  const { isLoading, spaces, entries, filer, inbox } = useJournal();
+  const { isLoading, spaces, entries, filer, inbox, proposals, inboxCount } = useJournal();
   const { data: allLinks } = useAllLinks();
   const { toast, flash, handleAnimationEnd } = useFeedbackToast();
   const addToSpace = useAddToSpace(flash);
@@ -61,6 +67,9 @@ const JournalPage = () => {
   const addLinks = useAddLinksToProfile();
   const addNotes = useAddNotesToProfile();
   const addTasks = useAddTasksToProfile();
+  const decideProposal = useDecideProposal();
+  const [deciding, setDeciding] = useState<{ id: string; decision: 'apply' | 'reject' } | null>(null);
+  const entriesByKey = useMemo(() => new Map<string, Entry>(entries.map((e) => [e.id, e])), [entries]);
 
   const [limit, setLimit] = useState(PAGE);
   const [hidden, setHidden] = useState<Set<string>>(() => new Set());
@@ -261,6 +270,24 @@ const JournalPage = () => {
     [convertJot, handleDeleteJot, handleFile, handleToggleTask, openNote],
   );
 
+  const handleDecide = useCallback(
+    async (proposal: InboxProposal, decision: 'apply' | 'reject') => {
+      setDeciding({ id: proposal.id, decision });
+      try {
+        await decideProposal.mutateAsync({ proposal, target: proposalTarget(proposal, entriesByKey), decision });
+        cue(decision === 'apply' ? 'confirm' : 'dismiss');
+        flash(decision === 'apply' ? `Approved ${proposal.client_name}’s change.` : `Rejected ${proposal.client_name}’s proposal.`);
+      } catch (error) {
+        console.error('Failed to decide a proposal:', error);
+        cue('error');
+        flash(error instanceof Error && /no longer exists|already decided/.test(error.message) ? error.message : 'Couldn’t do that. Try again.');
+      } finally {
+        setDeciding(null);
+      }
+    },
+    [decideProposal, entriesByKey, flash],
+  );
+
   const setInboxOpen = (open: boolean) =>
     setSearchParams(
       (prev) => {
@@ -272,11 +299,11 @@ const JournalPage = () => {
       { replace: true },
     );
 
-  // The tray closes itself once the last suggestion is handled
+  // The tray closes itself once the last suggestion or proposal is handled
   useEffect(() => {
-    if (inboxOpen && !isLoading && inbox.length === 0) setInboxOpen(false);
+    if (inboxOpen && !isLoading && inboxCount === 0) setInboxOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inbox.length, inboxOpen, isLoading]);
+  }, [inboxCount, inboxOpen, isLoading]);
 
   const today = new Date().toDateString();
   const todayCount = entries.filter((e) => new Date(e.at).toDateString() === today).length;
@@ -291,7 +318,7 @@ const JournalPage = () => {
             </h1>
             <p className="memex-page-subtitle">{todayCount === 0 ? 'Nothing yet today' : `${todayCount} today`}</p>
           </div>
-          {inbox.length > 0 && (
+          {inboxCount > 0 && (
             <div className="memex-page-actions">
               <button
                 type="button"
@@ -302,7 +329,7 @@ const JournalPage = () => {
               >
                 <Inbox aria-hidden="true" />
                 Inbox
-                <span className="jr-count">{inbox.length}</span>
+                <span className="jr-count">{inboxCount}</span>
               </button>
             </div>
           )}
@@ -332,21 +359,50 @@ const JournalPage = () => {
           <JournalComposer spaces={spaces} onSubmit={handleSubmit} />
         </main>
 
-        {inboxOpen && inbox.length > 0 && (
+        {inboxOpen && inboxCount > 0 && (
           <aside className="jr-inbox" id="journal-inbox" aria-label="Inbox">
             <div className="jr-inbox-head">
               <h2>Inbox</h2>
-              <span className="jr-count">{inbox.length}</span>
+              <span className="jr-count">{inboxCount}</span>
               <button type="button" className="memex-icon-button is-compact jr-push" aria-label="Close Inbox" onClick={() => setInboxOpen(false)}>
                 <X aria-hidden="true" />
               </button>
             </div>
-            <p className="jr-inbox-lede">Recent saves with a likely space. One press files each; anything you leave stays fine where it is.</p>
-            <ul className="jr-inbox-list">
-              {inbox.map(({ entry, suggestion }) => (
-                <InboxRow key={entry.id} entry={entry} suggestion={suggestion} onFile={handleFile} />
-              ))}
-            </ul>
+            {proposals.length > 0 && (
+              <section aria-labelledby="inbox-agents">
+                <h3 className="jr-inbox-section" id="inbox-agents">
+                  From agents
+                </h3>
+                <p className="jr-inbox-lede">Changes an agent asked to make. Nothing changes until you approve; rejected ones are kept as a record.</p>
+                <ul className="jr-inbox-list">
+                  {proposals.map((proposal) => (
+                    <ProposalRow
+                      key={proposal.id}
+                      proposal={proposal}
+                      target={proposalTarget(proposal, entriesByKey)}
+                      space={spaces.find((s) => s.id === proposal.space_id)}
+                      busy={deciding?.id === proposal.id ? deciding.decision : null}
+                      onDecide={(decision) => void handleDecide(proposal, decision)}
+                    />
+                  ))}
+                </ul>
+              </section>
+            )}
+            {inbox.length > 0 && (
+              <section aria-labelledby={proposals.length > 0 ? 'inbox-filing' : undefined}>
+                {proposals.length > 0 && (
+                  <h3 className="jr-inbox-section" id="inbox-filing">
+                    Filing suggestions
+                  </h3>
+                )}
+                <p className="jr-inbox-lede">Recent saves with a likely space. One press files each; anything you leave stays fine where it is.</p>
+                <ul className="jr-inbox-list">
+                  {inbox.map(({ entry, suggestion }) => (
+                    <InboxRow key={entry.id} entry={entry} suggestion={suggestion} onFile={handleFile} />
+                  ))}
+                </ul>
+              </section>
+            )}
           </aside>
         )}
       </div>
