@@ -54,7 +54,7 @@ export const FeedEmpty = () => {
       <Placeholder
         icon={<MessageSquareText size={26} color={palette.onAccent} strokeWidth={2} />}
         title="Nothing here yet"
-        body="Jots, links, notes and tasks you capture on the web or with the extension show up here, newest at the bottom."
+        body="Write a jot below, paste a link, or start a line with “[] ” for a task. Everything you capture lands here, newest at the bottom."
       />
     </View>
   );

@@ -100,9 +100,32 @@ export const buildDemoData = (now = new Date()): DemoData => {
       preview_image_url: picture('joinery', 960, 540),
     }),
     link('l3', t(0, 9, 50), 'https://www.are.na/blog/the-library-of-babel', {
-      title: 'Notes on a personal library',
+      title: 'Notes on a personal library, for the reading pile',
       favicon_url: favicon('are.na'),
     }),
+    // Older saves, one platform at a time (no runs), so the Library has a few pages.
+    ...(
+      [
+        ['o1', 4, 'https://www.pinterest.com/pin/demo-tatami/', 'Tatami room, paper screens, late light', 'pinterest:save', 600, 800],
+        ['o2', 4, 'https://www.youtube.com/watch?v=demo-woodblock', 'Woodblock printing in one take', null, 960, 540],
+        ['o3', 5, 'https://x.com/demo/status/2001', 'Small tools, sharp edges: notes on making software you can hold', 'x:bookmark', 800, 600],
+        ['o4', 5, 'https://www.pinterest.com/pin/demo-indigo/', 'Indigo dye, three dips', 'pinterest:save', 600, 760],
+        ['o5', 6, 'https://www.nngroup.com/articles/progressive-disclosure/', 'Progressive disclosure, revisited', null, 800, 500],
+        ['o6', 6, 'https://www.youtube.com/watch?v=demo-kintsugi', 'Kintsugi: mending with gold', null, 960, 540],
+        ['o7', 7, 'https://www.pinterest.com/pin/demo-ceramics/', 'Speckled stoneware mugs', 'pinterest:save', 600, 820],
+        ['o8', 7, 'https://x.com/demo/status/2002', 'A good default is a design decision you never have to explain', 'x:bookmark', 800, 600],
+        ['o9', 8, 'https://www.pinterest.com/pin/demo-garden/', 'Raked gravel, one stone', 'pinterest:save', 600, 780],
+        ['o10', 8, 'https://www.kinfolk.com/slow-rooms/', 'Slow rooms: furniture that waits for you', null, 800, 520],
+        ['o11', 9, 'https://www.youtube.com/watch?v=demo-bonsai', 'Repotting a 40-year-old juniper', null, 960, 540],
+        ['o12', 9, 'https://www.pinterest.com/pin/demo-lantern/', 'Paper lanterns over a narrow street', 'pinterest:save', 600, 800],
+      ] as const
+    ).map(([id, days, url, title, source, w, h], i) =>
+      link(id, t(days, i % 2 ? 19 : 11, 5 + i), url, {
+        title,
+        source: source ?? undefined,
+        preview_image_url: picture(id, w, h),
+      }),
+    ),
   ];
 
   const note = (id: string, created_at: string, title: string, body: string): NoteWithTags => ({

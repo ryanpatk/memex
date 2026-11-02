@@ -31,7 +31,7 @@ describe('toJournal on the demo data', () => {
     expect(journal.spaces.map((s) => s.name)).toEqual(['Studio', 'Kyoto trip', 'Reading', 'Home']);
     journal.spaces.forEach((s) => expect(s.color).toMatch(/^#[0-9a-f]{6}$/));
     expect(journal.perSpace.get('kyoto')).toBe(3);
-    expect(journal.counts).toEqual({ jot: 5, link: 12, note: 2, task: 3 });
+    expect(journal.counts).toEqual({ jot: 5, link: 24, note: 2, task: 3 });
   });
 });
 
