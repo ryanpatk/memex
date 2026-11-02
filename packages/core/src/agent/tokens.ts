@@ -48,9 +48,14 @@ export function checkAgentToken(row: AgentTokenRow, now: Date): AgentTokenCheck 
   return { ok: true, scope: row.scope };
 }
 
-/** The token in `Authorization: Bearer mxa_…`, or null when it isn't shaped like one. */
+/**
+ * The token in `Authorization: Bearer mxa_…`, or null when it isn't shaped
+ * like one. A bare `Authorization: mxa_…` is accepted too: some hosted
+ * connectors (xAI's `authorization` field) don't say whether they add the
+ * scheme, and the token's own shape is unambiguous.
+ */
 export function agentBearerToken(header: string | null | undefined): string | null {
-  const m = /^Bearer\s+(\S+)\s*$/i.exec(header ?? '');
+  const m = /^(?:Bearer\s+)?(\S+)\s*$/i.exec((header ?? '').trim());
   return m && AGENT_TOKEN_RE.test(m[1]) ? m[1] : null;
 }
 

@@ -46,7 +46,8 @@ describe('agent tokens', () => {
     const token = `mxa_${'A'.repeat(43)}`;
     expect(agentBearerToken(`Bearer ${token}`)).toBe(token);
     expect(agentBearerToken(`bearer ${token}`)).toBe(token);
-    expect(agentBearerToken(token)).toBeNull();
+    expect(agentBearerToken(token)).toBe(token); // bare token, no scheme
+    expect(agentBearerToken(`Basic ${token}`)).toBeNull();
     expect(agentBearerToken(`Bearer mx_${'A'.repeat(43)}`)).toBeNull(); // extension token
     expect(agentBearerToken(`Bearer mxa_${'A'.repeat(42)}`)).toBeNull();
     expect(agentBearerToken(`Bearer mxa_${'A'.repeat(42)}*`)).toBeNull();
