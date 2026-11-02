@@ -1,6 +1,8 @@
-# Typecheck, lint, unit tests and production build on every push and PR.
+# Typecheck, lint, unit tests and production build on every push and PR,
+# plus memex-api's typecheck and the extension's typecheck + build.
 # Runs alongside secret-scan.yml (gitleaks). Local equivalent:
 #   npm run typecheck && npm run lint && npm test && npm run build
+#   (cd api && npx tsc --noEmit) && (cd extension && npm run typecheck && npm run build)
 name: CI
 
 on:
@@ -27,6 +29,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            api/package-lock.json
+            extension/package-lock.json
 
       - name: Install
         run: npm ci
@@ -44,3 +50,11 @@ jobs:
         # The build needs no secrets: Supabase settings are read at runtime in
         # the browser, and the bundle is never deployed from CI.
         run: npm run build
+
+      - name: memex-api typecheck
+        working-directory: api
+        run: npm ci && npx tsc --noEmit
+
+      - name: Extension typecheck + build
+        working-directory: extension
+        run: npm ci && npm run typecheck && npm run build
