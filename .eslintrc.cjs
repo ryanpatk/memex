@@ -6,7 +6,8 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
     'plugin:react-hooks/recommended',
   ],
-  ignorePatterns: ['dist', '.eslintrc.cjs', 'extension/.output', 'extension/.wxt', 'api/.wrangler', 'scraper/.wrangler'],
+  // apps/* have their own lint (apps/mobile: ESLint 9 + eslint-config-expo).
+  ignorePatterns: ['dist', '.eslintrc.cjs', 'extension/.output', 'extension/.wxt', 'api/.wrangler', 'scraper/.wrangler', 'apps'],
   parser: '@typescript-eslint/parser',
   plugins: ['react-refresh'],
   rules: {
