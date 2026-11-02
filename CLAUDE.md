@@ -36,6 +36,7 @@ memex holds Ryan's real data in one production Supabase project; there is no sta
 - `scraper/README.md` — memex-scraper Cloudflare Worker (link metadata: title/description/preview image); deploy + backfill instructions.
 - `api/README.md` — memex-api Cloudflare Worker: token-authenticated capture API for the extension (routes, deploy, security model). Tokens are managed in Settings → Access tokens (`api_tokens` migration).
 - `packages/core/README.md` — `@memex/core`: what's shared across clients, its public API, the `Repository` interface and the Supabase adapter (web + Expo setup).
+- `docs/mobile.md` — the iPhone app in `apps/mobile` (Expo SDK 58, Expo Router): how to run it (demo data with `npm run fixtures`), its architecture (standalone npm project on `@memex/core`, encrypted session storage, PKCE GitHub sign-in), the Supabase redirect URL, screenshots, and the TestFlight checklist.
 - `extension/README.md` — memex capture browser extension (MV3, WXT + TypeScript): toolbar/⌘⇧S/context-menu save, and automatic capture of X bookmarks and Pinterest saves; install + configure. Its roadmap and open items live in `docs/browser-extension-plan.md`.
 
 ## Development Commands
@@ -49,6 +50,11 @@ npm test                   # Vitest unit tests (packages/core + src/**/*.test.ts
 npm run preview            # Preview production build locally
 npm run deploy             # Build + deploy to Cloudflare (Workers static assets, root wrangler.jsonc; .env.production overrides .env at build)
 VITE_MEMEX_FIXTURES=1 npm run dev   # The whole app on made-up demo data in memory (signed in, no network, nothing saved): UI checks without an account, portfolio screenshots. =signed-out starts signed out. Dev only (@memex/core/memory)
+
+# iPhone app (separate npm project; see docs/mobile.md)
+cd apps/mobile && npm install
+npm run ios                # Expo Go in the iOS Simulator (needs apps/mobile/.env); npm run fixtures = dev-only demo data
+npm run check              # typecheck + lint + Vitest; npm run check:release = release bundle without fixture code
 
 # Environment Setup — create .env with:
 # VITE_SUPABASE_URL=your_supabase_url

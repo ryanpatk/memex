@@ -249,7 +249,7 @@ Re-sync only needs `/api/capture`, so 5b–5d can start after Phase 3, before th
 
 ### Phase 6 — React Native app (Expo) · **v1 on TestFlight**
 *2026-11-01: v1 ships to TestFlight on today's backend; offline replicas + sync wait for the v2 vault backend. It reaches data through `@memex/core`'s Supabase adapter (decision 20, resolved 2026-11-01).*
-- [ ] App shell: Expo Router tabs (Journal · Library · Tasks), theme from core tokens, dark mode
+- [x] App shell: Expo Router tabs (Journal · Library · Spaces · Inbox per decision 16A), theme from core tokens, dark mode — *2026-11-01, `apps/mobile` (`docs/mobile.md`); Journal feed read-only so far*
 - [ ] Journal feed + composer (keyboard-avoiding, chat-style list), entry cards per type
 - [ ] Share extension (iOS) / share target (Android) → entry, optional space
 - [ ] Library: spaces row + masonry grid; link detail; open in browser

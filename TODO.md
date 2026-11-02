@@ -13,6 +13,9 @@ v1 stays on Supabase + Cloudflare Workers. Details and phase mapping: `ROADMAP.m
 - [x] **Walk-away export** ✓ 2026-11-01 — `scripts/export-vault.mjs` writes everything (images included) to `~/memex-vault/` as an Obsidian-ready vault; format + fixture in `docs/vault-format.md` / `docs/vault-fixture/`; nightly at 03:30 via launchd (`scripts/install-export-agent.sh`, log `~/Library/Logs/memex-export.log`). Next: a parser + round-trip test in `packages/core` (Phase 2)
 - [x] **`packages/core` + first tests** ✓ 2026-11-01 — npm workspace, shared logic and tokens in `@memex/core`, the `Repository` interface with a Supabase adapter (no supabase-js imports left in `src/`), 185 Vitest tests, CI (typecheck, lint, test, build)
 - [ ] **React Native (Expo) app on TestFlight** (Phase 6, on `packages/core`; talks to Supabase through `@memex/core/supabase` with SecureStore session storage, decision 20)
+  - [x] Shell ✓ 2026-11-01 (M6-A): `apps/mobile` on Expo SDK 58: tabs (Journal, Library, Spaces, Inbox), sign-in (email + GitHub PKCE), read-only Journal feed with pull to refresh, light/dark, CI job. Run/architecture/screenshots: `docs/mobile.md`
+  - [ ] Ryan: add `memex://auth/callback` to Supabase Auth → Redirect URLs, and work through the TestFlight checklist in `docs/mobile.md` (Apple Developer Program, App Store Connect record + bundle id, API key, Expo account)
+  - [ ] Next: composer + writes, filing, Library grid, EAS build → TestFlight
 - [ ] **Portfolio-ready screens** — v1 screens will appear on Ryan's public portfolio; plan demo data so screenshots don't show real jots
 
 ## 🔑 Your action items (need your credentials / accounts — code is ready and waiting)
