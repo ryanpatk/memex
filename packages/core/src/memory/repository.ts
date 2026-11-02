@@ -202,8 +202,10 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
       getAll: () =>
         wait([...db.notes].sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1)).map(withNoteTags)),
       create: (data) => {
+        const saved = data.id ? db.notes.find((row) => row.id === data.id) : undefined;
+        if (saved) return wait(saved);
         const note: Note = {
-          id: newId(),
+          id: data.id ?? newId(),
           user_id: userId,
           title: data.title,
           body: data.body ?? '',
@@ -230,8 +232,10 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
     tasks: {
       getAll: () => wait([...db.tasks].sort((a, b) => a.order_index - b.order_index).map(withTaskTags)),
       create: (data) => {
+        const saved = data.id ? db.tasks.find((row) => row.id === data.id) : undefined;
+        if (saved) return wait(saved);
         const task: Task = {
-          id: newId(),
+          id: data.id ?? newId(),
           user_id: userId,
           title: data.title,
           detail: data.detail,
@@ -303,8 +307,10 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
     jots: {
       getAll: () => wait([...db.jots].sort((a, b) => (a.created_at < b.created_at ? -1 : 1))),
       create: (data) => {
+        const saved = data.id ? db.jots.find((row) => row.id === data.id) : undefined;
+        if (saved) return wait(saved);
         const jot: SelfMessage = {
-          id: newId(),
+          id: data.id ?? newId(),
           user_id: userId,
           profile_id: data.profile_id,
           body: data.body,

@@ -4,6 +4,7 @@ import { getErrorMessage } from '../errors'
 import type { LinksRepository } from '../repository'
 import type { CreateLinkData, Link, LinkWithTag, UpdateLinkData } from '../types'
 import type { MemexSupabaseClient } from './client'
+import { requireUser } from './user'
 
 
 export const createLinksRepository = (client: MemexSupabaseClient): LinksRepository => {
@@ -13,8 +14,7 @@ export const createLinksRepository = (client: MemexSupabaseClient): LinksReposit
       return message.includes(relation) && message.includes('does not exist')
     },
     getDefaultProjectId: async (): Promise<string> => {
-      const { data: { user } } = await client.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
+      const user = await requireUser(client)
 
       const { data: existing, error: existingError } = await client
         .from('projects')
@@ -214,8 +214,7 @@ export const createLinksRepository = (client: MemexSupabaseClient): LinksReposit
     },
 
     create: async (linkData: CreateLinkData): Promise<Link> => {
-      const { data: { user } } = await client.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
+      const user = await requireUser(client)
 
       const projectId = linkData.project_id || await linksApi.getDefaultProjectId()
 

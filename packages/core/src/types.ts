@@ -235,6 +235,8 @@ export interface SelfMessage {
 }
 
 export interface CreateSelfMessageData {
+  /** A row id chosen by the client (a UUID). Saving again with the same id returns the row already saved, so a retried save never makes a second one. */
+  id?: string
   body: string
   profile_id: string | null
 }
@@ -345,6 +347,8 @@ export interface UpdateLinkData {
 }
 
 export interface CreateNoteData {
+  /** A row id chosen by the client (a UUID). Saving again with the same id returns the row already saved, so a retried save never makes a second one. */
+  id?: string
   title?: string
   body?: string
   order_index?: number
@@ -357,6 +361,8 @@ export interface UpdateNoteData {
 }
 
 export interface CreateTaskData {
+  /** A row id chosen by the client (a UUID). Saving again with the same id returns the row already saved, so a retried save never makes a second one. */
+  id?: string
   title: string
   detail?: string
   due_date?: string

@@ -1,9 +1,10 @@
 // Supabase adapter (see ../repository.ts). The queries are the web app's,
 // moved here unchanged from src/hooks/*.ts on 2026-11-01.
-import { getErrorMessage } from '../errors'
+import { getErrorMessage, isUniqueViolation } from '../errors'
 import type { NotesRepository } from '../repository'
 import type { CreateNoteData, Note, NoteWithTags, UpdateNoteData } from '../types'
 import type { MemexSupabaseClient } from './client'
+import { requireUser } from './user'
 
 const isMissingRelationError = (error: unknown, relation: string) => {
   const message = getErrorMessage(error)
@@ -43,12 +44,12 @@ export const createNotesRepository = (client: MemexSupabaseClient): NotesReposit
     },
 
     create: async (noteData: CreateNoteData): Promise<Note> => {
-      const { data: { user } } = await client.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
+      const user = await requireUser(client)
 
       const { data, error } = await client
         .from('notes')
         .insert({
+          ...(noteData.id ? { id: noteData.id } : {}),
           title: noteData.title,
           body: noteData.body ?? '',
           order_index: noteData.order_index ?? 0,
@@ -57,7 +58,14 @@ export const createNotesRepository = (client: MemexSupabaseClient): NotesReposit
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        // A retried save with the id it was first sent with: it's already there.
+        if (noteData.id && isUniqueViolation(error)) {
+          const { data: existing } = await client.from('notes').select('*').eq('id', noteData.id).maybeSingle()
+          if (existing) return existing
+        }
+        throw error
+      }
       return data
     },
 

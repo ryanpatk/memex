@@ -1,9 +1,10 @@
 // Supabase adapter (see ../repository.ts). The queries are the web app's,
 // moved here unchanged from src/hooks/*.ts on 2026-11-01.
-import { getErrorMessage } from '../errors'
+import { getErrorMessage, isUniqueViolation } from '../errors'
 import type { JotsRepository } from '../repository'
 import type { CreateSelfMessageData, SelfMessage, UpdateSelfMessageData } from '../types'
 import type { MemexSupabaseClient } from './client'
+import { requireUser } from './user'
 
 
 export const createJotsRepository = (client: MemexSupabaseClient): JotsRepository => {
@@ -30,14 +31,12 @@ export const createJotsRepository = (client: MemexSupabaseClient): JotsRepositor
     },
 
     create: async (input: CreateSelfMessageData): Promise<SelfMessage> => {
-      const {
-        data: { user },
-      } = await client.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
+      const user = await requireUser(client)
 
       const { data, error } = await client
         .from('self_messages')
         .insert({
+          ...(input.id ? { id: input.id } : {}),
           user_id: user.id,
           profile_id: input.profile_id,
           body: input.body,
@@ -45,7 +44,14 @@ export const createJotsRepository = (client: MemexSupabaseClient): JotsRepositor
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        // A retried save with the id it was first sent with: it's already there.
+        if (input.id && isUniqueViolation(error)) {
+          const { data: existing } = await client.from('self_messages').select('*').eq('id', input.id).maybeSingle()
+          if (existing) return existing
+        }
+        throw error
+      }
       return data
     },
 

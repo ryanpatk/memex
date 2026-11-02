@@ -83,3 +83,23 @@ describe('memory repository', () => {
     );
   });
 });
+
+describe('memory repository: creates with a client-chosen id', () => {
+  it('uses the id, and a second create with it returns the first row', async () => {
+    const repo = createMemoryRepository(createDemoData());
+    const id = '7d1f9a64-2b9e-4c1a-9a51-3f0c2d9e8b11';
+    const jot = await repo.jots.create({ id, profile_id: null, body: '[test] once' });
+    const again = await repo.jots.create({ id, profile_id: null, body: '[test] once' });
+    expect(jot.id).toBe(id);
+    expect(again).toEqual(jot);
+    expect((await repo.jots.getAll()).filter((j) => j.id === id)).toHaveLength(1);
+
+    const task = await repo.tasks.create({ id: `${id.slice(0, -1)}2`, title: '[test] task' });
+    await repo.tasks.create({ id: task.id, title: '[test] task' });
+    expect((await repo.tasks.getAll()).filter((t) => t.id === task.id)).toHaveLength(1);
+
+    const note = await repo.notes.create({ id: `${id.slice(0, -1)}3`, title: '[test] note', body: 'x' });
+    await repo.notes.create({ id: note.id, title: '[test] note', body: 'x' });
+    expect((await repo.notes.getAll()).filter((n) => n.id === note.id)).toHaveLength(1);
+  });
+});

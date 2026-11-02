@@ -29,3 +29,4 @@ export * from './tokens/spaceColors';
 export * from './tokens/pastelSky';
 export * from './repository';
 export * from './capture';
+export * from './outbox';

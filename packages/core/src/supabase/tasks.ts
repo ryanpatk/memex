@@ -1,9 +1,10 @@
 // Supabase adapter (see ../repository.ts). The queries are the web app's,
 // moved here unchanged from src/hooks/*.ts on 2026-11-01.
-import { getErrorMessage } from '../errors'
+import { getErrorMessage, isUniqueViolation } from '../errors'
 import type { TasksRepository } from '../repository'
 import type { CreateTaskData, Task, TaskWithTags, UpdateTaskData } from '../types'
 import type { MemexSupabaseClient } from './client'
+import { requireUser } from './user'
 
 const isMissingRelationError = (error: unknown, relation: string) => {
   const message = getErrorMessage(error)
@@ -43,8 +44,7 @@ export const createTasksRepository = (client: MemexSupabaseClient): TasksReposit
     },
 
     create: async (taskData: CreateTaskData): Promise<Task> => {
-      const { data: { user } } = await client.auth.getUser()
-      if (!user) throw new Error('User not authenticated')
+      const user = await requireUser(client)
 
       // Place new tasks at the top of the order stack.
       const { data: existing } = await client
@@ -65,7 +65,14 @@ export const createTasksRepository = (client: MemexSupabaseClient): TasksReposit
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        // A retried save with the id it was first sent with: it's already there.
+        if (taskData.id && isUniqueViolation(error)) {
+          const { data: existing } = await client.from('tasks').select('*').eq('id', taskData.id).maybeSingle()
+          if (existing) return existing
+        }
+        throw error
+      }
       return data
     },
 
