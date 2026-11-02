@@ -120,6 +120,9 @@ export const createDemoData = (nowMs: number = Date.now()): MemoryData => {
   const jots: SelfMessage[] = [
     { id: 'jt-1', user_id: USER, profile_id: null, body: 'The island should be one material, not two.', ...stamp(5 * HOUR) },
     { id: 'jt-2', user_id: USER, profile_id: null, body: 'Ask about lime plaster in the hallway too', ...stamp(2 * HOUR) },
+    { id: 'jt-3', user_id: USER, profile_id: 'sp-kitchen', body: 'Plasterer can start the week of the 18th if we decide on the finish by Friday.', ...stamp(1 * DAY + 3 * HOUR) },
+    { id: 'jt-4', user_id: USER, profile_id: 'sp-kitchen', body: 'Sage green island + warm oak shelves. Keep the worktop pale.', ...stamp(3 * HOUR + 20 * 60 * 1000) },
+    { id: 'jt-5', user_id: USER, profile_id: 'sp-kyoto', body: 'Gio-ji opens at 9. Go first, before the tour buses.', ...stamp(3 * DAY + 2 * HOUR) },
   ];
 
   const spaceLinks = [
@@ -127,7 +130,7 @@ export const createDemoData = (nowMs: number = Date.now()): MemoryData => {
     ['sp-kyoto', 'ln-4'], ['sp-kyoto', 'ln-9'], ['sp-kyoto', 'ln-16'], ['sp-kyoto', 'ln-19'], ['sp-kyoto', 'ln-3'],
     ['sp-jobs', 'ln-11'], ['sp-jobs', 'ln-17'],
     ['sp-reading', 'ln-6'], ['sp-reading', 'ln-10'], ['sp-reading', 'ln-21'], ['sp-reading', 'ln-2'],
-  ].map(([profile_id, link_id]) => ({ profile_id, link_id, is_super_favorite: link_id === 'ln-15' }));
+  ].map(([profile_id, link_id]) => ({ profile_id, link_id, is_super_favorite: link_id === 'ln-15' || link_id === 'ln-8' || link_id === 'ln-19' }));
 
   const spaceNotes = [
     ['sp-kitchen', 'nt-1'], ['sp-jobs', 'nt-2'], ['sp-kyoto', 'nt-3'], ['sp-reading', 'nt-4'],
