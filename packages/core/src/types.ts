@@ -281,6 +281,8 @@ export interface CreateLinkData {
 export interface UpdateLinkData {
   project_id?: string
   url?: string
+  /** Lists on the source that held it ('bookmarked' · 'saved' · 'liked'); capture merges new ones in. */
+  lists?: string[]
   title?: string
   description?: string
   favicon_url?: string

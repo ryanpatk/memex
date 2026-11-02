@@ -47,7 +47,7 @@ What memex's MCP server reads and how it pages, independent of the Worker (ROADM
 
 ### `@memex/core/memory`
 
-`createMemoryRepository(data, { signedOut? })`: the whole `Repository` over plain arrays (nothing persists), and `createDemoData(now?)`: an invented, screenshot-safe Library (kitchen reno, Kyoto trip, job search; saves from X, Pinterest and YouTube; generated SVG pictures; two saved views). The web app runs on it with `VITE_MEMEX_FIXTURES=1 npm run dev` (`=signed-out` to start signed out); production builds never include it.
+`createMemoryRepository(data, { signedOut? })`: the whole `Repository` over plain arrays (nothing persists; new links keep their capture provenance: `source`, `source_id`, `lists`, `captured_by`, `captured_client`, `url_key`), and `createDemoData(now?)`: an invented, screenshot-safe Library (kitchen reno, Kyoto trip, job search; saves from X, Pinterest and YouTube; generated SVG pictures; two saved views). The web app runs on it with `VITE_MEMEX_FIXTURES=1 npm run dev` (`=signed-out` to start signed out); production builds never include it.
 
 ### `@memex/core/supabase`
 
@@ -119,6 +119,7 @@ await capture.remove(linkId);           // undo; false if not the user's
 ```
 
 - **`CaptureStore`** is the storage port, for one user: `findCandidates`, `insertLink` (throws `CaptureConflictError` on the unique `(user, source, source_id)` index; the service then returns the winner), `setLists`, `ownedLinkIds` / `ownedSpaceIds` / `ownedTagIds`, `addToSpace`, `addTags`, `deleteLink`. memex-api's PostgREST version is `api/src/store.ts` (every query through `userScope`, `api/src/db.ts`); `createMemoryCaptureStore` is an in-memory one for tests.
+- **`createRepositoryCaptureStore(repository, { links? })`** runs the same service over the `Repository`, for clients that use it directly (the Expo app's composer: `captured_by: 'app'`, `captured_client: 'memex-ios/<version>'`). Pass `links` to read candidates from a cache you already hold instead of `links.getAll()`. A Postgres unique violation (`23505`) becomes `CaptureConflictError`. `mightMatch` and `toCapturedLink` are its helpers.
 - **Dedupe order**: same `(source, source_id)` → the same item under another URL (`identifySource`: X status, Pinterest pin, YouTube watch / youtu.be / shorts / embed / live) → the same `normalizeUrlKey` (no scheme, `www.`, trailing slash, fragment or tracking parameters). Stores may over-fetch; `pickMatch` re-checks every candidate. Older rows without `source_id` / `url_key` still match through `urlVariants` and `legacyIdFragments`.
 - **Duplicates** merge new `lists` (e.g. saved from the toolbar, later bookmarked) and still apply the requested space and tags.
 - **Helpers**: `identifySource`, `canonicalUrl`, `isValidSourceId`, `normalizeUrlKey`, `urlVariants`, `isUuid`, `httpUrl`, `parseSourceTag` (reads the pre-2026-11-01 `links.source` tags), `linkMatchFor`, `matchStrength`, `pickMatch`, `LIMITS`.

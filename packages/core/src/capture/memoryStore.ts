@@ -3,8 +3,8 @@
  * capture service (memex-api routes, MCP tools). It enforces the same unique
  * (source, source_id) rule as the database.
  */
-import { urlHasFragment } from './identify';
 import type { CaptureList } from './input';
+import { mightMatch } from './repositoryStore';
 import { CaptureConflictError, type CapturedLink, type CaptureStore, type LinkMatch, type NewCapturedLink } from './service';
 
 export interface MemoryCaptureStore extends CaptureStore {
@@ -29,13 +29,7 @@ export function createMemoryCaptureStore(
 
     async findCandidates(match: LinkMatch) {
       return store.links
-        .filter(
-          (l) =>
-            (match.sourceId && l.source === match.source && l.source_id === match.sourceId) ||
-            (match.urlKey && l.url_key === match.urlKey) ||
-            match.urls.includes(l.url) ||
-            match.idFragments.some((f) => urlHasFragment(l.url, f)),
-        )
+        .filter((l) => mightMatch(l, match))
         .sort((a, b) => a.created_at.localeCompare(b.created_at));
     },
     async insertLink(link: NewCapturedLink) {
