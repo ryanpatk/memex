@@ -1,8 +1,9 @@
 import { useCallback, useMemo } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View, type ListRenderItem } from 'react-native';
-import type { Filer, JournalSpace, Part } from '@memex/core';
+import type { Filer, JournalSpace, OutboxItem, Part } from '@memex/core';
 import { useTheme } from '../theme/theme';
 import { FeedContext, FeedPart } from './parts';
+import { PendingSaves } from './PendingSaves';
 import { useEntryActions } from './useEntryActions';
 
 /*
@@ -17,8 +18,11 @@ export const JournalFeed = ({
   filer,
   refreshing,
   onRefresh,
+  pending = [],
 }: {
   parts: Part[];
+  /** Saves kept on the phone, shown at the newest end. */
+  pending?: readonly OutboxItem[];
   spaces: JournalSpace[];
   filer?: Filer;
   refreshing: boolean;
@@ -36,6 +40,8 @@ export const JournalFeed = ({
         keyExtractor={(p) => p.id}
         renderItem={renderItem}
         ItemSeparatorComponent={Gap}
+        // Inverted: the header sits at the newest end, by the composer.
+        ListHeaderComponent={pending.length ? <PendingSaves items={pending} /> : undefined}
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.muted} />}
         keyboardDismissMode="interactive"

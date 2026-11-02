@@ -13,6 +13,7 @@ import {
   createCaptureService,
   createRepositoryCaptureStore,
   parseCaptureInput,
+  type CapturedBy,
   type CapturedLink,
   type PageMetadata,
 } from '@memex/core/capture';
@@ -31,7 +32,33 @@ import { keys } from './keys';
 
 export type FileableKind = 'link' | 'note' | 'task';
 export type EntryKind = FileableKind | 'jot';
-export type Composed = Exclude<ComposerResult, { kind: 'empty' }>;
+/** A link from the share sheet can carry what the sharing app knew and why you saved it. */
+export interface LinkExtras {
+  title?: string | null;
+  note?: string | null;
+  /** `app` from the composer (the default), `share` from the share sheet. */
+  capturedBy?: CapturedBy;
+}
+
+export type Composed =
+  | Exclude<ComposerResult, { kind: 'empty' | 'link' }>
+  | (Extract<ComposerResult, { kind: 'link' }> & LinkExtras);
+
+export interface ComposeOptions {
+  /**
+   * The id to create a jot, note or task with (a UUID chosen on the phone).
+   * The outbox retries with the same one, so a save that reached the server
+   * but lost its answer is found again instead of saved twice.
+   */
+  id?: string;
+  /**
+   * A retry: look for an earlier copy of a link on the server, not in the
+   * cache (the first try may have saved it before the connection dropped).
+   */
+  retry?: boolean;
+  /** When it was written (ISO), for a save that waited offline; jots, notes and tasks keep it. */
+  createdAt?: string;
+}
 
 export interface ComposeOutcome {
   kind: Composed['kind'];
@@ -188,8 +215,12 @@ export const createJournalActions = ({ queryClient, repository, client, enrich, 
     return { kind, id: row.id, unfiled: unfiled.length ? unfiled : undefined };
   };
 
-  const captureLink = async (url: string, spaceIds: string[]): Promise<ComposeOutcome> => {
-    const parsed = parseCaptureInput({ url, favicon: faviconFor(url) }, { defaultCapturedBy: 'app', defaultClient: client });
+  const captureLink = async (
+    { url, title, note, capturedBy = 'app' }: { url: string } & LinkExtras,
+    spaceIds: string[],
+    fresh = false,
+  ): Promise<ComposeOutcome> => {
+    const parsed = parseCaptureInput({ url, title, note, favicon: faviconFor(url) }, { defaultCapturedBy: capturedBy, defaultClient: client });
     if (!parsed.ok) throw new Error(parsed.error);
     const input = parsed.value;
     const at = stamp();
@@ -198,10 +229,12 @@ export const createJournalActions = ({ queryClient, repository, client, enrich, 
       user_id: '',
       project_id: 'pending',
       url: input.url,
+      title: input.title ?? undefined,
+      description: input.description ?? undefined,
       favicon_url: input.favicon ?? undefined,
       source: input.source,
       source_id: input.sourceId,
-      captured_by: 'app',
+      captured_by: input.capturedBy,
       captured_client: client,
       created_at: at,
       updated_at: at,
@@ -212,8 +245,9 @@ export const createJournalActions = ({ queryClient, repository, client, enrich, 
     add(keys.links, temp);
     showFiled('link', temp.id, spaceIds);
 
+    // A retry from the outbox reads the server's links, not a cache that may predate the first try.
     const capture = createCaptureService(
-      createRepositoryCaptureStore(repository, { links: cached ? () => cached : undefined }),
+      createRepositoryCaptureStore(repository, { links: cached && !fresh ? () => cached : undefined }),
       { enrich },
     );
     let result: Awaited<ReturnType<typeof capture.capture>>;
@@ -240,9 +274,10 @@ export const createJournalActions = ({ queryClient, repository, client, enrich, 
 
   return {
     /** Save what the composer parsed: a jot, a link, a task or a note, filed in its @spaces. */
-    async compose(result: Composed): Promise<ComposeOutcome> {
+    async compose(result: Composed, { id, retry = false, createdAt }: ComposeOptions = {}): Promise<ComposeOutcome> {
       const spaceIds = result.spaces.map((s) => s.id);
-      const at = stamp();
+      const at = createdAt ?? stamp();
+      const given = { ...(id ? { id } : {}), ...(createdAt ? { created_at: createdAt } : {}) };
       switch (result.kind) {
         case 'jot': {
           // A jot lives in one place: the first @space, else the Journal itself.
@@ -251,7 +286,7 @@ export const createJournalActions = ({ queryClient, repository, client, enrich, 
           await queryClient.cancelQueries({ queryKey: keys.jots });
           add(keys.jots, temp);
           try {
-            const row = await repository.jots.create({ profile_id, body: result.body });
+            const row = await repository.jots.create({ ...given, profile_id, body: result.body });
             swap(keys.jots, temp.id, row);
             return { kind: 'jot', id: row.id };
           } catch (error) {
@@ -263,14 +298,14 @@ export const createJournalActions = ({ queryClient, repository, client, enrich, 
         }
         case 'task': {
           const temp: TaskWithTags = { id: tempId(), user_id: '', title: result.title, is_done: false, order_index: -1, created_at: at, updated_at: at };
-          return createItem('task', temp, spaceIds, async () => ({ ...(await repository.tasks.create({ title: result.title })) }));
+          return createItem('task', temp, spaceIds, async () => ({ ...(await repository.tasks.create({ ...given, title: result.title })) }));
         }
         case 'note': {
           const temp: NoteWithTags = { id: tempId(), user_id: '', title: result.title, body: result.body, order_index: 0, created_at: at, updated_at: at };
-          return createItem('note', temp, spaceIds, async () => ({ ...(await repository.notes.create({ title: result.title, body: result.body })) }));
+          return createItem('note', temp, spaceIds, async () => ({ ...(await repository.notes.create({ ...given, title: result.title, body: result.body })) }));
         }
         case 'link':
-          return captureLink(result.url, spaceIds);
+          return captureLink(result, spaceIds, retry);
       }
     },
 

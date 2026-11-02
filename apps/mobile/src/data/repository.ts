@@ -15,7 +15,7 @@ import { FIXTURE_MODE, SUPABASE_ANON_KEY, SUPABASE_URL } from './config';
 
 const keychain = { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK };
 
-const encryptedStorage = createEncryptedStorage({
+export const encryptedStorage = createEncryptedStorage({
   keys: {
     getItemAsync: (key) => SecureStore.getItemAsync(key, keychain),
     setItemAsync: (key, value) => SecureStore.setItemAsync(key, value, keychain),

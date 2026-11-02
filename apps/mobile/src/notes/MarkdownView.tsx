@@ -29,7 +29,7 @@ const Spans = ({ spans }: { spans: Span[] }) => {
             onPress={href ? () => void WebBrowser.openBrowserAsync(href, { controlsColor: palette.accentText }) : undefined}
             style={[
               span.bold && { fontFamily: FONTS.heavy },
-              span.italic && styles.italic,
+              span.italic && { fontFamily: span.bold ? FONTS.heavyItalic : FONTS.italic },
               span.code && { fontFamily: MONO, fontSize: 14, backgroundColor: palette.well },
               span.href && { color: palette.accentText, textDecorationLine: 'underline', textDecorationColor: alpha(palette.accentText, 0.4) },
             ]}
@@ -122,7 +122,7 @@ export const MarkdownView = ({ source }: { source: string }) => {
 const styles = StyleSheet.create({
   root: { gap: 12 },
   heading: { marginTop: 8 },
-  italic: { fontStyle: 'italic' },
+  italic: { fontFamily: FONTS.italic },
   item: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: -6 },
   marker: { minWidth: 16, textAlign: 'right' },
   box: { width: 18, height: 18, borderRadius: 5, marginTop: 3, alignItems: 'center', justifyContent: 'center' },

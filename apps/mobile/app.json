@@ -28,7 +28,21 @@
           "dark": { "image": "./assets/splash-icon.png", "backgroundColor": "#13171d" }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
+            "NSExtensionActivationSupportsText": true
+          },
+          "iosShareExtensionName": "Save to memex",
+          "iosShareExtensionBundleIdentifier": "com.joyfulsystems.memex.share-extension",
+          "iosAppGroupIdentifier": "group.com.joyfulsystems.memex",
+          "androidIntentFilters": ["text/*"]
+        }
+      ]
     ]
   }
 }

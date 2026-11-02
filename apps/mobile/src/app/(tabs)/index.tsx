@@ -6,6 +6,7 @@ import { FIXTURE_MODE } from '../../data/config';
 import { useJournal } from '../../data/useJournal';
 import { Composer } from '../../journal/Composer';
 import { JournalFeed } from '../../journal/JournalFeed';
+import { PendingSaves, usePendingSaves } from '../../journal/PendingSaves';
 import { useComposerToasts } from '../../journal/useComposerToasts';
 import { useEntryActions } from '../../journal/useEntryActions';
 import { AccountButton } from '../../ui/AccountButton';
@@ -33,6 +34,7 @@ export default function JournalScreen() {
   const { journal, isLoading, error, refreshing, refresh } = useJournal();
   const actions = useEntryActions();
   const placeToasts = useComposerToasts();
+  const pending = usePendingSaves();
   const params = useLocalSearchParams<{ draft?: string; send?: string }>();
   const today = journal ? countToday(journal.feed) : 0;
   const subtitle = journal
@@ -69,10 +71,17 @@ export default function JournalScreen() {
           <FeedSkeleton />
         ) : error && !journal?.entries.length ? (
           <FeedError error={error} onRetry={refresh} />
-        ) : !journal?.entries.length ? (
+        ) : !journal?.entries.length && !pending.length ? (
           <FeedEmpty />
+        ) : journal?.entries.length ? (
+          <JournalFeed parts={journal.feed} spaces={journal.spaces} filer={journal.filer} refreshing={refreshing} onRefresh={refresh} pending={pending} />
         ) : (
-          <JournalFeed parts={journal.feed} spaces={journal.spaces} filer={journal.filer} refreshing={refreshing} onRefresh={refresh} />
+          <View style={styles.fill} />
+        )}
+        {!isLoading && !journal?.entries.length && pending.length > 0 && (
+          <View style={styles.pendingOnly}>
+            <PendingSaves items={pending} />
+          </View>
         )}
         {!isLoading && !(error && !journal) && (
           <Composer spaces={journal?.spaces ?? []} filer={journal?.filer} onSubmit={actions.compose} draft={draft} onTop={placeToasts} />
@@ -84,5 +93,6 @@ export default function JournalScreen() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  pendingOnly: { paddingHorizontal: 17, paddingBottom: 10 },
   trailing: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 });

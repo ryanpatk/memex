@@ -10,7 +10,8 @@ import {
   type TaskWithTags,
 } from '@memex/core';
 import { parseEntryId, type Composed } from '../data/actions';
-import { useActions, useDeleteQueue, useDismissals } from '../data/DataProvider';
+import { useActions, useDeleteQueue, useDismissals, useSaves } from '../data/DataProvider';
+import type { SaveResult } from '../data/saves';
 import { useToast } from '../ui/Toast';
 
 /*
@@ -45,6 +46,7 @@ const names = (spaces: { name: string }[]) => spaces.map((s) => `“${s.name}”
 
 export const useEntryActions = () => {
   const actions = useActions();
+  const saves = useSaves();
   const deletes = useDeleteQueue();
   const dismissals = useDismissals();
   const toast = useToast();
@@ -68,17 +70,28 @@ export const useEntryActions = () => {
     };
 
     return {
-      /** Save the composer's text. Rejects (so the text goes back in the box) when nothing was saved. */
-      async compose(result: Composed) {
+      /**
+       * Save the composer's (or the share sheet's) result. Offline, it's kept
+       * on the phone and sent later (it shows in the Journal as waiting).
+       * Rejects (so the text goes back in the box) when nothing was kept.
+       */
+      async compose(result: Composed, { savedMessage }: { savedMessage?: string } = {}): Promise<SaveResult> {
         try {
-          const outcome = await actions.compose(result);
+          const saved = await saves.save(result);
+          if (saved.queued) {
+            void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            toast.show('No connection. Kept on this phone; it’ll send when you’re back online.');
+            return saved;
+          }
+          const { outcome } = saved;
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           const failed = result.spaces.filter((s) => outcome.unfiled?.includes(s.id));
           if (failed.length) toast.show(`Saved, but couldn’t file it in ${names(failed)}.`, { tone: 'error' });
           else if (outcome.duplicate)
             toast.show(result.spaces.length ? `Already saved. Filed it in ${names(result.spaces)}.` : 'Already saved.');
+          else if (savedMessage) toast.show(savedMessage);
           else if (outcome.kind === 'note') toast.show('Note saved.');
-          return outcome;
+          return saved;
         } catch (error) {
           fail('Couldn’t save that. Your text is back in the box.', error);
           throw error;
@@ -144,7 +157,7 @@ export const useEntryActions = () => {
         router.push({ pathname: '/note/[id]', params: { id: noteId } });
       },
     };
-  }, [actions, deletes, dismissals, router, toast]);
+  }, [actions, deletes, dismissals, router, saves, toast]);
 };
 
 export type EntryActions = ReturnType<typeof useEntryActions>;

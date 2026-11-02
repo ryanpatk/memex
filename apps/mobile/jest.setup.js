@@ -72,3 +72,6 @@ jest.mock('@react-native-community/datetimepicker', () => {
     default: ({ onValueChange, testID }) => React.createElement(View, { testID, onValueChange: (date) => onValueChange?.({ type: 'set' }, date) }),
   };
 });
+
+// Connectivity: the package's own mock (always online; tests drive the outbox directly).
+jest.mock('@react-native-community/netinfo', () => require('@react-native-community/netinfo/jest/netinfo-mock.js'));

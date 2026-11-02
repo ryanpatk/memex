@@ -5,7 +5,7 @@ import { compactDiff, type DiffLine } from '@memex/core/agent';
 import { relativeTime } from '@memex/core';
 import type { ProposalView } from '../data/inbox';
 import { alpha, mix } from '../theme/palette';
-import { useTheme } from '../theme/theme';
+import { FONTS, useTheme } from '../theme/theme';
 import { Paper } from '../ui/Paper';
 import { Button } from '../ui/Pressable';
 import { SpaceChip } from '../ui/SpaceChip';
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   bot: { width: 24, height: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
   what: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
-  reason: { fontStyle: 'italic' },
+  reason: { fontFamily: FONTS.italic },
   field: { gap: 4 },
   diff: { paddingVertical: 6, overflow: 'hidden' },
   diffLine: { paddingHorizontal: 10 },

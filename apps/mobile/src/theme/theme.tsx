@@ -14,6 +14,9 @@ export const FONTS = {
   regular: 'Inter_400Regular',
   medium: 'Inter_500Medium',
   heavy: 'Inter_600SemiBold',
+  /** Inter's italic faces (iOS can't slant a custom font itself). */
+  italic: 'Inter_400Regular_Italic',
+  heavyItalic: 'Inter_600SemiBold_Italic',
   wordmark: 'Nunito_900Black',
 } as const;
 
