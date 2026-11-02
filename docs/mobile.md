@@ -2,12 +2,16 @@
 
 The native app lives in `apps/mobile`: React Native on **Expo SDK 58** with Expo Router. ROADMAP Phase 6, v1 on TestFlight. Following decision 20, it reads data straight from Supabase through `@memex/core`, using the same Repository and adapter as the web app. RLS limits every query to the signed-in user.
 
-**Status (2026-11-01, threads M6-A and M6-B):** the app shell has four tabs (Journal, Library, Spaces, Inbox) and a sign-in screen, with email + password and GitHub OAuth. Light and dark follow the system.
+**Status (2026-11-01, threads M6-A, M6-B and M6-C):** four tabs (Journal, Library, Spaces, Inbox) plus pushed screens for Tasks, a space's board, a note and a link, and a sign-in screen with email + password and GitHub OAuth. Light and dark follow the system. Next: the iOS share extension, then TestFlight.
 
 - **Journal** (M6-B): the feed plus a composer above the tab bar with the web's syntax, from core: plain text saves a jot, a lone URL saves a link, `[] ` starts a task, `@Space` files it, and the page button makes a note (phones have no ⌘↵). Saves appear at once and roll back if they fail. Tick tasks in place, tap a link for its detail, press a dashed suggestion chip to file an entry, long-press anything for its menu (Open, Mark done, File in…, Delete). Deleting and filing show a toast with Undo. Pull to refresh.
 - **Link detail** (M6-B): picture, title, description, source and date; spaces as toggles; Open in Safari (in-app browser), Share, Delete with Undo.
 - **Library** (M6-B): every saved link as a two-column masonry, newest saved first, with source chips, search and infinite scroll.
-- Spaces and Inbox are still placeholders that show real counts. The share extension, Spaces/Inbox and TestFlight come next.
+- **Spaces** (M6-C): every space in its own hue with how many items it holds, its open tasks, when something last landed there and its three newest entries; Tasks across all spaces sits on top. Pull to refresh.
+- **A space's board** (M6-C, decision 14B in phone form): the space's pinned sites, then its own Journal (jots written there and everything filed there, newest at the bottom), with the composer filing into the space unless the text names another `@Space`. The header's Tasks pill opens Tasks filtered to the space.
+- **Inbox** (M6-C): agents' proposals first (who, what, the item, the reason, and the change as a line diff or before → after; **Approve** applies it, **Reject** keeps the record), then filing suggestions (the item, the likely space with its reason, **File in …** and **Not now**, both with Undo). The tab's badge counts both, like the web's Inbox button.
+- **Tasks** (M6-C, `docs/tasks-view.md` on the phone): reached from the Tasks pill in the Journal's header (open count, red dot when something is overdue), the top of the Spaces tab and a space's header. Grouped by space or by due date, a space filter (Every space · each space · Unfiled, with open counts), an add field on the composer's syntax, tick with Undo (the row holds a beat checked, then moves to Done), due dates from the chip (Today, Tomorrow, Next week, Pick a date… with the system calendar, No due date), long-press for Mark done, Due date…, Rename…, Spaces… and Delete (with Undo), and a folded Done list, 50 at a time.
+- **Notes** (M6-C): tap a note in any feed. Its title, date, spaces and markdown rendered on paper (headings, lists, task boxes, quotes, code, links that open in Safari). **Edit** shows the stored markdown as plain text with its title; Save writes through the Repository. If the note changed elsewhere while you edited, Save asks before overwriting; Back and Cancel ask before dropping unsaved changes.
 
 | | Light | Dark |
 | --- | --- | --- |
@@ -18,10 +22,14 @@ The native app lives in `apps/mobile`: React Native on **Expo SDK 58** with Expo
 | After sending a jot, a link `@Studio` and a task `@Kyoto trip` | ![](mobile/journal-sent-light.png) | ![](mobile/journal-sent-dark.png) |
 | Link detail | ![](mobile/link-light.png) | ![](mobile/link-dark.png) |
 | Library | ![](mobile/library-light.png) | ![](mobile/library-dark.png) |
-| Spaces (placeholder) | ![](mobile/spaces-light.png) | ![](mobile/spaces-dark.png) |
-| Inbox (placeholder) | ![](mobile/inbox-light.png) | ![](mobile/inbox-dark.png) |
+| Spaces | ![](mobile/spaces-light.png) | ![](mobile/spaces-dark.png) |
+| A space's board (Reading: pinned sites, its Journal, the composer filing there) | ![](mobile/space-light.png) | ![](mobile/space-dark.png) |
+| Inbox: agents' proposals (filing, an append with its diff), then filing suggestions | ![](mobile/inbox-light.png) | ![](mobile/inbox-dark.png) |
+| Tasks by space | ![](mobile/tasks-light.png) | ![](mobile/tasks-dark.png) |
+| Tasks by due date | ![](mobile/tasks-date-light.png) | ![](mobile/tasks-date-dark.png) |
+| A note | ![](mobile/note-light.png) | ![](mobile/note-dark.png) |
 
-The signed-in screenshots use the dev-only demo data, not real data. They come from an iPhone 17 Pro simulator on iOS 26.4 running Expo Go 58.0.7. The simulator couldn't be tapped from scripts, so the composer states were reached with `?draft=` deep links and the saves with the dev-only `&send=1` (below); taps are covered by component tests instead.
+The signed-in screenshots use the dev-only demo data, not real data. They come from an iPhone 17 Pro simulator on iOS 26.4 running Expo Go 58.0.7. The simulator couldn't be tapped from scripts, so the composer states were reached with `?draft=` deep links and the saves with the dev-only `&send=1` (below), and the M6-C screens with deep links (`/spaces`, `/space/reading`, `/inbox`, `/tasks`, `/tasks?group=date`, `/note/n2`). Taps (approve, reject, file, not now, tick, Undo, due dates, editing a note) are covered by component tests instead.
 
 ## Run it
 
@@ -35,7 +43,7 @@ npm run ios               # starts Metro and opens the app in Expo Go on the sim
 ```
 
 - **Demo data:** `npm run fixtures` (then press `i`) runs on built-in invented data with a signed-in demo user. Use `EXPO_PUBLIC_MEMEX_FIXTURES=signed-out npx expo start` to start at the sign-in screen instead, where any credentials sign in. Demo mode is dev-only. The flag is ignored when `__DEV__` is false, and `npm run check:release` (also in CI) fails if any fixture code reaches a release bundle. Demo data is core's in-memory Repository (`@memex/core/memory`) over the app's demo rows, so writes work and vanish when the app reloads; nothing reaches Supabase, and link metadata isn't scraped.
-- **Deep links:** `memex:///?draft=<text>` (in Expo Go, `exp://127.0.0.1:8081/--/?draft=…`) opens the Journal with text in the composer; nothing is saved until you send. Only in a dev build on demo data, `&send=1` also sends it. That's how the simulator screenshots were made, and it can't write anywhere else. `…/--/link/<id>` opens link detail and `…/--/library` the Library.
+- **Deep links:** `memex:///?draft=<text>` (in Expo Go, `exp://127.0.0.1:8081/--/?draft=…`) opens the Journal with text in the composer; nothing is saved until you send. Only in a dev build on demo data, `&send=1` also sends it. That's how the simulator screenshots were made, and it can't write anywhere else. `…/--/link/<id>` opens link detail, `…/--/library` the Library, `…/--/spaces` and `…/--/inbox` those tabs, `…/--/space/<id>` a space's board, `…/--/note/<id>` a note, and `…/--/tasks` Tasks (with `?group=date`, `?space=<id>|unfiled` and `?done=1`; the screen keeps these in its URL as you change them).
 - **Link metadata:** set `EXPO_PUBLIC_SCRAPER_URL` (the web's `VITE_SCRAPER_URL`) to fill titles, descriptions and pictures when a link is saved from the composer. Without it, links save with what the URL says, and the favicon comes from Google's favicon service, as on the web.
 - **On your phone:** install Expo Go, run `npx expo start`, scan the QR code.
 - **Checks:** `npm run check` (typecheck, lint, then `npm test`: Vitest for the plain-TS `*.test.ts`, Jest with React Native Testing Library for the component `*.test.tsx`) and `npm run check:release` (release iOS bundle, no fixture code). CI runs both in the `mobile` job of `.github/workflows/ci.yml`, next to the web job.
@@ -53,17 +61,26 @@ apps/mobile/
     auth/callback.tsx      memex://auth/callback (cold-start OAuth redirect)
     (tabs)/                index (Journal + composer), library (masonry), spaces, inbox
     link/[id].tsx          link detail
+    note/[id].tsx          note view + plain-markdown editing
+    space/[id].tsx         a space's board (scoped Journal + composer)
+    tasks.tsx              Tasks
   src/auth/                encryptedStorage (session at rest), oauth (redirect parsing), signInWithGitHub, SessionProvider
   src/data/                config, client (captured_client), keys (React Query), repository, DataProvider,
-                           actions (the writes), deleteQueue (Undo), journal (core model → feed), useJournal,
-                           library + useLibrary, scraper
+                           actions (the writes), deleteQueue (Undo), journal (core model → feed, space summaries
+                           and boards), useJournal, library + useLibrary, scraper, tasks (core's Tasks view),
+                           inbox + useInbox (proposals), dismissals (Not now, on this phone)
   src/data/fixtures/       DEV-ONLY demo rows + the memory Repository over them
   src/journal/             Composer + composerModel, the feed and its entry renderers, entryMenu, useEntryActions
   src/library/             LibraryCard
-  src/screens/             screen tests (Library, link detail)
+  src/spaces/              SpaceCard, PinnedSites
+  src/inbox/               ProposalCard, SuggestionCard
+  src/tasks/               TaskRow, TaskAdd, TasksButton, DueDateSheet, dueMenu, taskMenu, useTaskActions
+  src/notes/               markdown (block + inline parser, tested), MarkdownView
+  src/screens/             screen tests (Library, link detail, Spaces, a space, Inbox, Tasks, notes)
   src/testing/             renderWithData: the app's providers over the demo repository
   src/theme/               palette (core tokens → hex) and theme (type roles, paper / object depth)
-  src/ui/                  Text, Paper, Button (objects), TextField, FilterChip, Toast, Canvas, Wordmark, chips, placeholders
+  src/ui/                  Text, Paper, Button (objects), RoundButton, Segmented, TextField, FilterChip, Toast, Canvas,
+                           ScreenHeader / StackHeader, Wordmark, chips, placeholders
 ```
 
 **A separate npm project, not a workspace member.** Expo SDK 58 pins React 19.3 and React Native 0.88. The web app is on React 19.1, and joining the root workspace would hoist two Reacts into one tree. So `apps/mobile` has its own `package-lock.json`, like `api/` and `extension/`, and depends on core with `"@memex/core": "file:../../packages/core"`. The web's install, lockfile, build and deploy are untouched; root ESLint ignores `apps/`. Two settings make core resolve its own imports from this app:
@@ -79,7 +96,15 @@ apps/mobile/
 - **Links go through core's capture service** (`createCaptureService` over the new `createRepositoryCaptureStore`, `@memex/core/capture`), so a phone save dedupes exactly like the extension's: same platform id, the same post under another URL, or the same normalized URL. A duplicate isn't saved twice; the toast says “Already saved” and the requested spaces are still applied. New links get `source` / `source_id` / `url_key` from `identifySource`, `captured_by: 'app'` and `captured_client: 'memex-ios/<app version>'`. The web's own composer still saves links without these provenance fields; the phone follows the capture rules instead, since the schema already allows `app`.
 - **Delete with Undo:** `deleteQueue.ts` hides the entry at once and deletes it after 6 seconds unless Undo is pressed. If the delete fails, the entry comes back with an error toast. Pending deletes run straight away when the app goes to the background.
 - **Filing:** suggestion chips, the long-press “File in…” menu and the link detail toggles all go through `actions.file` / `unfile`, with Undo on the toast.
+- **Tasks (M6-C):** `setTaskDone`, `setTaskDue` and `renameTask` patch the cached row and put back only the changed fields if the write fails. Ticking moves `updated_at` too, so the task sorts first in Done (core's `compareDoneTasks`) before the refetch.
+- **Notes (M6-C):** `updateNote` saves the title (an empty one is stored as null, as on the web) and the markdown with `notes.update`, optimistic with rollback.
+- **Agent proposals (M6-C):** `decideProposal` calls core's `applyProposal` / `rejectProposal` (`@memex/core/agent`), the web Inbox's path. The proposal leaves the list at once and comes back if that fails; approving refetches the item it changed. Proposals refetch every minute while the app is open, like the web's.
+- **Not now (M6-C):** dismissing a filing suggestion stores the entry id on the phone (`src/data/dismissals.ts`, AsyncStorage, pruned after 90 days and capped at 500). The Journal model wraps core's filer so a dismissed entry gets no suggestion anywhere: the Inbox, the feed's dashed chip, link detail. Nothing about the item changes, and nothing syncs (see Known gaps).
 - **Library:** `src/data/library.ts` runs core's `linkToItem`, `matchesLibraryFilters` (source), `itemMatchesSearch` and `sortItems` (newest saved), the same functions as the web Library. `useLibrary` hands FlashList one page of 24 at a time.
+
+**Reused from core (M6-C).** Spaces: `entriesInSpace` + `toParts` for a space's feed, `spaceBoard` for its counts, tasks and pinned sites, `withDefaultSpace` for its composer. Tasks: `taskSpaceMap`, `filterTasksBySpace`, `splitTasks`, `groupTasks`, `countOpenTasksBySpace`, `dueBucket`, `dueLabel`, `isOverdue`, `daysUntilDue`, `dueShortcuts`, `parseTaskGrouping`, `parseTaskInput`, `toDayKey` / `fromDayKey`. Inbox: `inboxOf` + `createFiler`, `proposalFields`, `changedSinceProposed`, `compactDiff`, `applyProposal`, `rejectProposal`. New in the app: the phone's one-beat hold before a ticked task moves to Done (`toTasksView`), the dismissals store, `proposalTarget` (the same eight lines as the web's `components/journal/proposalTarget.ts`; it can move to core once M3-B settles), and a small markdown parser for reading notes (the web uses react-markdown). Core wasn't changed in this thread.
+
+**One new dependency (M6-C):** `@react-native-community/datetimepicker` (the SDK 58 version, added with `npx expo install`, config plugin in `app.json`) for Tasks' Pick a date… sheet, the system's inline calendar. It ships in Expo Go; EAS builds include it like any other native module.
 
 **Feel.** The composer and its chips are objects: they settle when pressed and tick with haptics. Send gets a medium impact and success or error haptics when the save resolves. The feed, link detail and Library cards are paper: they tint when pressed but never move. The suggestion chip is dashed and carries its reason (web: `.jr-chip.is-suggested`). Toasts are announced to VoiceOver. Every entry's menu is also exposed as VoiceOver actions, and every control has a text label.
 
@@ -122,9 +147,11 @@ The next thread's commands, once 1–8 are in place: `npx eas-cli init` → `eas
 
 ## Known gaps
 
-- **Notes:** you can write a note, but you can't open or edit one on the phone yet (ROADMAP: a DOM component around the web's `MarkdownEditor`). Tapping a note does nothing; long-press still offers its menu.
+- **Notes:** editing is plain text (the stored markdown in a text field), not the web's live-preview editor (ROADMAP: a DOM component around `MarkdownEditor`). Task boxes in a note show their state but don't tick from the reading view. Inter's italic face isn't loaded, so `*italic*` reads upright.
+- **Not now is per phone:** a dismissed filing suggestion is remembered on this device only (no schema change in v1), and the web still suggests it. A shared “dismissed” field would need a home in the vault format.
+- **Rename** in the Tasks menu uses the iOS text prompt (`Alert.prompt`); Android would need its own sheet.
 - Jots can't be turned into notes or tasks yet (the web has both).
-- Spaces and Inbox are placeholders. The Inbox's count is real, and its suggestions show as chips in the feed.
+- A space's board on the phone is its Journal plus pinned sites; the web's board column (open tasks, saves, notes) isn't a separate section here. Tasks filtered to the space is one press away instead. Pinning and taking items out of a space happen on the web.
 - The canvas swatch is fixed to the default until a Settings screen exists. The web keeps its choice in localStorage, so it can't sync without a stored setting.
-- No end-to-end tests: Vitest covers the plain-TS parts (writes, Undo queue, composer model, Library model, encrypted storage, OAuth parsing, palette, fixtures) and Jest + React Native Testing Library covers the screens (composer, tick, delete and Undo, filing, link detail, Library). Maestro flows on a simulator that can be tapped would be the next step.
+- No end-to-end tests: Vitest covers the plain-TS parts (writes, Undo queue, composer model, Library model, encrypted storage, OAuth parsing, palette, fixtures) and Jest + React Native Testing Library covers the screens (composer, tick, delete and Undo, filing, link detail, Library; M6-C: Spaces, a space's board and its composer, Inbox approve / reject / file / not now with Undo, Tasks grouping, filter, add, tick with hold and Undo, due dates from the menu and the calendar, Done, the note view, editing, the overwrite and discard prompts). Maestro flows on a simulator that can be tapped would be the next step.
 - `npx expo start` may rewrite `tsconfig.json`'s `include`; that's expected and harmless.

@@ -254,7 +254,8 @@ Re-sync only needs `/api/capture`, so 5b–5d can start after Phase 3, before th
 - [x] Journal feed + composer (keyboard-avoiding, chat-style list), entry cards per type — *2026-11-01 (M6-B): composer on core's syntax, tick / delete with Undo / filing in the feed*
 - [ ] Share extension (iOS) / share target (Android) → entry, optional space
 - [ ] Library: spaces row + masonry grid; link detail; open in browser — *2026-11-01 (M6-B): masonry of links with source chips and search, link detail, open in the in-app Safari; the spaces row is still to do*
-- [ ] Note view/edit via a DOM component wrapping the web `MarkdownEditor`
+- [ ] Note view/edit via a DOM component wrapping the web `MarkdownEditor` — *2026-11-01 (M6-C): note view (rendered markdown) and plain-text markdown editing; the rich editor port is still to do*
+- [x] Spaces, Inbox and Tasks on the phone — *2026-11-01 (M6-C): Spaces tab + a space's board (scoped Journal, pinned sites), Inbox (agent proposals, filing suggestions with File / Not now), Tasks on core's model; `docs/mobile.md`*
 - [ ] Offline + sync via core (**v2**, needs Phase 4); TestFlight (**v1**)
 
 ### Phase 7 — Agents (MCP) · **v1 (7a–7d), v2 (7e)**
