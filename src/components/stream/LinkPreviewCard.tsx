@@ -2,6 +2,7 @@ import { useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { Check, ExternalLink } from 'lucide-react';
 import { type LinkWithTag, getHostname, getLinkTitle, itemKey } from '@memex/core';
 import { handleBackgroundLinkClick } from '../../utils/openUrlInBackgroundTab';
+import { dragAttrs } from '../../utils/itemDrag';
 
 interface LinkPreviewCardProps {
   link: LinkWithTag;
@@ -59,6 +60,7 @@ const LinkPreviewCard = ({
       aria-label={selectionMode ? `Select ${title}` : `Details for ${title}`}
       aria-pressed={selectionMode ? isSelected : undefined}
       data-item-key={itemKey('link', link.id)}
+      {...dragAttrs(itemKey('link', link.id), title)}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
     >

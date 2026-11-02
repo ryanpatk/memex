@@ -26,6 +26,11 @@ interface AppState {
   setItemSelection: (keys: string[]) => void;
   clearItemSelection: () => void;
 
+  // An item drag in progress (utils/itemDrag.ts): the keys it carries, so
+  // sidebar spaces can show themselves as drop targets. Not persisted.
+  itemDrag: { keys: string[] } | null;
+  setItemDrag: (drag: { keys: string[] } | null) => void;
+
   // Actions
   setProjects: (projects: Project[]) => void;
   setCurrentProject: (project: Project | null) => void;
@@ -74,6 +79,8 @@ export const useAppStore = create<AppState>()(
         })),
       setItemSelection: (keys) => set({ selectedItemKeys: Array.from(new Set(keys)) }),
       clearItemSelection: () => set({ selectedItemKeys: [] }),
+      itemDrag: null,
+      setItemDrag: (drag) => set({ itemDrag: drag }),
 
       // Project actions
       setProjects: (projects) => set({ projects }),

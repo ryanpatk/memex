@@ -2,6 +2,7 @@ import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import { Check } from 'lucide-react';
 import type { ItemType, Tag } from '@memex/core';
 import { SHOW_TAGS_UI } from '../constants/modules';
+import { dragAttrs } from '../utils/itemDrag';
 
 const MAX_VISIBLE_TAGS = 3;
 
@@ -101,6 +102,7 @@ const StreamCard = ({
       aria-pressed={interactive && selectionMode ? isSelected : undefined}
       aria-label={ariaLabel}
       data-item-key={itemKey}
+      {...(itemKey ? dragAttrs(itemKey, title) : {})}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
     >

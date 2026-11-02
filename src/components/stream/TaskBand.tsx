@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Check, ChevronRight, Plus, X } from 'lucide-react';
 import { type TaskWithTags, dueDateIso, itemKey } from '@memex/core';
+import { dragAttrs } from '../../utils/itemDrag';
 
 interface TaskBandProps {
   openTasks: TaskWithTags[];
@@ -49,6 +50,7 @@ export const TaskRow = ({
       aria-pressed={selectionMode ? isSelected : undefined}
       aria-label={selectionMode ? `Select “${task.title}”` : undefined}
       data-item-key={itemKey('task', task.id)}
+      {...dragAttrs(itemKey('task', task.id), task.title)}
       onClick={selectionMode ? toggleSelect : undefined}
       onKeyDown={selectionMode ? handleKeyDown : undefined}
     >

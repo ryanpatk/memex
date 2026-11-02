@@ -1,5 +1,6 @@
 import { useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { Check } from 'lucide-react';
+import { dragAttrs } from '../../utils/itemDrag';
 
 interface StreamRowProps {
   leading: ReactNode;
@@ -53,6 +54,7 @@ const StreamRow = ({
       aria-pressed={onActivate && selectionMode ? isSelected : undefined}
       aria-label={ariaLabel}
       data-item-key={itemKey}
+      {...(itemKey ? dragAttrs(itemKey, title) : {})}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
     >

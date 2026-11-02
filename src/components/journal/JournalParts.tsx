@@ -16,6 +16,7 @@ import {
   type Run,
 } from '@memex/core';
 import { getInitials } from '../../utils/streamCardFormat';
+import { dragAttrs } from '../../utils/itemDrag';
 
 /*
  * Journal entry renderers, decision 11D: jots are bubbles, tasks are lines,
@@ -69,6 +70,16 @@ const Favicon = ({ link }: { link: LinkWithTag }) => {
     </span>
   );
 };
+
+/** What a drag of this entry is called (the drag ghost, utils/itemDrag.ts). */
+const entryTitle = (entry: Entry) =>
+  entry.kind === 'link'
+    ? getLinkTitle(entry.link)
+    : entry.kind === 'note'
+      ? entry.note.title || 'Untitled'
+      : entry.kind === 'task'
+        ? entry.task.title
+        : '';
 
 const Picture = ({ link, className }: { link: LinkWithTag; className?: string }) => {
   const [failed, setFailed] = useState(false);
@@ -276,7 +287,7 @@ const EntryShell = ({
   filer: Filer;
   handlers: JournalHandlers;
 }) => (
-  <article className={`jr-entry ${className}`} data-item-key={entry.id}>
+  <article className={`jr-entry ${className}`} data-item-key={entry.id} {...dragAttrs(entry.id, entryTitle(entry))}>
     <div className="jr-entry-row">
       {children}
       <div className="jr-actions">{actions}</div>
@@ -291,7 +302,13 @@ const RunView = ({ run, spaces, handlers }: { run: Run; spaces: JournalSpace[]; 
   const filedIn = spaces.filter((s) => run.entries.some((e) => e.spaces.some((x) => x.id === s.id)));
   const n = run.entries.length;
   return (
-    <article className="jr-entry jr-entry--run" data-item-key={run.id}>
+    <article
+      className="jr-entry jr-entry--run"
+      data-item-key={run.id}
+      data-drag-keys={run.entries.map((e) => e.id).join(',')}
+      draggable
+      data-drag-label={`${n} ${n === 1 ? run.source.one : run.source.many} from ${run.source.label}`}
+    >
       <div className="jr-entry-row">
         <div className="jr-gallery">
           <div className="jr-run-head">

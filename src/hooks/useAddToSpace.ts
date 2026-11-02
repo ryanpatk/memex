@@ -1,18 +1,33 @@
 import { useCallback } from 'react';
-import { useAddLinksToProfile, useProfileLinkMembership } from './useProfileLinks';
-import { useAddNotesToProfile, useProfileNoteMembership } from './useProfileNotes';
-import { useAddTasksToProfile, useProfileTaskMembership } from './useProfileTasks';
+import {
+  useAddLinksToProfile,
+  useProfileLinkMembership,
+  useRemoveLinkFromProfile,
+} from './useProfileLinks';
+import {
+  useAddNotesToProfile,
+  useProfileNoteMembership,
+  useRemoveNoteFromProfile,
+} from './useProfileNotes';
+import {
+  useAddTasksToProfile,
+  useProfileTaskMembership,
+  useRemoveTaskFromProfile,
+} from './useProfileTasks';
 import { useProfiles } from './useProfiles';
+import type { ToastAction } from './useFeedbackToast';
 import { parseItemKey } from '@memex/core';
 import { cue } from '../utils/sound';
 
-type Flash = (message: string) => void;
+type Flash = (message: string, action?: ToastAction) => void;
 
 /**
  * Add stream items (by `${type}:${id}` key) to a space. Shared by the sidebar
- * (spaces as bulk-assign targets) and the selection bar, so both report the
- * same way: optimistic toast, "already there" counts, move cue. Resolves to
- * how many items were newly added (0 when they were all already there).
+ * (spaces as bulk-assign and drop targets), the selection bar, the Journal's
+ * “File to…” and the Tasks view, so all of them report the same way:
+ * optimistic toast with Undo, "already there" counts, move cue. Undo takes
+ * back out only what this call newly filed. Resolves to how many items were
+ * newly added (0 when they were all already there).
  */
 export function useAddToSpace(flash: Flash) {
   const { data: profiles } = useProfiles();
@@ -22,20 +37,17 @@ export function useAddToSpace(flash: Flash) {
   const addLinks = useAddLinksToProfile();
   const addNotes = useAddNotesToProfile();
   const addTasks = useAddTasksToProfile();
+  const removeLink = useRemoveLinkFromProfile();
+  const removeNote = useRemoveNoteFromProfile();
+  const removeTask = useRemoveTaskFromProfile();
 
   return useCallback(
     async (spaceId: string, keys: string[]): Promise<number> => {
       const name = (profiles ?? []).find((space) => space.id === spaceId)?.name ?? 'space';
 
-      const linkIds: string[] = [];
-      const noteIds: string[] = [];
-      const taskIds: string[] = [];
-      const usable = keys.filter((key) => !parseItemKey(key).id.startsWith('temp-'));
-      usable.forEach((key) => {
+      const usable = Array.from(new Set(keys)).filter((key) => {
         const { type, id } = parseItemKey(key);
-        if (type === 'link') linkIds.push(id);
-        else if (type === 'note') noteIds.push(id);
-        else if (type === 'task') taskIds.push(id);
+        return (type === 'link' || type === 'note' || type === 'task') && !id.startsWith('temp-');
       });
 
       const already = new Set<string>();
@@ -49,33 +61,83 @@ export function useAddToSpace(flash: Flash) {
         if (row.profile_id === spaceId) already.add(`task:${row.task_id}`);
       });
       const total = usable.length;
-      const newlyAdded = usable.filter((key) => !already.has(key)).length;
+      const fresh = usable.filter((key) => !already.has(key));
+      const newlyAdded = fresh.length;
       const items = (n: number) => `${n} item${n === 1 ? '' : 's'}`;
 
+      if (total === 0) return 0;
       if (newlyAdded === 0) {
         flash(`${total === 1 ? 'That item was' : 'Those items were'} already in “${name}”.`);
         return 0;
       }
+
+      const idsOf = (type: string) =>
+        fresh.map(parseItemKey).filter((key) => key.type === type).map((key) => key.id);
+      const linkIds = idsOf('link');
+      const noteIds = idsOf('note');
+      const taskIds = idsOf('task');
+
+      const write = Promise.all([
+        linkIds.length > 0 ? addLinks.mutateAsync({ profileId: spaceId, linkIds }) : null,
+        noteIds.length > 0 ? addNotes.mutateAsync({ profileId: spaceId, noteIds }) : null,
+        taskIds.length > 0 ? addTasks.mutateAsync({ profileId: spaceId, taskIds }) : null,
+      ]);
+
+      let undone = false;
+      const undo = async () => {
+        if (undone) return;
+        undone = true;
+        try {
+          await write;
+        } catch {
+          return; // nothing was filed; the failure toast already said so
+        }
+        try {
+          // One removal per item: the same calls removing from a space always made
+          await Promise.all([
+            ...linkIds.map((linkId) => removeLink.mutateAsync({ profileId: spaceId, linkId })),
+            ...noteIds.map((noteId) => removeNote.mutateAsync({ profileId: spaceId, noteId })),
+            ...taskIds.map((taskId) => removeTask.mutateAsync({ profileId: spaceId, taskId })),
+          ]);
+          cue('dismiss');
+          flash(`Took ${newlyAdded === 1 ? 'it' : items(newlyAdded)} back out of “${name}”.`);
+        } catch (error) {
+          console.error('Failed to undo filing:', error);
+          cue('error');
+          flash(`Couldn’t undo. Still in “${name}”.`);
+        }
+      };
+
       cue('move');
       flash(
         newlyAdded === total
           ? `Added ${items(newlyAdded)} to “${name}”.`
           : `Added ${items(newlyAdded)} to “${name}” (${total - newlyAdded} already there).`,
+        { label: 'Undo', onClick: () => void undo() },
       );
 
       try {
-        await Promise.all([
-          linkIds.length > 0 ? addLinks.mutateAsync({ profileId: spaceId, linkIds }) : null,
-          noteIds.length > 0 ? addNotes.mutateAsync({ profileId: spaceId, noteIds }) : null,
-          taskIds.length > 0 ? addTasks.mutateAsync({ profileId: spaceId, taskIds }) : null,
-        ]);
+        await write;
       } catch (error) {
         console.error('Failed to add items to space:', error);
+        cue('error');
         flash(`Couldn’t add to “${name}”. Try again.`);
         return 0;
       }
       return newlyAdded;
     },
-    [addLinks, addNotes, addTasks, flash, linkMembership, noteMembership, profiles, taskMembership],
+    [
+      addLinks,
+      addNotes,
+      addTasks,
+      flash,
+      linkMembership,
+      noteMembership,
+      profiles,
+      removeLink,
+      removeNote,
+      removeTask,
+      taskMembership,
+    ],
   );
 }

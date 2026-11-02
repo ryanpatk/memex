@@ -19,6 +19,7 @@ import {
   type TaskWithTags,
 } from '@memex/core';
 import { handleBackgroundLinkClick } from '../../utils/openUrlInBackgroundTab';
+import { dragAttrs } from '../../utils/itemDrag';
 
 export interface TableSpace {
   id: string;
@@ -339,6 +340,7 @@ const LibraryTable = ({
               <Fragment key={item.key}>
                 <tr
                   data-item-key={item.key}
+                  {...dragAttrs(item.key, title)}
                   aria-rowindex={index + 2}
                   tabIndex={item.key === tabStopKey ? 0 : -1}
                   className={`memex-table-row${selected ? ' is-selected' : ''}${expanded ? ' is-expanded' : ''}${done ? ' is-done' : ''}${isPending(item) ? ' is-new' : ''}${item.type === 'task' && !selectionMode ? '' : ' is-openable'}`}
