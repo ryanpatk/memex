@@ -1,0 +1,624 @@
+/*
+ * A space page (pages/SpacePage.tsx, components/space/SpaceBoard.tsx),
+ * decision 14B: the space's Journal (journal.css) with a board column.
+ * Joyful Utility: the board is paper (lit edge, ring, soft shadow); pins,
+ * the pin toggle and the empty-state discs are objects. The page sets
+ * `--hue` to the space's colour; the board speaks in it sparingly.
+ * Pastel Sky tokens only.
+ */
+
+.sp-page .jr-body {
+  position: relative;
+}
+
+/* ------------------------------------------------------------------ */
+/* Header                                                              */
+/* ------------------------------------------------------------------ */
+
+.sp-page .memex-page-actions svg {
+  width: 16px;
+  height: 16px;
+}
+
+.sp-page .memex-page-actions a.btn-secondary {
+  text-decoration: none;
+}
+
+/* The board is always beside the feed on wide windows; the toggle is for narrow ones */
+.sp-board-toggle {
+  display: none !important;
+}
+
+.sp-title-skeleton {
+  display: inline-block;
+  width: 160px;
+  height: 1em;
+  border-radius: var(--radius-full);
+  background: var(--neutral-3);
+}
+
+/* ------------------------------------------------------------------ */
+/* The feed's empty state: a raised disc in the space's colour          */
+/* ------------------------------------------------------------------ */
+
+.sp-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xxs);
+  align-self: center;
+  max-width: 380px;
+  margin-block: auto var(--space-l);
+  color: var(--neutral-7);
+  text-align: center;
+  font-size: var(--size-s);
+  line-height: var(--line-s);
+  letter-spacing: var(--letter-spacing-s);
+  text-wrap: balance;
+}
+
+.sp-empty p {
+  margin: 0;
+}
+
+.sp-empty-disc {
+  display: inline-grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--space-xs);
+  border-radius: var(--radius-full);
+  background: var(--neutral-1) var(--control-raised-image);
+  box-shadow: var(--control-raised-bevel), var(--shadow-s);
+  animation: memex-pop-in var(--motion-duration) var(--motion-easing);
+}
+
+.sp-empty-disc i {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background: var(--hue, var(--color-1)) var(--control-gloss-image);
+  box-shadow: 0 0 0 4px color-mix(in oklab, var(--hue, var(--color-1)) 18%, transparent);
+}
+
+/* ------------------------------------------------------------------ */
+/* The board column                                                    */
+/* ------------------------------------------------------------------ */
+
+.sp-board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+  flex: none;
+  width: 340px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: var(--space-s) var(--space-s) var(--space-m);
+  border-radius: var(--radius-m);
+  background: var(--neutral-1);
+  box-shadow:
+    var(--surface-lit),
+    0 0 0 var(--border-s) var(--border-default-color),
+    var(--shadow-m);
+}
+
+.sp-board-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.sp-board-head h2 {
+  margin: 0;
+  color: var(--neutral-10);
+  font-weight: var(--weight-ui-heavy);
+  font-size: var(--size-m);
+  line-height: var(--line-m);
+  letter-spacing: var(--letter-spacing-m);
+}
+
+.sp-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.sp-section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 28px;
+}
+
+.sp-section-head h2 {
+  margin: 0;
+  color: var(--neutral-8);
+  font-weight: var(--weight-ui-heavy);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+  text-transform: uppercase;
+  scroll-margin-top: var(--space-s);
+}
+
+.sp-count {
+  color: var(--neutral-7);
+  font-family: var(--font-data);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-section-action {
+  margin-left: auto;
+}
+
+/* Small text actions: “Add”, “Open in Library” */
+.sp-link-button,
+.sp-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 28px;
+  padding: 0 var(--space-xs);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-1-ink);
+  font: inherit;
+  font-weight: var(--weight-ui-medium);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.sp-link-button svg,
+.sp-more svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+.sp-link-button:hover,
+.sp-more:hover {
+  background: var(--option-badge-background);
+}
+
+.sp-link-button:focus-visible,
+.sp-more:focus-visible,
+.sp-clear a:focus-visible {
+  outline: var(--focus-ring-outline);
+  outline-offset: 2px;
+}
+
+.sp-more {
+  align-self: flex-start;
+}
+
+.sp-empty-line {
+  margin: 0;
+  color: var(--neutral-7);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+  text-wrap: pretty;
+}
+
+/* ---------- Pinned ---------- */
+
+.sp-pins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.sp-pin-chip {
+  max-width: 100%;
+  text-decoration: none;
+}
+
+.sp-pin-chip .memex-launch-chip-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-fav {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  background: var(--neutral-3);
+  color: var(--neutral-8);
+  font-family: var(--font-ui);
+  font-weight: var(--weight-ui-heavy);
+  font-size: 9px;
+  line-height: 1;
+}
+
+.sp-fav img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.memex-launch-chip-icon .sp-fav {
+  background: transparent;
+}
+
+/* ---------- Open tasks: the Tasks view's rows, a size down ---------- */
+
+.sp-tasks {
+  margin: 0 calc(-1 * var(--space-xxs));
+}
+
+.sp-tasks .tk-title {
+  font-size: var(--size-s);
+  line-height: var(--line-s);
+  letter-spacing: var(--letter-spacing-s);
+}
+
+.sp-tasks .tk-title-input {
+  font-size: var(--size-s);
+  line-height: var(--line-s);
+  letter-spacing: var(--letter-spacing-s);
+}
+
+.sp-tasks .tk-meta {
+  max-width: 60%;
+}
+
+.sp-tasks .tk-chip {
+  max-width: 96px;
+}
+
+/* An empty due date only shows on hover or focus, so short rows stay calm */
+@media (hover: hover) {
+  .sp-tasks .tk-due:not(.has-due) {
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+  }
+
+  .sp-tasks .tk-row:hover .tk-due:not(.has-due),
+  .sp-tasks .tk-row:focus-within .tk-due:not(.has-due) {
+    opacity: 1;
+  }
+}
+
+.sp-start,
+.sp-clear {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--neutral-7);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+}
+
+.sp-start-disc,
+.sp-clear-disc {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  background: var(--neutral-1) var(--control-raised-image);
+  color: var(--neutral-7);
+  box-shadow: var(--control-raised-bevel), var(--shadow-s);
+}
+
+.sp-start-disc svg,
+.sp-clear-disc svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* All done: the disc earns the gloss (an “on” state) */
+.sp-clear-disc {
+  background: var(--color-1) var(--control-gloss-image);
+  color: var(--cte-accent-text);
+  animation: memex-pop-in var(--motion-duration) var(--motion-easing);
+}
+
+.sp-clear a {
+  color: var(--color-1-ink);
+  font-weight: var(--weight-ui-medium);
+  border-radius: var(--radius-xs);
+}
+
+/* ---------- Saves: picture tiles (paper), a pin toggle (object) ---------- */
+
+.sp-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sp-tile {
+  position: relative;
+  aspect-ratio: 1;
+  min-width: 0;
+  border-radius: var(--radius-s);
+  background: var(--neutral-2);
+  box-shadow:
+    var(--surface-lit),
+    0 0 0 var(--border-s) var(--border-default-color),
+    var(--shadow-s);
+  transition:
+    box-shadow var(--transition-swell),
+    transform var(--transition-swell);
+}
+
+@media (hover: hover) {
+  .sp-tile:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      var(--surface-lit),
+      0 0 0 var(--border-s) var(--border-default-color),
+      var(--shadow-m);
+  }
+}
+
+.sp-tile[draggable='true'] {
+  cursor: grab;
+}
+
+.sp-tile-link {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: inherit;
+  color: inherit;
+  text-decoration: none;
+}
+
+.sp-tile-link:focus-visible {
+  outline: var(--focus-ring-outline);
+  outline-offset: 2px;
+}
+
+.sp-tile-link img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sp-tile--text .sp-tile-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+  padding: var(--space-xs);
+}
+
+.sp-tile-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  color: var(--neutral-10);
+  font-family: var(--font-editorial);
+  font-weight: var(--weight-editorial-medium);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+}
+
+.sp-pin {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--neutral-1) var(--control-raised-image);
+  color: var(--neutral-8);
+  box-shadow: 0 0 0 var(--border-s) var(--border-default-color), var(--control-raised-bevel), var(--shadow-s);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-swell);
+}
+
+.sp-pin svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sp-tile:hover .sp-pin,
+.sp-tile:focus-within .sp-pin,
+.sp-pin.is-pinned {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .sp-pin {
+    opacity: 1;
+  }
+}
+
+@media (hover: hover) {
+  .sp-pin:hover {
+    transform: scale(var(--hover-swell-icon));
+  }
+}
+
+.sp-pin:active {
+  transform: translateY(var(--motion-press-distance)) scale(var(--press-settle));
+  transition-duration: 80ms;
+}
+
+.sp-pin:focus-visible {
+  outline: var(--focus-ring-outline);
+  outline-offset: 2px;
+}
+
+/* Pinned is an “on” state: the space's colour with gloss */
+.sp-pin.is-pinned {
+  background: var(--hue, var(--color-1)) var(--control-gloss-image);
+  color: var(--neutral-1);
+}
+
+/* ---------- Notes ---------- */
+
+.sp-notes {
+  display: flex;
+  flex-direction: column;
+  margin: 0 calc(-1 * var(--space-xxs));
+  padding: 0;
+  list-style: none;
+}
+
+.sp-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-xxs);
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.sp-note:hover {
+  background: var(--neutral-2);
+}
+
+.sp-note:focus-visible {
+  outline: var(--focus-ring-outline);
+  outline-offset: 1px;
+}
+
+.sp-note-glyph {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  color: var(--neutral-7);
+}
+
+.sp-note-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sp-note-title,
+.sp-note-body {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-note-title {
+  color: var(--neutral-10);
+  font-family: var(--font-editorial);
+  font-weight: var(--weight-editorial-medium);
+  font-size: var(--size-s);
+  line-height: var(--line-s);
+  letter-spacing: var(--letter-spacing-s);
+}
+
+.sp-note-body {
+  color: var(--neutral-7);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+}
+
+/* ------------------------------------------------------------------ */
+/* Narrower windows: the board folds behind the header's Board button   */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 1179px) {
+  .sp-board-toggle {
+    display: inline-flex !important;
+  }
+
+  .sp-board-toggle.is-open {
+    background-color: var(--option-badge-background);
+    color: var(--color-1-ink);
+  }
+
+  .sp-board {
+    display: none;
+  }
+
+  .sp-page.has-board .sp-board {
+    position: absolute;
+    top: 0;
+    right: var(--layout-gutter, var(--space-m));
+    bottom: var(--space-m);
+    z-index: 5;
+    display: flex;
+    box-shadow:
+      var(--surface-lit),
+      0 0 0 var(--border-s) var(--border-default-color),
+      var(--shadow-l, var(--shadow-m));
+    animation: memex-pop-in var(--motion-duration) var(--motion-easing);
+    transform-origin: top right;
+  }
+}
+
+@media (max-width: 899px) {
+  .sp-hide-narrow {
+    display: none;
+  }
+
+  /* Phones: the board takes the whole column while open, like the Inbox */
+  .sp-page.has-board .jr-main {
+    display: none;
+  }
+
+  .sp-page.has-board .sp-board {
+    position: static;
+    flex: 1;
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-empty-disc,
+  .sp-clear-disc,
+  .sp-page.has-board .sp-board {
+    animation: none;
+  }
+
+  .sp-tile,
+  .sp-pin {
+    transition: opacity var(--transition-fast);
+  }
+
+  .sp-tile:hover {
+    transform: none;
+  }
+}

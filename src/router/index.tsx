@@ -5,6 +5,7 @@ import SignUpPage from "../pages/auth/SignUpPage.tsx";
 import ProtectedPage from "../pages/ProtectedPage.tsx";
 import StreamPage from "../pages/StreamPage.tsx";
 import TasksPage from "../pages/TasksPage.tsx";
+import SpacePage from "../pages/SpacePage.tsx";
 import ProjectPage from "../pages/ProjectPage.tsx";
 import StyleguidePage from "../pages/StyleguidePage.tsx";
 import MocksPage from "../pages/MocksPage.tsx";
@@ -49,8 +50,9 @@ const router = createBrowserRouter([
                 element: <StreamPage />,
               },
               {
+                // A space: its scoped Journal + board column (decision 14B)
                 path: "/spaces/:spaceId",
-                element: <StreamPage />,
+                element: <SpacePage />,
               },
               {
                 path: TASKS_PATH,
