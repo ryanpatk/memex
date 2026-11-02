@@ -70,6 +70,16 @@ describe('A space’s board', () => {
     expect((await repository.spaceTasks.listMembership()).filter((r) => r.task_id === task.id).map((r) => r.profile_id)).toEqual(['studio']);
   });
 
+  it('shows the space’s pinned sites (core’s spaceBoard) and opens them', async () => {
+    routerMock.__setParams({ id: 'reading' });
+    await renderWithData(<SpaceScreen />);
+    await flush();
+    const pins = screen.getAllByLabelText(/^Pinned: /).map((el) => el.props.accessibilityLabel);
+    expect(pins).toEqual(['Pinned: Calm Technology', 'Pinned: The Shape of Design']);
+    await fireEvent.press(screen.getByLabelText('Pinned: Calm Technology'));
+    expect(routerMock.__router.push).toHaveBeenCalledWith({ pathname: '/link/[id]', params: { id: 'l2' } });
+  });
+
   it('opens Tasks filtered to the space', async () => {
     routerMock.__setParams({ id: 'kyoto' });
     await renderWithData(<SpaceScreen />);

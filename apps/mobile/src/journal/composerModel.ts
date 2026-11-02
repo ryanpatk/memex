@@ -90,9 +90,3 @@ export const draftSuggestion = (parsed: ComposerResult, filer: Filer | undefined
   return entry ? filer.suggest(entry) : undefined;
 };
 
-/**
- * On a space's screen, what you send is filed there unless it names its own
- * @spaces (the web's rule for a capture while the filter holds one space).
- */
-export const fileByDefault = <T extends ComposerResult>(parsed: T, space: JournalSpace | undefined): T =>
-  space && parsed.kind !== 'empty' && parsed.spaces.length === 0 ? { ...parsed, spaces: [space] } : parsed;

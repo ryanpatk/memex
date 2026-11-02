@@ -68,6 +68,14 @@ describe('spaces', () => {
     expect(feed.filter((p) => p.kind === 'day').map((p) => (p.kind === 'day' ? p.label : ''))[0]).toBe('Today');
     expect(spaceFeed(journal, 'nope', NOW).feed).toEqual([]);
   });
+
+  it('carries core’s board: pins, open and done tasks, total', () => {
+    const { board } = spaceFeed(journal, 'kyoto', NOW);
+    expect(board.openTasks.map((t) => t.id)).toEqual(['t4', 't3']);
+    expect(board.doneTasks.map((t) => t.id)).toEqual(['t1']);
+    expect(board.total).toBe(4);
+    expect(spaceFeed(journal, 'reading', NOW).board.pinned.map((l) => l.id)).toEqual(['l2', 'l1']);
+  });
 });
 
 describe('createFixtureRepository', () => {

@@ -16,13 +16,15 @@ import { FeedError, FeedSkeleton } from '../../ui/FeedStates';
 import { Placeholder } from '../../ui/Placeholder';
 import { Button } from '../../ui/Pressable';
 import { StackHeader } from '../../ui/StackHeader';
+import { PinnedSites } from '../../spaces/PinnedSites';
 
 const countFmt = new Intl.NumberFormat();
 
 /**
- * A space's board (decision 14B, phone form): the space's own Journal (jots
- * written there and everything filed there, core's feed) with the composer
- * filing into it, and its open tasks one press away.
+ * A space's board (decision 14B, phone form): its pinned sites on top, the
+ * space's own Journal (jots written there and everything filed there, core's
+ * feed) with the composer filing into it (core's withDefaultSpace), and its
+ * open tasks one press away. Counts and pins are core's spaceBoard.
  */
 export default function SpaceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,11 +35,8 @@ export default function SpaceScreen() {
   const placeToasts = useComposerToasts();
   const space = journal?.spaces.find((s) => s.id === id);
   const scoped = useMemo(() => (journal && space ? spaceFeed(journal, space.id) : null), [journal, space]);
-  const spaceTasks = useMemo(
-    () => (journal && space ? journal.tasks.filter((task) => journal.taskMembership.some((r) => r.task_id === task.id && r.profile_id === space.id)) : []),
-    [journal, space],
-  );
-  const n = scoped?.entries.length ?? 0;
+  const spaceTasks = useMemo(() => (scoped ? [...scoped.board.openTasks, ...scoped.board.doneTasks] : []), [scoped]);
+  const n = scoped?.board.total ?? 0;
 
   if (journal && !space) {
     return (
@@ -71,6 +70,7 @@ export default function SpaceScreen() {
         }
         trailing={space && <TasksButton tasks={spaceTasks} space={space.id} />}
       />
+      {scoped && scoped.board.pinned.length > 0 && <PinnedSites links={scoped.board.pinned} onOpen={actions.openLink} />}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.fill}>
         {isLoading ? (
           <FeedSkeleton />

@@ -5,6 +5,7 @@ import {
   createFiler,
   entriesInSpace,
   inboxOf,
+  spaceBoard,
   oklchToHex,
   taskSpaceMap,
   toJournalSpaces,
@@ -33,7 +34,8 @@ export interface JournalInput {
   tasks: TaskWithTags[];
   spaces: Profile[];
   membership: {
-    links: { profile_id: string; link_id: string }[];
+    /** `is_super_favorite` pins a link in that space (the board's pinned sites). */
+    links: { profile_id: string; link_id: string; is_super_favorite?: boolean }[];
     notes: { profile_id: string; note_id: string }[];
     tasks: { profile_id: string; task_id: string }[];
   };
@@ -62,7 +64,7 @@ export const toJournal = (
   const perSpace = new Map(spaces.map((s) => [s.id, 0]));
   entries.forEach((e) => e.spaces.forEach((s) => perSpace.set(s.id, (perSpace.get(s.id) ?? 0) + 1)));
   const openTasks = countOpenTasksBySpace(input.tasks, taskSpaceMap(input.membership.tasks));
-  return { spaces, entries, feed, filer, inbox, counts, perSpace, openTasks, tasks: input.tasks, taskMembership: input.membership.tasks };
+  return { spaces, entries, feed, filer, inbox, counts, perSpace, openTasks, tasks: input.tasks, taskMembership: input.membership.tasks, linkMembership: input.membership.links };
 };
 
 export type Journal = ReturnType<typeof toJournal>;
@@ -86,21 +88,31 @@ export interface SpaceSummary {
   lastAt: string | null;
 }
 
-/** The Spaces tab: each space with its counts and newest entries, in the spaces' own order. */
+/** The Spaces tab: each space with its counts (core's spaceBoard) and newest entries, in the spaces' own order. */
 export const summarizeSpaces = (journal: Journal, recentCount = 3): SpaceSummary[] =>
   journal.spaces.map((space) => {
     const inSpace = entriesInSpace(journal.entries, space.id);
+    const board = spaceBoard(journal.entries, space.id);
     return {
       space,
-      count: inSpace.length,
-      openTasks: journal.openTasks.get(space.id) ?? 0,
+      count: board.total,
+      openTasks: board.openTasks.length,
       recent: inSpace.slice(-recentCount).reverse(),
       lastAt: inSpace.at(-1)?.at ?? null,
     };
   });
 
-/** A space's own Journal (decision 14B): core's feed over just its entries, newest first like the main feed. */
+/**
+ * A space's board (decision 14B) on the phone: core's scoped feed (newest
+ * first, like the main feed) and core's spaceBoard (pinned sites, its tasks,
+ * counts) over the Journal's entries.
+ */
 export const spaceFeed = (journal: Journal, spaceId: string, now = new Date()) => {
   const entries = entriesInSpace(journal.entries, spaceId);
-  return { entries, feed: toParts(entries, now).reverse() as Part[], counts: countKinds(entries) };
+  return {
+    entries,
+    feed: toParts(entries, now).reverse() as Part[],
+    counts: countKinds(entries),
+    board: spaceBoard(journal.entries, spaceId, journal.linkMembership),
+  };
 };

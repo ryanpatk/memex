@@ -24,7 +24,7 @@ export interface DemoData {
   /** An agent's changes waiting in the Inbox (MCP, docs/mcp.md). */
   proposals: InboxProposal[];
   membership: {
-    links: { profile_id: string; link_id: string }[];
+    links: { profile_id: string; link_id: string; is_super_favorite?: boolean }[];
     notes: { profile_id: string; note_id: string }[];
     tasks: { profile_id: string; task_id: string }[];
   };
@@ -221,10 +221,10 @@ export const buildDemoData = (now = new Date()): DemoData => {
     proposals,
     membership: {
       links: [
-        { profile_id: 'reading', link_id: 'l1' },
+        { profile_id: 'reading', link_id: 'l1', is_super_favorite: true },
         { profile_id: 'studio', link_id: 'p0' },
         { profile_id: 'studio', link_id: 'p1' },
-        { profile_id: 'reading', link_id: 'l2' },
+        { profile_id: 'reading', link_id: 'l2', is_super_favorite: true },
         { profile_id: 'studio', link_id: 'x0' },
         { profile_id: 'home', link_id: 'y1' },
       ],

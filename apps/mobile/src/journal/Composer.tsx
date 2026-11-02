@@ -4,12 +4,12 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowUp, FileText, Plus } from 'lucide-react-native';
-import { parseComposer, type ComposerResult, type Filer, type JournalSpace } from '@memex/core';
+import { parseComposer, withDefaultSpace, type ComposerResult, type Filer, type JournalSpace } from '@memex/core';
 import { alpha, mix } from '../theme/palette';
 import { typeRole, useTheme } from '../theme/theme';
 import { usePressSettle } from '../ui/Pressable';
 import { Text } from '../ui/Text';
-import { KIND_HINT, SEND_LABEL, appendMention, draftSuggestion, fileByDefault, insertMention, pickerFor } from './composerModel';
+import { KIND_HINT, SEND_LABEL, appendMention, draftSuggestion, insertMention, pickerFor } from './composerModel';
 
 /*
  * The Journal composer (decision 16A: above the tab bar). One field; what you
@@ -65,7 +65,7 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = s
     }
   }
 
-  const parsed = useMemo(() => fileByDefault(parseComposer(text, spaces, asNote), space), [asNote, space, spaces, text]);
+  const parsed = useMemo(() => withDefaultSpace(parseComposer(text, spaces, asNote), space), [asNote, space, spaces, text]);
   const picker = useMemo(() => pickerFor(text, caret, spaces), [caret, spaces, text]);
   // Recomputed per keystroke, but the filer caches by draft text.
   const suggestion = useMemo(() => (picker ? undefined : draftSuggestion(parsed, filer, now())), [filer, now, parsed, picker]);
