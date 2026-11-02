@@ -39,6 +39,6 @@ export const AUDIT_STATUSES = ['ok', 'error', 'denied', 'invalid', 'rate_limited
  * `ok`: answered. `error`: the tool failed (bad arguments, not found, a
  * backend error). `denied`: the token may not do this (scope, revoked,
  * expired). `invalid`: not a well-formed MCP message. `rate_limited`: over
- * the per-token limit (logged at most once a minute per token).
+ * the per-token limit (logged about once a minute per token and Worker instance).
  */
 export type AuditStatus = (typeof AUDIT_STATUSES)[number];
