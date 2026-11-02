@@ -15,6 +15,8 @@
  *                                    link that is the same thing as `url` (read-only)
  *   GET    /api/spaces             [{ id, name }]
  *   GET    /api/tags               [{ id, name }]
+ *   POST   /mcp                    hosted MCP server for agents (agent tokens, mxa_…;
+ *                                    src/mcp/, docs/mcp.md)
  *
  * The capture rules (identify, dedupe, validate) live in @memex/core
  * (`packages/core/src/capture`), so the hosted MCP server can reuse them.
@@ -23,6 +25,7 @@
  */
 import { CaptureError, createCaptureService, isUuid, parseCaptureInput } from '../../packages/core/src/capture';
 import { createDb, userScope, type Db, type DbEnv } from './db';
+import { handleMcp, type RateLimiter } from './mcp/handler';
 import { tryScrape } from './scraper';
 import { createPostgrestCaptureStore } from './store';
 
@@ -33,6 +36,8 @@ export interface Env extends DbEnv {
   SCRAPER_URL: string;
   /** Workers rate limiting binding (wrangler.jsonc → ratelimits); optional. */
   RATE_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
+  /** Per-agent-token rate limit for /mcp (wrangler.jsonc → ratelimits); optional. */
+  MCP_RATE_LIMITER?: RateLimiter;
 }
 
 const MAX_BODY_BYTES = 64 * 1024;
@@ -100,11 +105,14 @@ async function readJson(request: Request): Promise<unknown> {
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const { pathname, searchParams } = new URL(request.url);
+
+    // Hosted MCP for agents: its own tokens (mxa_…), scopes, limits and audit log (src/mcp/).
+    if (pathname === '/mcp') return handleMcp(request, env, ctx);
+
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
-
-    const { pathname, searchParams } = new URL(request.url);
     const db = createDb(env);
 
     let auth: TokenRow | null;

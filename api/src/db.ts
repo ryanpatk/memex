@@ -29,8 +29,13 @@ export class DbError extends Error {
 
 export type Params = Record<string, string>;
 
-/** Tables that carry user_id and are reachable through userScope. */
-export type OwnedTable = 'links' | 'profiles' | 'tags' | 'projects';
+/**
+ * Tables that carry user_id and are reachable through userScope. Notes,
+ * tasks, jots (self_messages) and the MCP audit log joined for /mcp
+ * (api/src/mcp/); their space/tag joins are read only as embeds under an
+ * owned parent row, so they inherit its user filter.
+ */
+export type OwnedTable = 'links' | 'profiles' | 'tags' | 'projects' | 'notes' | 'tasks' | 'self_messages' | 'mcp_audit_log';
 /** Join tables, written only after both sides were ownership-checked. */
 export type JoinTable = 'profile_links' | 'link_tags';
 

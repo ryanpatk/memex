@@ -3,7 +3,7 @@
 # check), and the Expo app in apps/mobile (job: mobile).
 # Runs alongside secret-scan.yml (gitleaks). Local equivalent:
 #   npm run typecheck && npm run lint && npm test && npm run build
-#   (cd api && npx tsc --noEmit) && (cd extension && npm run typecheck && npm run build)
+#   (cd api && npm ci && npx tsc --noEmit) && (cd extension && npm run typecheck && npm run build)
 name: CI
 
 on:
@@ -38,6 +38,11 @@ jobs:
       - name: Install
         run: npm ci
 
+      # memex-api's tests (run by the root Vitest) import the MCP SDK from api/node_modules.
+      - name: Install memex-api
+        working-directory: api
+        run: npm ci
+
       - name: Typecheck (web app + @memex/core)
         run: npm run typecheck
 
@@ -54,7 +59,7 @@ jobs:
 
       - name: memex-api typecheck
         working-directory: api
-        run: npm ci && npx tsc --noEmit
+        run: npx tsc --noEmit
 
       - name: Extension typecheck + build
         working-directory: extension
