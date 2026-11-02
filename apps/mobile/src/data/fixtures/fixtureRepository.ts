@@ -83,6 +83,7 @@ export const createFixtureRepository = ({ signedIn = true, now = new Date() } = 
     spaceNotes: { listMembership: async () => data.membership.notes, addNotes: readOnly, removeNote: readOnly },
     spaceTasks: { listMembership: async () => data.membership.tasks, addTasks: readOnly, removeTask: readOnly },
     apiTokens: { getAll: async () => [], create: readOnly, delete: readOnly },
+    views: { getAll: async () => [], create: readOnly, update: readOnly, delete: readOnly },
     projects: { getAll: async () => [], getById: async () => null, create: readOnly, update: readOnly, delete: readOnly },
   };
 };

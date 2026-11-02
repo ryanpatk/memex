@@ -143,6 +143,8 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
       },
       signUp: async () => ({ error: null }),
       signInWithOAuth: async () => ({ error: { message: 'OAuth is not available with demo data.' } }),
+      exchangeCodeForSession: async () => ({ error: { message: 'OAuth is not available with demo data.' } }),
+      setAutoRefresh: () => {},
       signOut: async () => {
         setSession(null);
         return { error: null };
