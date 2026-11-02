@@ -137,6 +137,16 @@ describe('parseComposer', () => {
     expect(parseComposer('example.com', spaces)).toEqual({ kind: 'link', url: 'http://example.com', spaces: [] });
   });
 
+  it('makes a link from any lone http(s):// URL, even on a TLD outside the allowlist', () => {
+    expect(parseComposer('https://www.are.na/ryan/working-memory', spaces)).toEqual({
+      kind: 'link',
+      url: 'https://www.are.na/ryan/working-memory',
+      spaces: [],
+    });
+    // Without the scheme it stays a jot: bare "word.word" text is too often not a URL
+    expect(parseComposer('are.na', spaces).kind).toBe('jot');
+  });
+
   it('files a link', () => {
     expect(parseComposer('github.com/anthropics @Work', spaces)).toEqual({
       kind: 'link',

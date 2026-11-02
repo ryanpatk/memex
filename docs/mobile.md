@@ -123,7 +123,6 @@ The next thread's commands, once 1–8 are in place: `npx eas-cli init` → `eas
 ## Known gaps
 
 - **Notes:** you can write a note, but you can't open or edit one on the phone yet (ROADMAP: a DOM component around the web's `MarkdownEditor`). Tapping a note does nothing; long-press still offers its menu.
-- **Links on `.na` and other rare TLDs** (e.g. `https://www.are.na/…`) save as jots, on the web too: core's `normalizeUrlInput` only accepts TLDs on its allowlist (`packages/core/src/tlds.ts`), even with an explicit `https://`. Not changed here, because it would change the web's behaviour. Worth a decision.
 - Jots can't be turned into notes or tasks yet (the web has both).
 - Spaces and Inbox are placeholders. The Inbox's count is real, and its suggestions show as chips in the feed.
 - The canvas swatch is fixed to the default until a Settings screen exists. The web keeps its choice in localStorage, so it can't sync without a stored setting.

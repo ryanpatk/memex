@@ -6,6 +6,18 @@ describe('normalizeUrlInput', () => {
     expect(normalizeUrlInput('https://example.com/a?b=1#c')).toBe('https://example.com/a?b=1#c');
   });
 
+  it('treats any explicit http(s):// URL as a link, whatever its TLD', () => {
+    expect(normalizeUrlInput('https://www.are.na/ryan/working-memory')).toBe('https://www.are.na/ryan/working-memory');
+    expect(normalizeUrlInput('http://example.photography')).toBe('http://example.photography');
+    expect(normalizeUrlInput(' HTTPS://Studio.Invalidtld/x ')).toBe('HTTPS://Studio.Invalidtld/x');
+    expect(normalizeUrlInput('http://localhost:3000/a')).toBe('http://localhost:3000/a');
+  });
+
+  it('still needs an allowlisted TLD without a scheme', () => {
+    expect(normalizeUrlInput('are.na')).toBe('');
+    expect(normalizeUrlInput('www.are.na/ryan')).toBe('');
+  });
+
   it('adds http:// to bare domains and trims', () => {
     expect(normalizeUrlInput('  example.co.uk/path ')).toBe('http://example.co.uk/path');
   });
@@ -14,7 +26,7 @@ describe('normalizeUrlInput', () => {
     expect(normalizeUrlInput('example.com.')).toBe('http://example.com.');
   });
 
-  it.each(['', '   ', 'hello', 'localhost', 'file.txt', 'two words.com', 'a..com', 'https://'])('rejects %j', (value) => {
+  it.each(['', '   ', 'hello', 'localhost', 'file.txt', 'two words.com', 'a..com', 'https://', 'https:// spaced.com'])('rejects %j', (value) => {
     expect(normalizeUrlInput(value)).toBe('');
     expect(isUrlLike(value)).toBe(false);
   });

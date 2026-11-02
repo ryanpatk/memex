@@ -18,6 +18,17 @@ export function normalizeUrlInput(raw: string): string {
   // A valid host has no whitespace; bail early on anything spacey.
   if (/\s/.test(t)) return '';
 
+  // An explicit http(s):// scheme is a deliberate link, whatever the TLD
+  // (are.na, a new gTLD, localhost:3000): only the URL has to parse.
+  if (/^https?:\/\//i.test(t)) {
+    try {
+      const u = new URL(t);
+      return u.hostname ? t : '';
+    } catch {
+      return '';
+    }
+  }
+
   const candidate = t.includes('://') ? t : `${DEFAULT_SCHEME}${t}`;
   try {
     const u = new URL(candidate);
