@@ -193,7 +193,7 @@ The phases below were written as one line toward the vault. On 2026-11-01 they w
 | **v1** — on Supabase + Cloudflare Workers | 1 (desktop web), 2, 3, 6 (TestFlight), 7a–7d | Journal-first desktop web · live capture via extension + memex-api · hosted MCP on memex-api (headline: Grok Bots read and store project context) · Expo app on TestFlight · walk-away export |
 | **v2** | 4, 5, 6 offline sync, 7e | Vault backend (leave Supabase) · Tauri desktop (re-sync, mirror, shortcut) · offline replicas · embeddings / semantic search |
 
-Done for v1 so far: safety rails ✓ 2026-11-01 (production backups with a tested restore, gitleaks in CI, safety rules for agents in `CLAUDE.md`). Suggested order for the rest, not yet confirmed by Ryan: MCP on memex-api (7a, 7d, the headline) → finish Phase 1 desktop → Phase 2 export → Expo app → TestFlight, with Phase 3 in parallel.
+Done for v1 so far: Phase 1 desktop ✓ 2026-11-01 (the last piece, decision 17B and Journal polish, in `docs/journal-17b.md`); safety rails ✓ 2026-11-01 (production backups with a tested restore, gitleaks in CI, safety rules for agents in `CLAUDE.md`). Suggested order for the rest, not yet confirmed by Ryan: MCP on memex-api (7a, 7d, the headline) → finish Phase 1 desktop → Phase 2 export → Expo app → TestFlight, with Phase 3 in parallel.
 
 ### Phase 0 — Plan ✓ 2026-10-24
 
@@ -207,6 +207,7 @@ Validate the product direction before rebuilding the plumbing.
 - [x] A real Tasks view ✓ 2026-11-01 (`/tasks`: open tasks across spaces by space or due date, Space filter, tick with Undo, Done list, due dates, inline add on the composer's syntax, ⌘K Go to; `docs/tasks-view.md`)
 - [x] ~~Back-office rail~~ → decision 12B: Inbox in the sidebar and a header button, both only while suggestions wait; the tray opens beside the feed (`/?inbox=1`); Tasks in the sidebar ✓ 2026-10-25 (its own view since 2026-11-01)
 - [x] Space page becomes a board (pinned sites · tasks · notes · saves) with a scoped Journal column ✓ 2026-11-01 (decision 14B: the home Journal's feed scoped to the space, composer files there unless you `@` another; board column with pins, open tasks, saves, notes; take-out-of-a-space with Undo; `docs/space-page.md`)
+- [x] Desktop Journal layout, decision 17B ✓ 2026-11-01 (M5-D): the feed is a 760px notebook page with the title over it; quick jots stack into one thought; jots edit in place, move between spaces or out of one (`repository.jots.update`, with Undo) and turn up in ⌘K (`docs/journal-17b.md`)
 - [x] Library: Table view and saved views (Unfiled, From X, From YouTube) ✓ 2026-11-02 (decision 15A: tabs over the Library with counts, Save view, Source/Space/Sort, Table with sortable columns; spec `docs/library-views.md`; saved views in `saved_views`, exported to `views/*.json`)
 - [ ] Mobile web gets the same Journal-first layout (bridge until Phase 6) — *2026-11-01: not a v1 goal; v1 is desktop web and the phone gets the Expo app. Keep mobile web usable, no new layout work*
 
@@ -306,7 +307,7 @@ The primitives (note, link, task), spaces as cross-cutting contexts, one tag voc
 | 14 | Space page | 14A board columns · 14B scoped Journal + board column | **14B** (2026-10-24) |
 | 15 | Library views | 15A tabs over the content · 15B nested in the sidebar | **15A**; the Table ships as a toggle in either view (2026-10-24) |
 | 16 | Phone layout | 16A tab bar · others | **16A tab bar**: Journal, Library, Spaces, Inbox; composer above the tab bar (2026-10-24) |
-| 17 | Desktop Journal layout | 17A as shipped · 17B notebook page + grouped jots · 17C + time gutter · 17D + today column | Open (mocks round 6, `/mocks`, 2026-10-28); recommended **17B** |
+| 17 | Desktop Journal layout | 17A as shipped · 17B notebook page + grouped jots · 17C + time gutter · 17D + today column | **17B** (Ryan, 2026-11-01; mocks round 6, `/mocks`). Built 2026-11-01 on the shared Journal feed (home and space pages): `docs/journal-17b.md` |
 | 18 | Release split | One line of phases toward the vault · v1 on today's stack, then v2 | **v1 / v2** (2026-11-01, approved by Ryan). v1 on Supabase + Cloudflare Workers: Journal-first desktop web, live capture (extension + memex-api), hosted MCP on memex-api for Grok Bots (headline), Expo app on TestFlight, walk-away export. v2: vault backend (leave Supabase), Tauri desktop, embeddings. v1 is single-user; its screens go on Ryan's public portfolio |
 | 19 | Where v1's MCP server runs | memex-api Worker over Supabase · wait for the vault index | **memex-api over Supabase** (2026-11-01, follows from 18); tools keep the §3.6 shape so they move to the vault index in v2 unchanged |
 | 20 | How the v1 Expo app reaches data | Through memex-api (§6: new clients never talk to Supabase) · Supabase adapter in `packages/core` | **Supabase directly via `packages/core`** (2026-11-01, Ryan). Web and Expo share one client factory (`createMemexClient`, injectable auth storage: web storage vs. Expo SecureStore) and the same Repository; RLS protects each user's rows. memex-api stays focused on capture and the hosted MCP |

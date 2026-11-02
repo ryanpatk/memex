@@ -255,6 +255,13 @@ Three rules, all derived at runtime from the chosen canvas swatch in `src/utils/
 - **Filter menus** (Source, Space, Sort) are filter chips with a caret; a chip with a value is “on” (raised tile) and names it (“From X”, “Kyoto trip” with its dot). Menus use the shared `.memex-menu` with check (square) and radio (round) marks; checked = color-1 + gloss.
 - **Table** is paper: neutral-1 surface, hairline ring, `--shadow-s`, sticky header. Rows tint, never lift; selected rows take `--navigation-active-background`. Titles use the reading face; dates, hosts and counts the data face. Spaces are pills in their own hue (13% mix) with the dot. Selection checks and row actions appear on hover/focus (always on touch). Narrow tables shed columns by priority (Type, then Updated/Tags, then Source; spaces become dots).
 
+### Desktop Journal, 17B (2026-11-01)
+
+- **Notebook page:** the Journal's paper (neutral-2 stack, lit edge, ring, `--shadow-m`) shrinks to 760px (`--jr-page`) and sits centred on the canvas; the page title row aligns to the page, or to page + Inbox tray / page + space board when those sit beside it (`--jr-head`). Phones keep the full-width column.
+- **Grouped jots:** jots within 5 minutes, same place, same author, stack into one thought: 3px apart, the joining top-left corner squared to `--radius-xs`, one time and one filing row at the end.
+- **Editing a jot:** the bubble keeps its fill and type and gains the composer's focus ring; a one-line hint (UI face, `--size-xs`, neutral-7) sits inside it.
+- **Found from ⌘K:** a wash of `--color-1` at 14% with a 40% hairline behind the entry, fading by opacity over 2.4s (static with reduced motion); afterwards a focus ring while focus stays.
+
 ### Tasks and drag to a space (2026-11-01)
 
 - **Tasks** (`/tasks`, `styles/tasks.css`): the column sits on the same paper stack as the Journal; each group is a paper card (neutral-1, lit edge, hairline ring, `--shadow-s`) with a sticky header (space dot or a date icon; Overdue in `--error` with an icon). Rows are list rows: 44px, tint on hover, never lift; hairlines are drawn, not borders. The check is the shared task check (gloss when ticked) inside a 40px hit area. Due dates are data-face chips: Today takes the option-badge tint, Overdue the error tint plus an icon. The add field is the Journal composer's recessed field. Empty states use one raised disc; “All clear” makes it glossy because it's an “on” state.

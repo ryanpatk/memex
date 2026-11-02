@@ -6,7 +6,7 @@
 
 Before: the Library's grid filtered to the space, with the old Journal panel (J) docked beside it. Now (14B, “Journal-led”):
 
-- **Left: the space's own Journal.** Every jot written in the space and every link, note and task filed in it, in time order, newest at the bottom, composer below. It is the home Journal's own component (`components/journal/JournalFeed.tsx`), so entries, runs of saves, day separators, filing chips and the jot menu are identical, and whichever desktop layout decision 17 picks will apply here too.
+- **Left: the space's own Journal.** Every jot written in the space and every link, note and task filed in it, in time order, newest at the bottom, composer below. It is the home Journal's own component (`components/journal/JournalFeed.tsx`), so entries, runs of saves, day separators, filing chips and the jot menu are identical, and decision 17B (2026-11-01, `docs/journal-17b.md`: notebook page, grouped jots) applies here too.
   - Entries leave out the space's own chip (every entry would carry it); chips for *other* spaces still show.
   - **Composer defaults to the space.** Same syntax as the Journal (jot, lone URL → link, `[] ` → task, ⌘/Ctrl↵ → note). With no `@`, the result is filed in this space; the hint under the field says “→ Kitchen reno”. An explicit `@Other` **wins and replaces** the default (it does not add to it), so you can write from one space into another; the toast then says where it went (“Jotted in Kyoto trip.”). Logic: `withDefaultSpace` in `@memex/core` `journal/space.ts`.
 - **Right: the board column** (340px, paper). Sections, each with a count:
@@ -44,7 +44,7 @@ Ticking a task in the **home** Journal now also offers Undo (it used to tick sil
 4. **Pins are toggled from save tiles** on the board (the same per-space pin the Library's expanded card sets).
 5. **Narrow breakpoint** at 1180px; the board is a header-button tray below it.
 6. The space's **Library grid** is no longer at `/spaces/:id`; it's one click away at `/library?space=<id>`. The old Journal panel (J) remains in the Library only.
-7. **Jots can't be taken out of a space** (they belong to where they were written; moving a jot needs a `jots.update` in the Repository, listed under Journal polish).
+7. ~~**Jots can't be taken out of a space**~~ *2026-11-01 (M5-D): they can now. “File to…” on a jot moves it to another space or takes it out, with Undo, through `repository.jots.update` (`docs/journal-17b.md`).*
 8. Header count says **entries** (jots included), so it can differ from the sidebar's item count (no jots).
 
 ## Code
