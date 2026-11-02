@@ -1,3 +1,4 @@
+import { SOURCE_KEYS } from '../capture/input';
 import { ITEM_TYPES, isItemType, type ItemType } from '../itemTypes';
 import { SOURCES, sourceOf, type SourceKey } from '../sources';
 import type { SavedView } from '../types';
@@ -22,7 +23,7 @@ export const isLibraryLayout = (value: unknown): value is LibraryLayout =>
 /** The Space filter's value for items filed nowhere. */
 export const UNFILED = 'unfiled';
 
-export const SOURCE_KEYS: readonly SourceKey[] = ['x', 'pinterest', 'youtube', 'web'];
+/** Whether a URL or stored value names a source (the capture module's list). */
 export const isSourceKey = (value: string): value is SourceKey =>
   (SOURCE_KEYS as readonly string[]).includes(value);
 export const sourceKeyLabel = (key: SourceKey): string => (key === 'web' ? 'Web' : SOURCES[key].label);
