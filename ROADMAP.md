@@ -206,7 +206,7 @@ Validate the product direction before rebuilding the plumbing.
 - [x] Filing affordances on entries: space chips ✓, one-press suggestions ✓, “File to…” ✓ (2026-10-25); drag to a sidebar space ✓ 2026-11-01 (Journal entries, Library cards, list and Table rows, Tasks rows; multi-select drags the selection; every filing has Undo; `docs/tasks-view.md`)
 - [x] A real Tasks view ✓ 2026-11-01 (`/tasks`: open tasks across spaces by space or due date, Space filter, tick with Undo, Done list, due dates, inline add on the composer's syntax, ⌘K Go to; `docs/tasks-view.md`)
 - [x] ~~Back-office rail~~ → decision 12B: Inbox in the sidebar and a header button, both only while suggestions wait; the tray opens beside the feed (`/?inbox=1`); Tasks in the sidebar ✓ 2026-10-25 (its own view since 2026-11-01)
-- [ ] Space page becomes a board (pinned sites · tasks · notes · saves) with a scoped Journal column
+- [x] Space page becomes a board (pinned sites · tasks · notes · saves) with a scoped Journal column ✓ 2026-11-01 (decision 14B: the home Journal's feed scoped to the space, composer files there unless you `@` another; board column with pins, open tasks, saves, notes; take-out-of-a-space with Undo; `docs/space-page.md`)
 - [x] Library: Table view and saved views (Unfiled, From X, From YouTube) ✓ 2026-11-02 (decision 15A: tabs over the Library with counts, Save view, Source/Space/Sort, Table with sortable columns; spec `docs/library-views.md`; saved views in `saved_views`, exported to `views/*.json`)
 - [ ] Mobile web gets the same Journal-first layout (bridge until Phase 6) — *2026-11-01: not a v1 goal; v1 is desktop web and the phone gets the Expo app. Keep mobile web usable, no new layout work*
 
