@@ -136,7 +136,7 @@ export const TOOLS: ToolDef[] = [
     name: 'get_item',
     title: 'Read one item',
     description:
-      `Read one link, note, task or jot in full: the whole note text (up to ${AGENT_LIMITS.fullTextChars} characters; text_truncated says if it was cut), task detail, link metadata, spaces and tags. Use the type and id from search, get_journal or space_overview.`,
+      `Read one link, note, task or jot in full: the whole note text (up to ${AGENT_LIMITS.fullTextChars} characters; text_truncated says if it was cut), task detail, link metadata, spaces, tags, and who wrote it (captured_by "agent" + captured_client for items an agent wrote). Use the type and id from search, get_journal or space_overview.`,
     access: 'read',
     inputSchema: z.object({
       type: z.enum(AGENT_ITEM_TYPES).describe('The item type: link, note, task or jot'),

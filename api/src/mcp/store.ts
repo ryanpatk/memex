@@ -39,21 +39,21 @@ export const TYPES: Record<AgentItemType, TypeConfig> = {
   },
   note: {
     table: 'notes',
-    columns: 'id,created_at,updated_at,title,body',
+    columns: 'id,created_at,updated_at,title,body,captured_by,captured_client',
     textColumns: ['title', 'body'],
     spaceJoin: 'profile_notes',
     tagJoin: 'note_tags',
   },
   task: {
     table: 'tasks',
-    columns: 'id,created_at,updated_at,title,detail,is_done,due_date',
+    columns: 'id,created_at,updated_at,title,detail,is_done,due_date,captured_by,captured_client',
     textColumns: ['title', 'detail'],
     spaceJoin: 'profile_tasks',
     tagJoin: 'task_tags',
   },
   jot: {
     table: 'self_messages',
-    columns: 'id,created_at,updated_at,body,profile_id',
+    columns: 'id,created_at,updated_at,body,profile_id,captured_by,captured_client',
     textColumns: ['body'],
     spaceJoin: null,
     tagJoin: null,
@@ -122,11 +122,19 @@ function toRecord(type: AgentItemType, row: Row): AgentRecord {
         favicon_url: str(row.favicon_url),
       };
     case 'note':
-      return { ...base, title: str(row.title), text: str(row.body) };
+      return { ...base, title: str(row.title), text: str(row.body), captured_by: str(row.captured_by), captured_client: str(row.captured_client) };
     case 'task':
-      return { ...base, title: str(row.title), text: str(row.detail), is_done: row.is_done === true, due_date: str(row.due_date) };
+      return {
+        ...base,
+        title: str(row.title),
+        text: str(row.detail),
+        is_done: row.is_done === true,
+        due_date: str(row.due_date),
+        captured_by: str(row.captured_by),
+        captured_client: str(row.captured_client),
+      };
     case 'jot':
-      return { ...base, title: null, text: str(row.body) };
+      return { ...base, title: null, text: str(row.body), captured_by: str(row.captured_by), captured_client: str(row.captured_client) };
   }
 }
 

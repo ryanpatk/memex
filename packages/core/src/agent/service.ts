@@ -58,8 +58,9 @@ export interface AgentItemDetail extends AgentItemSummary {
   text_truncated: boolean;
   source_id?: string | null;
   lists?: string[];
-  captured_by?: string | null;
-  captured_client?: string | null;
+  /** 'agent' when an MCP agent wrote it (captured_client names which); for links also extension, api…; null = the user, in the app. */
+  captured_by: string | null;
+  captured_client: string | null;
   preview_image_url?: string | null;
 }
 
@@ -346,12 +347,14 @@ export function createAgentReadService(store: AgentReadStore, deps: { now?: () =
         text: text && text.length > max ? text.slice(0, max) : text,
         text_length: text?.length ?? 0,
         text_truncated: !!text && text.length > max,
+        // Who wrote it: 'agent' + client name for MCP writes (append_to_note applies
+        // directly only to notes this client wrote), null when the user did.
+        captured_by: record.captured_by ?? null,
+        captured_client: record.captured_client ?? null,
       };
       if (record.type === 'link') {
         detail.source_id = record.source_id ?? null;
         detail.lists = record.lists ?? [];
-        detail.captured_by = record.captured_by ?? null;
-        detail.captured_client = record.captured_client ?? null;
         detail.preview_image_url = record.preview_image_url ?? null;
       }
       return detail;
