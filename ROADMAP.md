@@ -253,7 +253,7 @@ Re-sync only needs `/api/capture`, so 5b–5d can start after Phase 3, before th
 *2026-11-01: v1 ships to TestFlight on today's backend; offline replicas + sync wait for the v2 vault backend. It reaches data through `@memex/core`'s Supabase adapter (decision 20, resolved 2026-11-01).*
 - [x] App shell: Expo Router tabs (Journal · Library · Spaces · Inbox per decision 16A), theme from core tokens, dark mode — *2026-11-01, `apps/mobile` (`docs/mobile.md`); Journal feed read-only so far*
 - [x] Journal feed + composer (keyboard-avoiding, chat-style list), entry cards per type — *2026-11-01 (M6-B): composer on core's syntax, tick / delete with Undo / filing in the feed*
-- [ ] Share extension (iOS) / share target (Android) → entry, optional space
+- [x] Share extension (iOS) / share target (Android) → entry, optional space — *2026-11-01 (M6-D): iOS share extension via expo-share-intent → the app's share sheet (note, `@Space`, recent spaces); offline saves wait in core's outbox and retry without duplicates. The Android share intent is configured (`text/*`) but untested*
 - [ ] Library: spaces row + masonry grid; link detail; open in browser — *2026-11-01 (M6-B): masonry of links with source chips and search, link detail, open in the in-app Safari; the spaces row is still to do*
 - [ ] Note view/edit via a DOM component wrapping the web `MarkdownEditor` — *2026-11-01 (M6-C): note view (rendered markdown) and plain-text markdown editing; the rich editor port is still to do*
 - [x] Spaces, Inbox and Tasks on the phone — *2026-11-01 (M6-C): Spaces tab + a space's board (scoped Journal, pinned sites), Inbox (agent proposals, filing suggestions with File / Not now), Tasks on core's model; `docs/mobile.md`*

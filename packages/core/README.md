@@ -29,10 +29,11 @@ The logic every memex client shares: the web app today, the Expo app (Phase 6) a
 | `links.ts` | `getHostname`, `getUrlLabel`, `getUrlTitle`, `getLinkTitle`, `getTagsForLink`, `getTagIdsForLink` |
 | `markdown.ts` | `stripMarkdown`, `markdownExcerpt`, `noteDisplayTitle` |
 | `time.ts` | `relativeTime`, `timeGroupFor`, `groupByTime`, `dueDateIso`, `toDayKey` / `fromDayKey` / `shiftDay` / `dayKeyOf` |
-| `errors.ts` | `getErrorMessage` |
+| `errors.ts` | `getErrorMessage`, `isTransientError` (offline, timeouts, 408 / 429 / 5xx: worth retrying), `isUniqueViolation` (Postgres 23505) |
 | `tokens/` | Canvas swatches (`CANVAS_COLOR_OPTIONS`, `getCanvasColorOption`, …), OKLCH maths (`buildThemeSurfaceColors`, `buildCanvasGradient`, `parseOklch`, `oklchToHex` for renderers without OKLCH, …), `buildSpaceColors`, and Pastel Sky constants (`PASTEL_SKY_COLORS`, `TYPE_SCALE`, `SPACE`, `RADIUS`, `FONT_WEIGHTS`, `MOTION`, `DEPTH`, `WORDMARK_INK`). `src/styles/pastelSky.test.ts` in the web app fails if these drift from `pastel-sky.css` |
 | `repository.ts` | The `Repository` interface and its parts (below), plus `AuthUser` / `AuthSession` |
 | `capture/` | Capture rules shared by memex-api and the MCP write tools (below; also at `@memex/core/capture`) |
+| `outbox/` | The capture outbox (below): saves a device couldn't send yet |
 | `agent/` | The MCP read model, at `@memex/core/agent` only (below) |
 
 ### `@memex/core/agent`
@@ -96,6 +97,8 @@ interface Repository {
 }
 ```
 
+Creating a jot, note or task takes an optional client-chosen `id` (a UUID) and `created_at`. With an id, creating again returns the row already saved (the Supabase adapter catches the primary-key conflict and reads the row back), so a retried save never makes a second copy; `created_at` keeps the time a save was written when it reached the server later. Without them nothing changes. Writes that need the user throw the auth server's own error when it can't be reached, so callers can tell "offline" from "signed out".
+
 Methods throw on failure, except auth calls, which return `{ error }` so forms can show the message. To add data access, add the method to the interface in `repository.ts` and implement it in `src/supabase/`. Apps never import supabase-js themselves.
 
 ## Capture (`@memex/core/capture`)
@@ -127,6 +130,26 @@ await capture.remove(linkId);           // undo; false if not the user's
 - **Dedupe order**: same `(source, source_id)` → the same item under another URL (`identifySource`: X status, Pinterest pin, YouTube watch / youtu.be / shorts / embed / live) → the same `normalizeUrlKey` (no scheme, `www.`, trailing slash, fragment or tracking parameters). Stores may over-fetch; `pickMatch` re-checks every candidate. Older rows without `source_id` / `url_key` still match through `urlVariants` and `legacyIdFragments`.
 - **Duplicates** merge new `lists` (e.g. saved from the toolbar, later bookmarked) and still apply the requested space and tags.
 - **Helpers**: `identifySource`, `canonicalUrl`, `isValidSourceId`, `normalizeUrlKey`, `urlVariants`, `isUuid`, `httpUrl`, `parseSourceTag` (reads the pre-2026-11-01 `links.source` tags), `linkMatchFor`, `matchStrength`, `pickMatch`, `LIMITS`.
+
+- **Shared content** (`share.ts`, for share sheets and share intents): `parseSharedContent({ text, url, title })` decides between a link (`{ url, title, note }`: one http(s) URL with at most a short line around it, which becomes the note) and text; several URLs or longer text stay text. `urlsInText` finds URLs in prose (sentence punctuation trimmed, balanced parentheses kept). `SHARE_NOTE_MAX`, `SHARE_TEXT_MAX`.
+
+## Outbox (`outbox/`)
+
+Saves a device made while it couldn't reach the server (CONTEXT.md → Change: devices queue them in an outbox). v1 holds new entries only; v2's outbox carries every Change to the vault writer. The Expo app is the first user (`apps/mobile/src/data/saves.ts`).
+
+```ts
+const outbox = createOutbox({ storage, send: (item) => save(item.draft, { id: item.id }) });
+await outbox.load();                                   // the stored queue
+outbox.enqueue(draft, { id, owner, error });           // id = the one the first try used
+await outbox.flush({ force: true, owner });            // oldest first; { sent, failed, waiting }
+outbox.retry(id); outbox.discard(id); outbox.restore(item);   // discard is local only; restore = Undo
+outbox.items(); outbox.subscribe(fn); outbox.nextDueAt(owner);
+```
+
+- `OutboxDraft` follows `ComposerResult` (jot, link, task, note, each with its spaces' ids and names); links may carry `title`, `note` and `capturedBy`. `OutboxItem` adds `id`, `owner`, `queuedAt`, `attempts`, `status` (`waiting` · `sending` · `failed`), `nextAttemptAt`, `lastError`.
+- `send` must be idempotent per `item.id`: create jots, notes and tasks with that id, and let links dedupe through the capture service.
+- A transient failure (`isTransientError`) keeps the item waiting with backoff (`backoffDelay`: 5 s doubling to 10 min, ±25% jitter) and ends the round. Any other failure parks it as `failed` with its reason. `flush` runs one at a time; a call during a run gets one more pass. Only the given owner's items (and ownerless ones) are sent.
+- `OutboxStorage` is `{ read, write }` of one string (`serializeOutbox` / `parseStoredOutbox`, versioned; unreadable items are dropped one by one; an item cut off mid-send loads as waiting). `limit` (500) throws `OutboxFullError`.
 
 ## Not here (yet)
 

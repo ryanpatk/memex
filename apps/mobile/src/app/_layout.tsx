@@ -32,6 +32,9 @@ import { ToastProvider } from '../ui/Toast';
 // Link metadata from the scraper Worker; demo data stays offline.
 const enrich = scraperEnabled && FIXTURE_MODE === 'off' ? scrapeLink : undefined;
 
+/** Screens opened by a link (the share sheet on a cold start) sit over the Journal, not alone. */
+export const unstable_settings = { anchor: '(tabs)' };
+
 // The share extension's native module (null in Expo Go, where there's no extension).
 const shareIntentOptions = { disabled: !ShareIntentModule, resetOnBackground: false };
 
@@ -95,16 +98,8 @@ const Root = ({ fontsReady }: { fontsReady: boolean }) => {
           <Stack.Screen name="sign-in" options={{ animation: 'fade' }} />
         </Stack.Protected>
         <Stack.Screen name="auth/callback" options={{ animation: 'none' }} />
-        <Stack.Screen
-          name="share"
-          options={{
-            presentation: 'formSheet',
-            sheetAllowedDetents: [0.72, 1],
-            sheetGrabberVisible: true,
-            sheetCornerRadius: 29,
-            contentStyle: { backgroundColor: palette.canvas },
-          }}
-        />
+        {/* Signed in: an iOS page sheet over whatever was open (the Journal on a cold start). Signed out there's nothing to sit over, so a full screen. */}
+        <Stack.Screen name="share" options={{ presentation: session ? 'modal' : 'card', contentStyle: { backgroundColor: palette.canvas } }} />
       </Stack>
     </>
   );

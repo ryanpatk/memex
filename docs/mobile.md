@@ -2,7 +2,7 @@
 
 The native app lives in `apps/mobile`: React Native on **Expo SDK 58** with Expo Router. ROADMAP Phase 6, v1 on TestFlight. Following decision 20, it reads data straight from Supabase through `@memex/core`, using the same Repository and adapter as the web app. RLS limits every query to the signed-in user.
 
-**Status (2026-11-01, threads M6-A, M6-B and M6-C):** four tabs (Journal, Library, Spaces, Inbox) plus pushed screens for Tasks, a space's board, a note and a link, and a sign-in screen with email + password and GitHub OAuth. Light and dark follow the system. Next: the iOS share extension, then TestFlight.
+**Status (2026-11-01, threads M6-A to M6-D):** four tabs (Journal, Library, Spaces, Inbox) plus pushed screens for Tasks, a space's board, a note and a link, a sign-in screen with email + password and GitHub OAuth, the iOS share extension with its share sheet, and saves that wait on the phone while it's offline. Light and dark follow the system. Next: TestFlight, which needs Ryan's Apple accounts (checklist below).
 
 - **Journal** (M6-B): the feed plus a composer above the tab bar with the web's syntax, from core: plain text saves a jot, a lone URL saves a link, `[] ` starts a task, `@Space` files it, and the page button makes a note (phones have no ⌘↵). Saves appear at once and roll back if they fail. Tick tasks in place, tap a link for its detail, press a dashed suggestion chip to file an entry, long-press anything for its menu (Open, Mark done, File in…, Delete). Deleting and filing show a toast with Undo. Pull to refresh.
 - **Link detail** (M6-B): picture, title, description, source and date; spaces as toggles; Open in Safari (in-app browser), Share, Delete with Undo.
@@ -11,6 +11,8 @@ The native app lives in `apps/mobile`: React Native on **Expo SDK 58** with Expo
 - **A space's board** (M6-C, decision 14B in phone form): the space's pinned sites, then its own Journal (jots written there and everything filed there, newest at the bottom), with the composer filing into the space unless the text names another `@Space`. The header's Tasks pill opens Tasks filtered to the space.
 - **Inbox** (M6-C): agents' proposals first (who, what, the item, the reason, and the change as a line diff or before → after; **Approve** applies it, **Reject** keeps the record), then filing suggestions (the item, the likely space with its reason, **File in …** and **Not now**, both with Undo). The tab's badge counts both, like the web's Inbox button.
 - **Tasks** (M6-C, `docs/tasks-view.md` on the phone): reached from the Tasks pill in the Journal's header (open count, red dot when something is overdue), the top of the Spaces tab and a space's header. Grouped by space or by due date, a space filter (Every space · each space · Unfiled, with open counts), an add field on the composer's syntax, tick with Undo (the row holds a beat checked, then moves to Done), due dates from the chip (Today, Tomorrow, Next week, Pick a date… with the system calendar, No due date), long-press for Mark done, Due date…, Rename…, Spaces… and Delete (with Undo), and a folded Done list, 50 at a time.
+- **Share sheet** (M6-D): share a link or text from Safari, X, YouTube or any app, pick **Save to memex**, and the app opens on its share sheet (section below). Pick a space or type `@Space` in the note, press Save, and it's in your Journal.
+- **Offline** (M6-D): a save from the composer or the share sheet that can't reach Supabase is kept on the phone and shows at the bottom of the Journal as not sent yet, with **Retry** and **Discard**. It sends on its own when the connection comes back (section below).
 - **Notes** (M6-C): tap a note in any feed. Its title, date, spaces and markdown rendered on paper (headings, lists, task boxes, quotes, code, links that open in Safari). **Edit** shows the stored markdown as plain text with its title; Save writes through the Repository. If the note changed elsewhere while you edited, Save asks before overwriting; Back and Cancel ask before dropping unsaved changes.
 
 | | Light | Dark |
@@ -31,9 +33,63 @@ The native app lives in `apps/mobile`: React Native on **Expo SDK 58** with Expo
 
 The signed-in screenshots use the dev-only demo data, not real data. They come from an iPhone 17 Pro simulator on iOS 26.4 running Expo Go 58.0.7. The simulator couldn't be tapped from scripts, so the composer states were reached with `?draft=` deep links and the saves with the dev-only `&send=1` (below), and the M6-C screens with deep links (`/spaces`, `/space/reading`, `/inbox`, `/tasks`, `/tasks?group=date`, `/note/n2`). Taps (approve, reject, file, not now, tick, Undo, due dates, editing a note) are covered by component tests instead.
 
+## Share extension (M6-D)
+
+**How it works.** The share extension is a small native target that [expo-share-intent](https://github.com/achorein/expo-share-intent) 9 (the version for SDK 58) generates at prebuild. It accepts one URL, one web page (Safari also sends the page title) or text. It writes the item to the App Group's shared `UserDefaults` and opens `memex://dataUrl=memexShareKey#…`. `src/app/+native-intent.tsx` turns that link into `/share`, and the share screen reads the item from the plugin's native module (`ShareIntentProvider` in `_layout.tsx`, with `resetOnBackground: false` so a GitHub sign-in doesn't drop it).
+
+The sheet is a screen in the app (`src/app/share.tsx`, presented as a form sheet), not a React Native view inside the extension. The Supabase session stays in the app's keychain and never crosses the App Group. Two processes refreshing one rotating refresh token would sign each other out, and an extension bundle would carry a second copy of React Native under the extension's memory limit. The cost: sharing switches to memex (iOS shows “◀ Safari” in the status bar to go back). The plugin's author decided the same; an in-host sheet would mean `expo-share-extension` and a separate bundle with keychain sharing (Known gaps).
+
+**The sheet** (`src/share/ShareSheet.tsx`, logic in `src/share/shareModel.ts`):
+
+- **A link** shows its site (with the platform for X, YouTube and Pinterest), the page title when the app sent one, and the URL. The **Note** field is optional: its words become the link's description (core's capture rule: “why I saved this” wins), and `@Space` in it files the link, with the composer's @ picker.
+- **Text** is editable and follows the composer exactly (`parseComposer`): a jot, `[] ` for a task, a lone URL for a link, the page button for a note.
+- **Space**: a row of chips, the spaces you filed in most recently first, then the rest; **Journal** means unfiled. One chip at a time (a jot lives in one space); `@Space`s typed in the text are added to it. The header says where it'll land.
+- **Save** goes through the same path as the composer: `useEntryActions().compose` → `saves.save` → `actions.compose` → core's capture service for links, so a shared link dedupes like the extension's and the composer's (same post, same platform id, same normalized URL). Shared links are stored with `captured_by: 'share'` (in core's vocabulary and the database's check constraint) and `captured_client: 'memex-ios/<version>'`. Jots, notes and tasks from the sheet are stored like the composer's.
+- **Signed out**, the sheet keeps the preview, says “You're signed out of memex”, and offers **Sign in**. The item waits in memory (`src/share/shareDraft.ts`) and the sheet reopens after sign-in. It isn't kept across launches.
+- What arrived is decided by core: `parseSharedContent` (`@memex/core/capture`). One http(s) URL with at most a short line around it (≤ 200 characters) is a link, and the line becomes the note. Several URLs or longer text stay text. Files and images aren't accepted (the extension doesn't offer itself for them).
+- `memex://share?url=…&title=…&text=…` opens the same sheet (nothing is saved until you press Save). That's how the screenshots below were made, and it also works from Shortcuts. Only in a dev build on demo data, `&send=1` also presses Save (like the Journal's `?draft=…&send=1`).
+- Signed in, the sheet is an iOS page sheet over the Journal (`unstable_settings.anchor = '(tabs)'`, so a cold start from the extension has the Journal under it). Signed out it's a full screen, since there's nothing to sit over.
+
+| | Light | Dark |
+| --- | --- | --- |
+| Share sheet: a link from Safari, filed in a space | ![](mobile/share-light.png) | ![](mobile/share-dark.png) |
+| Share sheet: signed out | ![](mobile/share-signed-out-light.png) | ![](mobile/share-signed-out-dark.png) |
+
+**Verified in the simulator** (2026-11-01, a local dev build of this app with the extension, `npx expo run:ios` on an iPhone 17 simulator, iOS 26.4, on demo data): prebuild generates the `Savetomemex` target; the build installs with both targets signed for the simulator; the App Group container `group.com.joyfulsystems.memex` exists on the device. The extension's last step was reproduced exactly: its item (a URL and Safari's page metadata, encoded as the extension encodes it) written to the App Group's `memexShareKey`, then `memex://dataUrl=memexShareKey?nonce=…#weburl` opened. The app went from a cold start to the share sheet with the URL and the page title, read through the plugin's native module. Saving was proven with the dev-only `&send=1` (below): a new link landed in the Journal with “Saved to your Journal.”, and an already-saved URL answered “Already saved.” **Not verified:** pressing Share → Save to memex inside Safari itself, because the simulator can't be tapped from scripts here; that's step 11 of the TestFlight checklist. Taps in the sheet (note, `@` picker, chips, Save, offline, signed out, Close) are covered by component tests (`src/share/ShareSheet.test.tsx`, `src/screens/share.test.tsx`).
+
+**Identifiers** (set in `app.json` → `plugins` → `expo-share-intent`; nothing is registered with Apple yet):
+
+| | Value |
+| --- | --- |
+| App bundle id | `com.joyfulsystems.memex` (unchanged) |
+| Share extension bundle id | `com.joyfulsystems.memex.share-extension` |
+| Extension target / name in the share sheet | `Savetomemex` / “Save to memex” (the target name is the display name minus spaces; plain “memex” would clash with the app target) |
+| App Group (both targets' entitlements) | `group.com.joyfulsystems.memex` |
+| URL scheme the extension opens | `memex` (the app's `scheme`) |
+| Activation rules | `NSExtensionActivationSupportsWebURLWithMaxCount` 1, `…WebPageWithMaxCount` 1, `…Text` |
+| Android | `text/*` share intent on the main activity (configured, not tested) |
+
+`npx expo prebuild --platform ios` writes the target under `ios/Savetomemex/` (Swift view controller, Info.plist, entitlements, the Safari preprocessing script that reads the page title) and adds an `extra.eas.build.experimental.ios.appExtensions` entry to the resolved config, so EAS creates credentials for the extension too. `ios/` stays gitignored (CNG).
+
+## Offline (M6-D)
+
+**What happens.** Every save from the composer and the share sheet runs through `src/data/saves.ts`. It's tried straight away, as before (optimistic row, rollback on failure). If the failure is one worth retrying (core's `isTransientError`: no connection, a dropped connection, a timeout, HTTP 408 / 429 / 5xx), the save goes into core's outbox (`createOutbox`, `@memex/core`) instead of being lost. The composer's text is cleared and a toast says “No connection. Kept on this phone; it'll send when you're back online.” Anything else (the server said no) fails as before and the text goes back in the box.
+
+**On the phone.** The outbox is stored with the session's encryption (`src/data/outboxStorage.ts`: a fresh AES key per write in the keychain, ciphertext in AsyncStorage), so it survives the app being killed. Each item belongs to the signed-in user and is only sent while they're signed in. Demo data uses its own key.
+
+**In the Journal.** Waiting saves sit at the newest end of the feed, above the composer (`src/journal/PendingSaves.tsx`): paper with a dashed edge, the kind, site and spaces, the text, and where it stands (“Waiting for a connection · tried 3 times”, or “Couldn't save: …” in red if the server refused it). **Retry** sends it now. **Discard** drops the copy on the phone, with Undo, and never touches anything already saved. While a save is being sent it shows as a normal entry in the feed instead.
+
+**When it sends** (`src/data/useOutboxSync.ts`): at launch (once the stored queue is read), when the app comes back to the foreground, when the connection comes back (`@react-native-community/netinfo`), and after each backoff while the app is open (5 s doubling to 10 min, ±25%). A round stops at the first offline failure. A refused save stops retrying until you press Retry. A toast says “Sent 2 saves kept on this phone.”
+
+**Never twice.** The save's id is chosen on the phone before the first try (`expo-crypto` `randomUUID`), and jots, notes and tasks are created with it. If the first try reached Supabase but the answer was lost, the retry hits the primary key and core's adapter returns the saved row instead of making another. A link retry looks for an earlier copy on the server, not in the cache (the capture service's dedupe), so it comes back as “already saved”. Jots, notes and tasks keep the time they were written (`created_at` = when first tried), so an offline jot sits in the Journal where you wrote it. Links are dated when they reach the server.
+
+**Proven by tests**, on the demo repository behind a network switch (`src/testing/network.ts`): `src/data/saves.test.ts` (offline → kept and stored → sent once when online; a lost answer for a jot and for a link → still one copy; refused saves aren't kept; only the owner's saves send; discard asks nothing of the server), `src/journal/PendingSaves.test.tsx` (the pending row, Retry offline and online, sending on its own after the backoff, Discard with Undo, a refused save's reason) and core's `outbox/outbox.test.ts` and `supabase/creates.test.ts`.
+
 ## Run it
 
-You need Node 22+, Xcode with an iOS Simulator runtime, and the Xcode license accepted once (`sudo xcodebuild -license accept`). Without the license, Expo CLI can't drive the simulator (`xcrun simctl … exited with code 69`).
+You need Node 22+, Xcode with an iOS Simulator runtime, and the Xcode license accepted once (`sudo xcodebuild -license accept`; done on Ryan's Mac as of 2026-11-01). Without the license, Expo CLI can't drive the simulator (`xcrun simctl … exited with code 69`).
+
+Expo Go runs everything except the share extension (it has no native targets of its own; the app treats the module as absent). For the extension, make a local dev build: `npx expo prebuild --platform ios` (CocoaPods 1.17 is on the mise Ruby, so run it from a login shell), then `npx expo run:ios`. `ios/` is generated and gitignored. Prebuild also rewrites `package.json`'s `ios` script to `expo run:ios`; don't commit that.
 
 ```bash
 cd apps/mobile
@@ -64,20 +120,25 @@ apps/mobile/
     note/[id].tsx          note view + plain-markdown editing
     space/[id].tsx         a space's board (scoped Journal + composer)
     tasks.tsx              Tasks
+    share.tsx              the share sheet's screen (form sheet; signed in or out)
+    +native-intent.tsx     memex://dataUrl=… from the share extension → /share
   src/auth/                encryptedStorage (session at rest), oauth (redirect parsing), signInWithGitHub, SessionProvider
   src/data/                config, client (captured_client), keys (React Query), repository, DataProvider,
                            actions (the writes), deleteQueue (Undo), journal (core model → feed, space summaries
                            and boards), useJournal, library + useLibrary, scraper, tasks (core's Tasks view),
-                           inbox + useInbox (proposals), dismissals (Not now, on this phone)
+                           inbox + useInbox (proposals), dismissals (Not now, on this phone),
+                           saves (every save; offline → core's outbox), outboxStorage, useOutboxSync
   src/data/fixtures/       DEV-ONLY demo rows + the memory Repository over them
-  src/journal/             Composer + composerModel, the feed and its entry renderers, entryMenu, useEntryActions
+  src/journal/             Composer + composerModel, the feed and its entry renderers, entryMenu, useEntryActions,
+                           PendingSaves (saves waiting on the phone)
+  src/share/               ShareSheet, shareModel (what arrived, recent spaces, what Save makes), shareDraft
   src/library/             LibraryCard
   src/spaces/              SpaceCard, PinnedSites
   src/inbox/               ProposalCard, SuggestionCard
   src/tasks/               TaskRow, TaskAdd, TasksButton, DueDateSheet, dueMenu, taskMenu, useTaskActions
   src/notes/               markdown (block + inline parser, tested), MarkdownView
   src/screens/             screen tests (Library, link detail, Spaces, a space, Inbox, Tasks, notes)
-  src/testing/             renderWithData: the app's providers over the demo repository
+  src/testing/             renderWithData: the app's providers over the demo repository; withNetwork (an offline switch)
   src/theme/               palette (core tokens → hex) and theme (type roles, paper / object depth)
   src/ui/                  Text, Paper, Button (objects), RoundButton, Segmented, TextField, FilterChip, Toast, Canvas,
                            ScreenHeader / StackHeader, Wordmark, chips, placeholders
@@ -103,6 +164,10 @@ apps/mobile/
 - **Library:** `src/data/library.ts` runs core's `linkToItem`, `matchesLibraryFilters` (source), `itemMatchesSearch` and `sortItems` (newest saved), the same functions as the web Library. `useLibrary` hands FlashList one page of 24 at a time.
 
 **Reused from core (M6-C).** Spaces: `entriesInSpace` + `toParts` for a space's feed, `spaceBoard` for its counts, tasks and pinned sites, `withDefaultSpace` for its composer. Tasks: `taskSpaceMap`, `filterTasksBySpace`, `splitTasks`, `groupTasks`, `countOpenTasksBySpace`, `dueBucket`, `dueLabel`, `isOverdue`, `daysUntilDue`, `dueShortcuts`, `parseTaskGrouping`, `parseTaskInput`, `toDayKey` / `fromDayKey`. Inbox: `inboxOf` + `createFiler`, `proposalFields`, `changedSinceProposed`, `compactDiff`, `applyProposal`, `rejectProposal`. New in the app: the phone's one-beat hold before a ticked task moves to Done (`toTasksView`), the dismissals store, `proposalTarget` (the same eight lines as the web's `components/journal/proposalTarget.ts`; it can move to core once M3-B settles), and a small markdown parser for reading notes (the web uses react-markdown). Core wasn't changed in this thread.
+
+**Reused from core (M6-D).** `parseSharedContent` / `urlsInText` (new, `capture/share.ts`), `parseComposer`, `extractMentions`, `identifySource` and `SOURCES` in the sheet; `parseCaptureInput` + `createCaptureService` for shared links (as for the composer's); `createOutbox` and `isTransientError` (new) for offline saves; the Repository's new optional `id` and `created_at` on jot, note and task creates. Core changes are additive and tested; the web doesn't use them yet and behaves as before. New in the app: the share sheet UI and its glue (`shareModel`), the save path over the outbox (`saves`), the sync triggers and the pending rows.
+
+**Two new dependencies (M6-D):** `expo-share-intent` 9.0 (config plugin + a small native module; not in Expo Go, where the app treats it as absent) and `@react-native-community/netinfo` (in Expo Go). Both added with `npx expo install`.
 
 **One new dependency (M6-C):** `@react-native-community/datetimepicker` (the SDK 58 version, added with `npx expo install`, config plugin in `app.json`) for Tasks' Pick a date… sheet, the system's inline calendar. It ships in Expo Go; EAS builds include it like any other native module.
 
@@ -130,28 +195,31 @@ Email + password sign-in needs no redirect URL. The GitHub OAuth app keeps its e
 Nothing below has been created yet; this thread made no Apple, App Store Connect or EAS records. In order:
 
 1. **Apple Developer Program** membership (individual or organization, US$99/year) on the Apple ID you want to publish under. Note the **Team ID** (developer.apple.com → Membership).
-2. **Bundle identifier.** Confirm `com.joyfulsystems.memex` (set in `apps/mobile/app.json` → `ios.bundleIdentifier`) or pick another. It's permanent once the app record exists. EAS can register the App ID for you on the first build.
+2. **Bundle identifiers and the App Group.** Confirm `com.joyfulsystems.memex` (set in `apps/mobile/app.json` → `ios.bundleIdentifier`) or pick another. It's permanent once the app record exists. The share extension adds two more (M6-D, `app.json` → `plugins` → `expo-share-intent`): the extension's App ID `com.joyfulsystems.memex.share-extension` (`iosShareExtensionBundleIdentifier`) and the App Group `group.com.joyfulsystems.memex` (`iosAppGroupIdentifier`), which both App IDs need the **App Groups** capability for. If you change the app's bundle id, change these two to match. EAS can register both App IDs, enable App Groups and make both provisioning profiles on the first build; if it can't create the group, add it once at developer.apple.com → Identifiers → App Groups → + (`group.com.joyfulsystems.memex`) and tick it on both App IDs.
 3. **App Store Connect app record**: Apps → + → New App → iOS. Fill in name (must be unique on the App Store; “memex” may be taken, so have a fallback such as “memex — working memory”), primary language, the bundle id from step 2, and a SKU (e.g. `memex-ios`). Note the numeric **Apple ID** of the app (App Information); EAS Submit's `ascAppId` uses it.
 4. **Credentials for EAS** (pick one):
    - Preferred: an **App Store Connect API key**. Users and Access → Integrations → App Store Connect API → Team Keys → generate a key with the *App Manager* (or *Admin*) role. Send the **Issuer ID**, the **Key ID** and the **`.p8` file** through a secret channel (T3 `request_secret` or a local file), never in chat or git. With it, EAS builds and submits non-interactively.
    - Or: your **Apple ID + an app-specific password**, with 2FA prompts during `eas build` / `eas submit` (interactive, so you run those commands yourself).
-5. **Expo account** at expo.dev (free tier is fine for TestFlight builds). Either run `npx eas login` once on this Mac, or create an access token (expo.dev → Account settings → Access tokens) and hand it over as `EXPO_TOKEN`. The next thread then runs `eas init` (creates the EAS project and writes `extra.eas.projectId` into `app.json`) and adds `eas.json`.
+5. **Expo account** at expo.dev (free tier is fine for TestFlight builds). Either run `npx eas login` once on this Mac, or create an access token (expo.dev → Account settings → Access tokens) and hand it over as `EXPO_TOKEN`. The next thread then runs `eas init` (creates the EAS project and writes `extra.eas.projectId` into `app.json`) and adds `eas.json`. With the share extension, `eas build` asks for (or makes) credentials for two targets, `memex` and `Savetomemex`; keep exactly one extension entry under `extra.eas.build.experimental.ios.appExtensions` (the plugin adds it at prebuild, so don't add another by hand; the plugin's README warns that a second entry breaks credential setup).
 6. **EAS environment variables.** EAS builds from git and `.env` is gitignored, so `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` must be set as EAS environment variables (`eas env:create`, environment *production*). These are the same public values the web app uses.
 7. **Internal tester**: App Store Connect → Users and Access, where your Apple ID needs at least the *Developer* or *Marketing* role (the account holder already qualifies). Then TestFlight → Internal Testing → create a group and add yourself. Install the **TestFlight** app on the iPhone. Internal testing needs no App Review.
 8. **Supabase redirect URL** `memex://auth/callback` (section above).
 9. **Export compliance**: `app.json` sets `ITSAppUsesNonExemptEncryption = false`, because the app only uses HTTPS and encrypts its own session at rest. Confirm this matches your reading; App Store Connect asks on every build otherwise.
 10. **Before external testers or the App Store** (not needed for internal TestFlight): the App Privacy questionnaire (email address and user content, linked to the user, not used for tracking), a privacy policy URL, and the final app icon. `apps/mobile/assets/icon.png` is a placeholder (blue gloss with a white Journal bubble; source `assets/icon.svg`).
-11. **Local builds only:** accept the Xcode license on this Mac (`sudo xcodebuild -license accept`). EAS cloud builds don't need it.
+11. **Check the share extension on the TestFlight build**: in Safari, Share → (More…) → turn on **Save to memex** and move it up; share a page, pick a space, Save, and the link appears in the Journal filed there. Then share from the X and YouTube apps, and once in Airplane Mode (the save waits at the bottom of the Journal and sends when you turn it off).
+12. **Local builds only:** the Xcode license on this Mac is accepted (2026-11-01), so `npx expo run:ios` works; EAS cloud builds don't need it. A local build for a real iPhone needs your Team ID in Xcode's signing settings for both targets (prebuild leaves `DEVELOPMENT_TEAM` empty).
 
 The next thread's commands, once 1–8 are in place: `npx eas-cli init` → `eas build:configure` → `eas build -p ios --profile production` → `eas submit -p ios --latest`.
 
 ## Known gaps
 
-- **Notes:** editing is plain text (the stored markdown in a text field), not the web's live-preview editor (ROADMAP: a DOM component around `MarkdownEditor`). Task boxes in a note show their state but don't tick from the reading view. Inter's italic face isn't loaded, so `*italic*` reads upright.
+- **Notes:** editing is plain text (the stored markdown in a text field), not the web's live-preview editor (ROADMAP: a DOM component around `MarkdownEditor`). Task boxes in a note show their state but don't tick from the reading view. (Italics render since M6-D: Inter's italic faces load.)
 - **Not now is per phone:** a dismissed filing suggestion is remembered on this device only (no schema change in v1), and the web still suggests it. A shared “dismissed” field would need a home in the vault format.
 - **Rename** in the Tasks menu uses the iOS text prompt (`Alert.prompt`); Android would need its own sheet.
 - Jots can't be turned into notes or tasks yet (the web has both).
 - A space's board on the phone is its Journal plus pinned sites; the web's board column (open tasks, saves, notes) isn't a separate section here. Tasks filtered to the space is one press away instead. Pinning and taking items out of a space happen on the web.
 - The canvas swatch is fixed to the default until a Settings screen exists. The web keeps its choice in localStorage, so it can't sync without a stored setting.
 - No end-to-end tests: Vitest covers the plain-TS parts (writes, Undo queue, composer model, Library model, encrypted storage, OAuth parsing, palette, fixtures) and Jest + React Native Testing Library covers the screens (composer, tick, delete and Undo, filing, link detail, Library; M6-C: Spaces, a space's board and its composer, Inbox approve / reject / file / not now with Undo, Tasks grouping, filter, add, tick with hold and Undo, due dates from the menu and the calendar, Done, the note view, editing, the overwrite and discard prompts). Maestro flows on a simulator that can be tapped would be the next step.
+- **Share sheet:** it opens the app rather than showing inside Safari or X (see “How it works”). An in-host sheet needs `expo-share-extension`, a second JS bundle and a safe way to share the session. Images and files aren't accepted yet. A share made while signed out waits in memory only. The Android share intent is configured but untested.
+- **Offline:** only new saves wait offline. Ticking, filing, editing and deleting still need a connection, and nothing is readable offline (no persisted cache; that's v2's local replica). Links saved offline are dated when they reach the server. A save that hangs rather than failing (a very weak connection) waits for iOS's 60-second request timeout before it's kept. The outbox is per phone, and Discard can't take back a save that already reached the server.
 - `npx expo start` may rewrite `tsconfig.json`'s `include`; that's expected and harmless.

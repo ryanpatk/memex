@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native
 import Animated from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check, FileText, LogIn, X } from 'lucide-react-native';
 import { getHostname, type JournalSpace, type SharedContent } from '@memex/core';
 import { faviconFor, type Composed } from '../data/actions';
@@ -44,10 +45,16 @@ export const ShareSheet = ({ content, spaces, signedIn, onSave, onClose, onSignI
   const [picked, setPicked] = useState<JournalSpace | null>(null);
   const [asNote, setAsNote] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Signed in it's a page sheet, already below the status bar; signed out it's a full screen.
+  const insets = useSafeAreaInsets();
+  const top = signedIn ? 20 : insets.top + 12;
 
   const result = useMemo(() => shareResult(content, field, spaces, picked, asNote), [asNote, content, field, picked, spaces]);
   const picker = useMemo(() => pickerFor(field, caret, spaces), [caret, field, spaces]);
-  const filed = new Set(result?.spaces.map((s) => s.id));
+  const filedKey = result?.spaces.map((s) => s.id).join(',') ?? '';
+  const filed = useMemo(() => new Set(filedKey ? filedKey.split(',') : []), [filedKey]);
+  // Where it'll be filed leads the row (so a typed @Space is in view), then the rest, recent first.
+  const ordered = useMemo(() => [...spaces.filter((s) => filed.has(s.id)), ...spaces.filter((s) => !filed.has(s.id))], [filed, spaces]);
 
   const save = async () => {
     if (!result || saving) return;
@@ -61,7 +68,7 @@ export const ShareSheet = ({ content, spaces, signedIn, onSave, onClose, onSignI
 
   return (
     <View style={styles.root} testID="share-sheet">
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: top }]}>
         <View style={styles.headerText}>
           <Text size="l" weight="heavy" accessibilityRole="header">
             Save to memex
@@ -73,7 +80,7 @@ export const ShareSheet = ({ content, spaces, signedIn, onSave, onClose, onSignI
         <RoundButton label="Close" onPress={onClose} icon={(color) => <X size={20} color={color} strokeWidth={2.25} />} />
       </View>
 
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         {content.kind === 'empty' ? (
           <Paper style={styles.card}>
             <Text size="m" weight="medium">
@@ -164,6 +171,7 @@ export const ShareSheet = ({ content, spaces, signedIn, onSave, onClose, onSignI
                 horizontal
                 keyboardShouldPersistTaps="always"
                 showsHorizontalScrollIndicator={false}
+                style={styles.chipRail}
                 contentContainerStyle={styles.chips}
                 accessibilityLabel="Spaces"
               >
@@ -184,7 +192,7 @@ export const ShareSheet = ({ content, spaces, signedIn, onSave, onClose, onSignI
                 ) : (
                   <>
                     <SpaceToggle on={!result?.spaces.length} label="Journal" a11y="Journal only" onPress={() => setPicked(null)} />
-                    {spaces.map((space) => (
+                    {ordered.map((space) => (
                       <SpaceToggle
                         key={space.id}
                         space={space}
@@ -202,7 +210,7 @@ export const ShareSheet = ({ content, spaces, signedIn, onSave, onClose, onSignI
       </ScrollView>
 
       {signedIn && content.kind !== 'empty' && (
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
           <Button
             variant="primary"
             label={result ? SAVE_LABEL[result.kind] : 'Save'}
@@ -226,12 +234,12 @@ const LinkPreview = ({ url, title }: { url: string; title: string | null }) => {
   return (
     <Paper style={[styles.card, styles.link]} accessible accessibilityLabel={`Link: ${title ?? host}, ${url}`}>
       <View style={[styles.favicon, { backgroundColor: palette.well, borderRadius: t.radius.s }]}>
-        {favicon ? (
+        {/* Initials until (or unless) the site's icon loads over them. */}
+        <Text size="xs" weight="heavy" tone="muted">
+          {host.slice(0, 2).toUpperCase()}
+        </Text>
+        {favicon && (
           <Image source={{ uri: favicon }} style={styles.faviconImage} contentFit="contain" accessibilityIgnoresInvertColors />
-        ) : (
-          <Text size="xs" weight="heavy" tone="muted">
-            {host.slice(0, 2).toUpperCase()}
-          </Text>
         )}
       </View>
       <View style={styles.flex}>
@@ -308,22 +316,24 @@ const NoteToggle = ({ on, onPress }: { on: boolean; onPress: () => void }) => {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 17, paddingTop: 18, paddingBottom: 10 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 17, paddingBottom: 10 },
   headerText: { flex: 1, minWidth: 0, gap: 2 },
   body: { paddingHorizontal: 17, paddingBottom: 17, gap: 16 },
   card: { padding: 14, gap: 6 },
   link: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   favicon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  faviconImage: { width: 24, height: 24 },
+  faviconImage: { position: 'absolute', width: 24, height: 24 },
   flex: { flex: 1, minWidth: 0 },
   textField: { minHeight: 88, maxHeight: 220, padding: 0, textAlignVertical: 'top' },
   kindRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   noteToggle: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   section: { gap: 8 },
   note: { minHeight: 64, maxHeight: 140, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 12, textAlignVertical: 'top' },
-  chips: { gap: 8, paddingVertical: 4, paddingRight: 17, alignItems: 'center' },
+  // Edge to edge, so a picked chip's glow isn't clipped at the sheet's margin.
+  chipRail: { marginHorizontal: -17 },
+  chips: { gap: 8, paddingVertical: 6, paddingHorizontal: 17, alignItems: 'center' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36, paddingHorizontal: 13, borderRadius: 9999, maxWidth: 220 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   signedOut: { gap: 10, paddingVertical: 16 },
-  footer: { paddingHorizontal: 17, paddingTop: 8, paddingBottom: 12 },
+  footer: { paddingHorizontal: 17, paddingTop: 8 },
 });
