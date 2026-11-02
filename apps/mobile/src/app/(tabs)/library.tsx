@@ -1,91 +1,152 @@
-import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { Image } from 'expo-image';
-import { BookOpen } from 'lucide-react-native';
-import { useJournal } from '../../data/useJournal';
-import { useTheme } from '../../theme/theme';
+import { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
+import { useRouter } from 'expo-router';
+import { FlashList, type ListRenderItem } from '@shopify/flash-list';
+import { BookOpen, Search, SearchX, X } from 'lucide-react-native';
+import type { SourceKey } from '@memex/core';
+import type { LinkItem } from '../../data/library';
+import { useLibrary } from '../../data/useLibrary';
+import { LibraryCard } from '../../library/LibraryCard';
+import { typeRole, useTheme } from '../../theme/theme';
 import { Canvas } from '../../ui/Canvas';
-import { Paper } from '../../ui/Paper';
+import { FeedError, FeedSkeleton } from '../../ui/FeedStates';
+import { FilterChip } from '../../ui/FilterChip';
 import { Placeholder } from '../../ui/Placeholder';
+import { Button } from '../../ui/Pressable';
 import { ScreenHeader } from '../../ui/ScreenHeader';
-import { Text } from '../../ui/Text';
+
+/*
+ * The Library (ROADMAP Phase 6: masonry grid): every saved link as a
+ * two-column masonry of pictures and text cards, newest saved first. Source
+ * chips (core's source rules, like the web's From X / Pinterest / YouTube
+ * tabs) and search narrow it; it loads a page at a time as you scroll.
+ */
 
 const countFmt = new Intl.NumberFormat();
+const GUTTER = 13;
 
-/** Library placeholder: what's coming, with the real counts and the latest pictures. */
 export default function LibraryScreen() {
   const t = useTheme();
-  const { journal } = useJournal();
+  const { palette } = t;
+  const router = useRouter();
   const { width } = useWindowDimensions();
-  const tileWidth = Math.floor((width - 17 * 2 - 8 * 2) / 3);
-  const pictures = (journal?.entries ?? [])
-    .filter((e) => e.kind === 'link' && e.link.preview_image_url)
-    .slice(-6)
-    .reverse();
-  const stats = journal
-    ? [
-        { label: 'Links', value: journal.counts.link },
-        { label: 'Notes', value: journal.counts.note },
-        { label: 'Tasks', value: journal.counts.task },
-      ]
-    : [];
+  const [source, setSource] = useState<SourceKey | null>(null);
+  const [search, setSearch] = useState('');
+  const query = useMemo(() => ({ source, search }), [source, search]);
+  const library = useLibrary(query);
+  const columnWidth = Math.floor((width - GUTTER * 2) / 2) - 8;
+
+  const open = useCallback((id: string) => router.push({ pathname: '/link/[id]', params: { id } }), [router]);
+  const renderItem: ListRenderItem<LinkItem> = useCallback(
+    ({ item }) => <LibraryCard item={item} width={columnWidth} onOpen={open} />,
+    [columnWidth, open],
+  );
+
+  const filtered = Boolean(source || search.trim());
+  const subtitle = library.isLoading
+    ? undefined
+    : filtered
+      ? `${countFmt.format(library.matching)} of ${countFmt.format(library.total)} links`
+      : `${countFmt.format(library.total)} links`;
 
   return (
     <Canvas>
-      <ScreenHeader title="Library" subtitle="Everything you've captured" />
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Placeholder
-          icon={<BookOpen size={26} color={t.palette.onAccent} strokeWidth={2} />}
-          title="The Library comes next"
-          body="Every link, note and task as one visual grid, with type and tag filters, like the Library on the web."
-        >
-          {stats.length > 0 && (
-            <View style={styles.stats}>
-              {stats.map((s) => (
-                <View key={s.label} style={[styles.stat, { backgroundColor: t.palette.well }]}>
-                  <Text size="l" weight="heavy" numeric>
-                    {countFmt.format(s.value)}
-                  </Text>
-                  <Text size="xs" weight="medium" tone="muted">
-                    {s.label}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </Placeholder>
-
-        {pictures.length > 0 && (
-          <View style={styles.section}>
-            <Text size="xs" weight="heavy" tone="muted" style={styles.sectionHead}>
-              Latest pictures
-            </Text>
-            <View style={styles.grid}>
-              {pictures.map((e) =>
-                e.kind === 'link' ? (
-                  <Paper key={e.id} style={[styles.tile, { width: tileWidth, height: Math.round((tileWidth * 4) / 3) }]}>
-                    <Image
-                      source={e.link.preview_image_url}
-                      style={StyleSheet.absoluteFill}
-                      contentFit="cover"
-                      accessibilityLabel={e.link.title ?? e.link.url}
-                    />
-                  </Paper>
-                ) : null,
-              )}
-            </View>
-          </View>
+      <ScreenHeader title="Library" subtitle={subtitle} />
+      <View style={styles.controls}>
+        <View style={[styles.search, { backgroundColor: palette.well, borderRadius: t.radius.l }]}>
+          <Search size={17} color={palette.muted} strokeWidth={2} />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search links…"
+            placeholderTextColor={palette.faint}
+            selectionColor={palette.accent}
+            returnKeyType="search"
+            autoCorrect={false}
+            autoCapitalize="none"
+            clearButtonMode="never"
+            accessibilityLabel="Search the Library"
+            style={[typeRole('m'), styles.searchInput, { color: palette.ink }]}
+          />
+          {search ? (
+            <Pressable accessibilityRole="button" accessibilityLabel="Clear search" hitSlop={10} onPress={() => setSearch('')}>
+              <X size={17} color={palette.muted} strokeWidth={2.25} />
+            </Pressable>
+          ) : null}
+        </View>
+        {library.tabs.length > 2 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
+            {library.tabs.map((tab) => (
+              <FilterChip
+                key={tab.key ?? 'all'}
+                label={tab.label}
+                count={tab.count}
+                on={source === tab.key}
+                onPress={() => setSource(tab.key === source ? null : tab.key)}
+              />
+            ))}
+          </ScrollView>
         )}
-      </ScrollView>
+      </View>
+
+      {library.isLoading ? (
+        <FeedSkeleton />
+      ) : library.error && !library.total ? (
+        <FeedError error={library.error} onRetry={library.refresh} />
+      ) : library.total === 0 ? (
+        <View style={styles.center}>
+          <Placeholder
+            icon={<BookOpen size={26} color={palette.onAccent} strokeWidth={2} />}
+            title="Your Library is empty"
+            body="Links you save in the Journal, with the extension or from X, Pinterest and YouTube collect here as a grid."
+          >
+            <Button label="Go to the Journal" onPress={() => router.navigate('/')} />
+          </Placeholder>
+        </View>
+      ) : library.matching === 0 ? (
+        <View style={styles.center}>
+          <Placeholder
+            icon={<SearchX size={26} color={palette.onAccent} strokeWidth={2} />}
+            title={search.trim() ? `Nothing matches “${search.trim()}”` : 'Nothing from here yet'}
+            body="Try another word or source."
+          >
+            <Button
+              label="Show everything"
+              onPress={() => {
+                setSearch('');
+                setSource(null);
+              }}
+            />
+          </Placeholder>
+        </View>
+      ) : (
+        <FlashList
+          data={library.items}
+          masonry
+          numColumns={2}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.key}
+          onEndReached={library.loadMore}
+          onEndReachedThreshold={0.6}
+          keyboardDismissMode="on-drag"
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.grid}
+          refreshControl={<RefreshControl refreshing={library.refreshing} onRefresh={library.refresh} tintColor={palette.muted} />}
+          ListFooterComponent={library.hasMore ? <ActivityIndicator style={styles.more} color={palette.muted} accessibilityLabel="Loading more…" /> : null}
+          accessibilityLabel="Library"
+          testID="library-grid"
+        />
+      )}
     </Canvas>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingTop: 8, paddingBottom: 33, gap: 25 },
-  stats: { flexDirection: 'row', gap: 8, alignSelf: 'stretch' },
-  stat: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 12 },
-  section: { gap: 8, paddingHorizontal: 17 },
-  sectionHead: { paddingLeft: 2 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tile: { overflow: 'hidden' },
+  controls: { gap: 10, paddingBottom: 8 },
+  search: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 17, paddingHorizontal: 12, minHeight: 44 },
+  searchInput: { flex: 1, paddingVertical: 10 },
+  chips: { gap: 8, paddingHorizontal: 17, paddingVertical: 4 },
+  grid: { paddingHorizontal: GUTTER - 4, paddingTop: 4, paddingBottom: 24 },
+  more: { marginVertical: 17 },
+  center: { flex: 1, justifyContent: 'center', paddingBottom: 60 },
 });
