@@ -1,16 +1,20 @@
 import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CornerDownLeft, Search } from 'lucide-react';
-import { INBOX_PARAM, JOURNAL_PATH, LIBRARY_PATH, TASKS_PATH, spacePath } from '../constants/modules';
+import { CornerDownLeft, MessageSquareText, Search } from 'lucide-react';
+import { INBOX_PARAM, JOT_PARAM, JOURNAL_PATH, LIBRARY_PATH, TASKS_PATH, spacePath } from '../constants/modules';
 import { useJournal } from '../hooks/useJournal';
 import { useAllTasks } from '../hooks/useTasks';
+import { useAllSelfMessages } from '../hooks/useSelfMessages';
+import { jotSnippet, searchJots } from '@memex/core';
 import { InboxIcon, JournalIcon, LibraryIcon, TasksIcon } from './icons';
 
 /*
  * ⌘/Ctrl K, on every signed-in page: a small “Go to” palette over the
  * sidebar's destinations (Journal, Library, Tasks, the Inbox while something
- * waits, every space). Type to narrow, ↑/↓ to move, Enter to go, Esc to
- * close. The Library's own search palette (“/”) stays where it is.
+ * waits, every space), plus your jots once you type two letters (core's
+ * searchJots; Enter opens the Journal at that jot, `?jot=<id>`). Type to
+ * narrow, ↑/↓ to move, Enter to go, Esc to close. The Library's own search
+ * palette (“/”) stays where it is.
  */
 
 interface Destination {
@@ -21,7 +25,21 @@ interface Destination {
   meta?: string;
   /** Extra words that should find it. */
   aliases?: string;
+  /** A jot found by its words (listed under “Jots”). */
+  jot?: boolean;
 }
+
+const jotDateFmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+const jotYearFmt = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+const jotTimeFmt = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+
+/** “3:04 PM” today, “Oct 20” this year, “Oct 20, 2025” before. */
+const jotWhen = (iso: string) => {
+  const date = new Date(iso);
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) return jotTimeFmt.format(date);
+  return (date.getFullYear() === now.getFullYear() ? jotDateFmt : jotYearFmt).format(date);
+};
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
@@ -52,6 +70,7 @@ const GoToDialog = ({ onClose }: { onClose: () => void }) => {
   const [active, setActive] = useState(0);
   const { spaces, inbox } = useJournal();
   const { data: tasks } = useAllTasks();
+  const { data: jots } = useAllSelfMessages();
   const openTasks = (tasks ?? []).filter((task) => !task.is_done).length;
 
   useEffect(() => {
@@ -97,8 +116,20 @@ const GoToDialog = ({ onClose }: { onClose: () => void }) => {
     const contains = destinations.filter(
       (d) => !starts.includes(d) && `${d.label} ${d.aliases ?? ''}`.toLowerCase().includes(q),
     );
-    return [...starts, ...contains];
-  }, [destinations, query]);
+    const places = [...starts, ...contains];
+    const spaceName = new Map(spaces.map((space) => [space.id, space.name]));
+    const found = searchJots(jots ?? [], q).map(
+      (jot): Destination => ({
+        key: `jot-${jot.id}`,
+        label: jotSnippet(jot.body, q, 72),
+        to: `${JOURNAL_PATH}?${JOT_PARAM}=${encodeURIComponent(jot.id)}`,
+        icon: <MessageSquareText />,
+        meta: [jot.profile_id ? spaceName.get(jot.profile_id) : null, jotWhen(jot.created_at)].filter(Boolean).join(' · '),
+        jot: true,
+      }),
+    );
+    return [...places, ...found];
+  }, [destinations, jots, query, spaces]);
 
   const current = Math.min(active, Math.max(results.length - 1, 0));
 
@@ -154,7 +185,7 @@ const GoToDialog = ({ onClose }: { onClose: () => void }) => {
               setActive(0);
             }}
             onKeyDown={onKeyDown}
-            placeholder="Go to…"
+            placeholder="Go to… or find a jot"
             aria-label="Go to"
             role="combobox"
             aria-expanded="true"
@@ -165,16 +196,22 @@ const GoToDialog = ({ onClose }: { onClose: () => void }) => {
           />
           <kbd className="memex-kbd">esc</kbd>
         </div>
-        <div className="memex-goto-list" role="listbox" id={listId} aria-label="Destinations">
+        <div className="memex-goto-list" role="listbox" id={listId} aria-label="Destinations and jots">
           {results.length === 0 ? (
-            <p className="memex-palette-empty">Nothing called “{query.trim()}”.</p>
+            <p className="memex-palette-empty">Nothing matches “{query.trim()}”.</p>
           ) : (
-            results.map((destination, index) => (
+            results.map((destination, index) => [
+              destination.jot && !results[index - 1]?.jot && (
+                <div key="jots-label" className="memex-palette-label" aria-hidden="true">
+                  Jots
+                </div>
+              ),
               <div
                 key={destination.key}
                 id={`${listId}-${destination.key}`}
                 role="option"
                 aria-selected={index === current}
+                aria-label={destination.jot ? `Jot: ${destination.label}${destination.meta ? `, ${destination.meta}` : ''}` : undefined}
                 className={`memex-palette-row${index === current ? ' is-active' : ''}`}
                 onMouseMove={() => setActive(index)}
                 onMouseDown={(event) => event.preventDefault()}
@@ -183,8 +220,8 @@ const GoToDialog = ({ onClose }: { onClose: () => void }) => {
                 <span className="memex-palette-icon">{destination.icon}</span>
                 <span className="memex-palette-text">{destination.label}</span>
                 {destination.meta && <span className="memex-palette-meta">{destination.meta}</span>}
-              </div>
-            ))
+              </div>,
+            ])
           )}
         </div>
         <div className="memex-palette-foot" aria-hidden="true">

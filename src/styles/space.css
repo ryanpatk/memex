@@ -7,6 +7,11 @@
  * Pastel Sky tokens only.
  */
 
+/* 17B: the title row runs over the page and the board beside it */
+.jr-page.sp-page {
+  --jr-head: calc(var(--jr-page) + 340px + var(--space-s));
+}
+
 .sp-page .jr-body {
   position: relative;
 }
@@ -560,6 +565,11 @@
 /* ------------------------------------------------------------------ */
 
 @media (max-width: 1179px) {
+  /* The board folds away, so the title lines up with the page alone */
+  .jr-page.sp-page {
+    --jr-head: var(--jr-page);
+  }
+
   .sp-board-toggle {
     display: inline-flex !important;
   }

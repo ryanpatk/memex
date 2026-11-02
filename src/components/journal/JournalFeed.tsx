@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
+  groupJots,
   toParts,
   type ComposerResult,
   type Entry,
@@ -12,7 +13,7 @@ import {
 import { useAddToSpace } from '../../hooks/useAddToSpace';
 import { useRemoveFromSpace } from '../../hooks/useRemoveFromSpace';
 import type { ToastAction } from '../../hooks/useFeedbackToast';
-import { useCreateSelfMessage, useDeleteSelfMessage } from '../../hooks/useSelfMessages';
+import { useCreateSelfMessage, useDeleteSelfMessage, useUpdateSelfMessage } from '../../hooks/useSelfMessages';
 import { useAllLinks, useCreateLink } from '../../hooks/useLinks';
 import { useCreateNote } from '../../hooks/useNotes';
 import { useCreateTask, useUpdateTask } from '../../hooks/useTasks';
@@ -21,7 +22,7 @@ import { useAddNotesToProfile } from '../../hooks/useProfileNotes';
 import { useAddTasksToProfile } from '../../hooks/useProfileTasks';
 import JournalComposer, { type JournalComposerHandle } from './JournalComposer';
 import { PartView, type JournalHandlers } from './JournalParts';
-import { LIBRARY_PATH, NOTE_PARAM } from '../../constants/modules';
+import { JOT_PARAM, LIBRARY_PATH, NOTE_PARAM } from '../../constants/modules';
 import { cue } from '../../utils/sound';
 
 /*
@@ -32,10 +33,16 @@ import { cue } from '../../utils/sound';
  * there unless you @ another space, and entries leave out that space's chip.
  * Newest at the bottom, composer below (decision 1). The page owns the
  * header, the toast and anything beside the feed (Inbox, board).
+ *
+ * Decision 17B (2026-11-01): the feed is a notebook page (journal.css) and
+ * quick jots stack into one thought (core's groupJots). Jots edit in place
+ * with Undo; `?jot=<id>` (⌘K) scrolls to a jot and highlights it.
  */
 
 const PAGE = 150;
 const UNDO_WINDOW_MS = 6000;
+/** How long a jot reached from ⌘K stays highlighted. */
+const FOUND_MS = 2400;
 
 const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -62,12 +69,15 @@ interface JournalFeedProps {
 const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
   ({ entries, spaces, filer, isLoading, scope, empty, label, flash, dismiss }, ref) => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const jotParam = searchParams.get(JOT_PARAM);
     const { data: allLinks } = useAllLinks();
     const addToSpace = useAddToSpace(flash);
     const removeFromSpace = useRemoveFromSpace(flash);
 
     const createJot = useCreateSelfMessage();
     const deleteJot = useDeleteSelfMessage();
+    const updateJot = useUpdateSelfMessage();
     const createLink = useCreateLink();
     const createNote = useCreateNote();
     const createTask = useCreateTask();
@@ -78,6 +88,8 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
 
     const [limit, setLimit] = useState(PAGE);
     const [hidden, setHidden] = useState<Set<string>>(() => new Set());
+    const [foundKey, setFoundKey] = useState<string | null>(null);
+    const shownFound = useRef<string | null>(null);
     const pendingDeletes = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; commit: () => void }>());
     const scrollRef = useRef<HTMLDivElement>(null);
     const composerRef = useRef<JournalComposerHandle>(null);
@@ -88,6 +100,7 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
 
     const visible = useMemo(() => entries.filter((e) => !hidden.has(e.id)), [entries, hidden]);
     const parts = useMemo(() => toParts(visible.slice(-limit)), [limit, visible]);
+    const rows = useMemo(() => groupJots(parts), [parts]);
     const hasEarlier = visible.length > limit;
 
     /* ---------- Scrolling: start at the bottom, stay there while new things arrive ---------- */
@@ -115,6 +128,43 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
       stickToBottom.current = true;
       setLimit(PAGE);
     }, [scope?.id]);
+
+    /* ---------- ?jot=<id> (⌘K): load far enough back, scroll to it, highlight it once ---------- */
+
+    useEffect(() => {
+      if (!jotParam || isLoading) return;
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete(JOT_PARAM);
+          return next;
+        },
+        { replace: true },
+      );
+      const key = `jot:${jotParam}`;
+      const index = visible.findIndex((e) => e.id === key);
+      if (index < 0) return; // deleted, or not in this feed: the feed opens as usual
+      stickToBottom.current = false;
+      shownFound.current = null;
+      const need = visible.length - index;
+      setLimit((n) => Math.max(n, Math.ceil(need / PAGE) * PAGE));
+      setFoundKey(key);
+    }, [isLoading, jotParam, setSearchParams, visible]);
+
+    useLayoutEffect(() => {
+      if (!foundKey || shownFound.current === foundKey) return;
+      const el = scrollRef.current?.querySelector<HTMLElement>(`[data-item-key="${CSS.escape(foundKey)}"]`);
+      if (!el) return;
+      shownFound.current = foundKey;
+      el.scrollIntoView({ block: 'center', behavior: 'auto' });
+      el.focus({ preventScroll: true });
+    }, [foundKey, rows]);
+
+    useEffect(() => {
+      if (!foundKey) return;
+      const timer = setTimeout(() => setFoundKey(null), FOUND_MS);
+      return () => clearTimeout(timer);
+    }, [foundKey]);
 
     const onScroll = () => {
       const el = scrollRef.current;
@@ -313,6 +363,28 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
       [deleteJot, dismiss, flash],
     );
 
+    const handleEditJot = useCallback(
+      (jot: SelfMessage, body: string) => {
+        const before = jot.body;
+        const onError = (error: unknown) => {
+          console.error('Failed to edit a jot:', error);
+          cue('error');
+          flash('Couldn’t save that edit. The jot is as it was.');
+        };
+        cue('confirm');
+        updateJot.mutate({ id: jot.id, updates: { body } }, { onError });
+        flash('Jot edited.', {
+          label: 'Undo',
+          onClick: () => {
+            updateJot.mutate({ id: jot.id, updates: { body: before } }, { onError });
+            cue('dismiss');
+            dismiss();
+          },
+        });
+      },
+      [dismiss, flash, updateJot],
+    );
+
     const handlers = useMemo<JournalHandlers>(
       () => ({
         onFile: handleFile,
@@ -322,8 +394,9 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
         onJotToNote: (jot) => void convertJot(jot, 'note'),
         onJotToTask: (jot) => void convertJot(jot, 'task'),
         onDeleteJot: handleDeleteJot,
+        onEditJot: handleEditJot,
       }),
-      [convertJot, handleDeleteJot, handleFile, handleToggleTask, handleUnfile, openNote],
+      [convertJot, handleDeleteJot, handleEditJot, handleFile, handleToggleTask, handleUnfile, openNote],
     );
 
     return (
@@ -336,8 +409,18 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
               </button>
             )}
             {!isLoading && parts.length === 0 && empty}
-            {parts.map((part) => (
-              <PartView key={part.id} part={part} filer={filer} spaces={spaces} handlers={handlers} scopeSpaceId={scope?.id} />
+            {rows.map(({ part, cont, held }) => (
+              <PartView
+                key={part.id}
+                part={part}
+                filer={filer}
+                spaces={spaces}
+                handlers={handlers}
+                scopeSpaceId={scope?.id}
+                cont={cont}
+                held={held}
+                found={part.id === foundKey}
+              />
             ))}
           </div>
         </div>

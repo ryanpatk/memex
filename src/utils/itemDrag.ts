@@ -12,8 +12,8 @@
 /** The dataTransfer type carrying a JSON array of item keys. */
 export const ITEM_DRAG_TYPE = 'application/x-memex-items';
 
-/** Links, notes and tasks can be filed; jots and optimistic rows can't. */
-export const isFileableKey = (key: string) => /^(link|note|task):(?!temp-)\S/.test(key);
+/** Links, notes, tasks and jots can be filed (a jot moves); optimistic rows can't. */
+export const isFileableKey = (key: string) => /^(link|note|task|jot):(?!temp-)\S/.test(key);
 
 /**
  * Which keys a drag carries: the dragged item(s), or the whole selection when
@@ -50,6 +50,6 @@ export const dragGhostLabel = (keys: readonly string[], title?: string | null) =
   return text.length > 60 ? `${text.slice(0, 60)}…` : text || '1 item';
 };
 
-/** Props that make an item's element a drag source (none for jots and optimistic rows). */
+/** Props that make an item's element a drag source (none for optimistic rows). */
 export const dragAttrs = (key: string, title: string) =>
   isFileableKey(key) ? { draggable: true, 'data-drag-label': title } : {};

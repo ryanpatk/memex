@@ -43,6 +43,8 @@ export const GROUP_PARAM = 'group';
 export const DONE_PARAM = 'done';
 /** Journal: the Inbox tray is open (`?inbox=1`). */
 export const INBOX_PARAM = 'inbox';
+/** Journal: scroll to one jot and highlight it (`?jot=<id>`, from ⌘K); cleared once shown. */
+export const JOT_PARAM = 'jot';
 
 /**
  * Tag UI is parked while the core stream is refined: hides the tag chip row

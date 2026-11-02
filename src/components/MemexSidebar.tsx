@@ -8,6 +8,7 @@ import { useAddToSpace } from '../hooks/useAddToSpace';
 import { useProfileLinkMembership } from '../hooks/useProfileLinks';
 import { useProfileNoteMembership } from '../hooks/useProfileNotes';
 import { useProfileTaskMembership } from '../hooks/useProfileTasks';
+import { useAllSelfMessages } from '../hooks/useSelfMessages';
 import { useProfiles } from '../hooks/useProfiles';
 import { useAppStore } from '../store';
 import { useSpaceColors } from '../hooks/useSpaceColors';
@@ -45,6 +46,7 @@ const MemexSidebar = () => {
   const { data: linkMembership } = useProfileLinkMembership();
   const { data: noteMembership } = useProfileNoteMembership();
   const { data: taskMembership } = useProfileTaskMembership();
+  const { data: jots } = useAllSelfMessages();
   const { toast, flash, handleAnimationEnd } = useFeedbackToast();
   const addToSpace = useAddToSpace(flash);
 
@@ -137,8 +139,12 @@ const MemexSidebar = () => {
     (linkMembership ?? []).forEach((row) => add(row.profile_id, `link:${row.link_id}`));
     (noteMembership ?? []).forEach((row) => add(row.profile_id, `note:${row.note_id}`));
     (taskMembership ?? []).forEach((row) => add(row.profile_id, `task:${row.task_id}`));
+    // A jot dragged over the space it lives in reads “All in” too
+    (jots ?? []).forEach((jot) => {
+      if (jot.profile_id) add(jot.profile_id, `jot:${jot.id}`);
+    });
     return bySpace;
-  }, [linkMembership, noteMembership, taskMembership]);
+  }, [jots, linkMembership, noteMembership, taskMembership]);
 
   const assignableKeys = useMemo(() => targetKeys.filter(isFileableKey), [targetKeys]);
 

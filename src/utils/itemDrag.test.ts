@@ -2,14 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { dragAttrs, dragGhostLabel, isFileableKey, parseDragKeys, resolveDragKeys } from './itemDrag';
 
 describe('isFileableKey', () => {
-  it('accepts links, notes and tasks', () => {
+  it('accepts links, notes, tasks and jots', () => {
+    expect(isFileableKey('jot:abc')).toBe(true);
     expect(isFileableKey('link:abc')).toBe(true);
     expect(isFileableKey('note:abc')).toBe(true);
     expect(isFileableKey('task:abc')).toBe(true);
   });
 
-  it('refuses jots, runs, optimistic rows and junk', () => {
-    expect(isFileableKey('jot:abc')).toBe(false);
+  it('refuses runs, optimistic rows and junk', () => {
+    expect(isFileableKey('jot:temp-1')).toBe(false);
     expect(isFileableKey('run:abc')).toBe(false);
     expect(isFileableKey('link:temp-123')).toBe(false);
     expect(isFileableKey('link:')).toBe(false);
@@ -33,11 +34,12 @@ describe('resolveDragKeys', () => {
   });
 
   it('keeps a gallery’s own keys, deduped and fileable only', () => {
-    expect(resolveDragKeys(['link:a', 'link:a', 'jot:x', 'link:b'], selection)).toEqual(['link:a', 'link:b']);
+    expect(resolveDragKeys(['link:a', 'link:a', 'run:x', 'link:b'], selection)).toEqual(['link:a', 'link:b']);
   });
 
   it('is empty for things that can’t be filed', () => {
-    expect(resolveDragKeys(['jot:x'], selection)).toEqual([]);
+    expect(resolveDragKeys(['jot:temp-1'], selection)).toEqual([]);
+    expect(resolveDragKeys(['run:x'], selection)).toEqual([]);
   });
 });
 
@@ -47,7 +49,7 @@ describe('parseDragKeys', () => {
   });
 
   it('drops anything that isn’t a fileable key', () => {
-    expect(parseDragKeys('["link:a", 3, "jot:x", null]')).toEqual(['link:a']);
+    expect(parseDragKeys('["link:a", 3, "run:x", "jot:temp-1", null]')).toEqual(['link:a']);
   });
 
   it('is empty for missing or malformed data', () => {
@@ -77,8 +79,9 @@ describe('dragAttrs', () => {
     expect(dragAttrs('task:a', 'Buy milk')).toEqual({ draggable: true, 'data-drag-label': 'Buy milk' });
   });
 
-  it('leaves jots and optimistic rows alone', () => {
-    expect(dragAttrs('jot:a', 'hi')).toEqual({});
+  it('leaves optimistic rows alone', () => {
+    expect(dragAttrs('jot:a', 'hi')).toEqual({ draggable: true, 'data-drag-label': 'hi' });
+    expect(dragAttrs('jot:temp-1', 'hi')).toEqual({});
     expect(dragAttrs('task:temp-1', 'hi')).toEqual({});
   });
 });

@@ -15,8 +15,9 @@ import {
   useRemoveTaskFromProfile,
 } from './useProfileTasks';
 import { useProfiles } from './useProfiles';
+import { useMoveJots } from './useMoveJots';
 import type { ToastAction } from './useFeedbackToast';
-import { parseItemKey } from '@memex/core';
+import { parseItemKey, undoMoves } from '@memex/core';
 import { cue } from '../utils/sound';
 
 type Flash = (message: string, action?: ToastAction) => void;
@@ -26,8 +27,10 @@ type Flash = (message: string, action?: ToastAction) => void;
  * (spaces as bulk-assign and drop targets), the selection bar, the Journal's
  * “File to…” and the Tasks view, so all of them report the same way:
  * optimistic toast with Undo, "already there" counts, move cue. Undo takes
- * back out only what this call newly filed. Resolves to how many items were
- * newly added (0 when they were all already there).
+ * back out only what this call newly filed. Jots (`jot:<id>`) live in one
+ * place, so filing one moves it here, and Undo moves it back to where it
+ * was. Resolves to how many items were newly added (0 when they were all
+ * already there).
  */
 export function useAddToSpace(flash: Flash) {
   const { data: profiles } = useProfiles();
@@ -40,15 +43,20 @@ export function useAddToSpace(flash: Flash) {
   const removeLink = useRemoveLinkFromProfile();
   const removeNote = useRemoveNoteFromProfile();
   const removeTask = useRemoveTaskFromProfile();
+  const jots = useMoveJots();
 
   return useCallback(
     async (spaceId: string, keys: string[]): Promise<number> => {
       const name = (profiles ?? []).find((space) => space.id === spaceId)?.name ?? 'space';
 
-      const usable = Array.from(new Set(keys)).filter((key) => {
+      const unique = Array.from(new Set(keys));
+      const usable = unique.filter((key) => {
         const { type, id } = parseItemKey(key);
         return (type === 'link' || type === 'note' || type === 'task') && !id.startsWith('temp-');
       });
+      // Jots: the ones that would move, and the ones already here
+      const jotMoves = jots.plan(unique, spaceId);
+      const jotsHere = jots.plan(unique, null).filter((move) => move.from === spaceId).length;
 
       const already = new Set<string>();
       (linkMembership ?? []).forEach((row) => {
@@ -60,10 +68,11 @@ export function useAddToSpace(flash: Flash) {
       (taskMembership ?? []).forEach((row) => {
         if (row.profile_id === spaceId) already.add(`task:${row.task_id}`);
       });
-      const total = usable.length;
+      const total = usable.length + jotMoves.length + jotsHere;
       const fresh = usable.filter((key) => !already.has(key));
-      const newlyAdded = fresh.length;
-      const items = (n: number) => `${n} item${n === 1 ? '' : 's'}`;
+      const newlyAdded = fresh.length + jotMoves.length;
+      const onlyJots = usable.length === 0;
+      const items = (n: number) => (onlyJots ? `${n === 1 ? 'the jot' : `${n} jots`}` : `${n} item${n === 1 ? '' : 's'}`);
 
       if (total === 0) return 0;
       if (newlyAdded === 0) {
@@ -81,6 +90,7 @@ export function useAddToSpace(flash: Flash) {
         linkIds.length > 0 ? addLinks.mutateAsync({ profileId: spaceId, linkIds }) : null,
         noteIds.length > 0 ? addNotes.mutateAsync({ profileId: spaceId, noteIds }) : null,
         taskIds.length > 0 ? addTasks.mutateAsync({ profileId: spaceId, taskIds }) : null,
+        jotMoves.length > 0 ? jots.apply(jotMoves) : null,
       ]);
 
       let undone = false;
@@ -98,9 +108,14 @@ export function useAddToSpace(flash: Flash) {
             ...linkIds.map((linkId) => removeLink.mutateAsync({ profileId: spaceId, linkId })),
             ...noteIds.map((noteId) => removeNote.mutateAsync({ profileId: spaceId, noteId })),
             ...taskIds.map((taskId) => removeTask.mutateAsync({ profileId: spaceId, taskId })),
+            jots.apply(undoMoves(jotMoves)),
           ]);
           cue('dismiss');
-          flash(`Took ${newlyAdded === 1 ? 'it' : items(newlyAdded)} back out of “${name}”.`);
+          flash(
+            onlyJots
+              ? `Moved ${newlyAdded === 1 ? 'it' : items(newlyAdded)} back.`
+              : `Took ${newlyAdded === 1 ? 'it' : items(newlyAdded)} back out of “${name}”.`,
+          );
         } catch (error) {
           console.error('Failed to undo filing:', error);
           cue('error');
@@ -109,10 +124,11 @@ export function useAddToSpace(flash: Flash) {
       };
 
       cue('move');
+      const verb = onlyJots ? 'Moved' : 'Added';
       flash(
         newlyAdded === total
-          ? `Added ${items(newlyAdded)} to “${name}”.`
-          : `Added ${items(newlyAdded)} to “${name}” (${total - newlyAdded} already there).`,
+          ? `${verb} ${items(newlyAdded)} to “${name}”.`
+          : `${verb} ${items(newlyAdded)} to “${name}” (${total - newlyAdded} already there).`,
         { label: 'Undo', onClick: () => void undo() },
       );
 
@@ -131,6 +147,7 @@ export function useAddToSpace(flash: Flash) {
       addNotes,
       addTasks,
       flash,
+      jots,
       linkMembership,
       noteMembership,
       profiles,

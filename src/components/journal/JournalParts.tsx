@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
-import { Bot, Check, Ellipsis, FileText, FolderInput, ListTodo, StickyNote, Trash2 } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
+import { Bot, Check, Ellipsis, FileText, FolderInput, ListTodo, Pencil, StickyNote, Trash2 } from 'lucide-react';
 import {
   type LinkWithTag,
   type SelfMessage,
@@ -8,6 +8,7 @@ import {
   getLinkTitle,
   stripMarkdown,
   isVisualLink,
+  jotEdit,
   type Entry,
   type FileableEntry,
   type Filer,
@@ -23,7 +24,10 @@ import { dragAttrs } from '../../utils/itemDrag';
  * platform saves with pictures stay big (one gallery per run), plain links
  * and notes go compact. Filing (decision 13) sits under each entry: the
  * spaces it's in, a one-press suggestion when there's a likely one, and
- * “File to…” in the hover actions. Styles: styles/journal.css.
+ * “File to…” in the hover actions. Decision 17B: quick jots stack into one
+ * thought (`cont` / `held` from core's groupJots), and a jot edits in place
+ * (Edit in its menu, or double-click; Enter saves, Esc cancels). A jot lives
+ * in one place, so “File to…” on a jot moves it. Styles: styles/journal.css.
  */
 
 export interface JournalHandlers {
@@ -35,6 +39,8 @@ export interface JournalHandlers {
   onJotToNote: (jot: SelfMessage) => void;
   onJotToTask: (jot: SelfMessage) => void;
   onDeleteJot: (jot: SelfMessage) => void;
+  /** Save an edited jot (already checked by core's jotEdit). Without it, jots can't be edited. */
+  onEditJot?: (jot: SelfMessage, body: string) => void;
 }
 
 interface PartProps {
@@ -44,6 +50,12 @@ interface PartProps {
   handlers: JournalHandlers;
   /** On a space page: the space itself, whose chip every entry would carry, so it's left out. */
   scopeSpaceId?: string;
+  /** 17B: this jot continues the one above (one thought). */
+  cont?: boolean;
+  /** 17B: the next jot continues this one, so its time and filing wait for the end of the thought. */
+  held?: boolean;
+  /** Reached from ⌘K: highlighted once and focusable. */
+  found?: boolean;
 }
 
 const timeFmt = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -83,7 +95,7 @@ const entryTitle = (entry: Entry) =>
       ? entry.note.title || 'Untitled'
       : entry.kind === 'task'
         ? entry.task.title
-        : '';
+        : entry.jot.body;
 
 const Picture = ({ link, className }: { link: LinkWithTag; className?: string }) => {
   const [failed, setFailed] = useState(false);
@@ -179,6 +191,7 @@ const FileMenu = ({
   inSpaces,
   spaces,
   handlers,
+  single = false,
 }: {
   keys: string[];
   /** What's being filed, for the toast. */
@@ -186,6 +199,8 @@ const FileMenu = ({
   inSpaces: JournalSpace[];
   spaces: JournalSpace[];
   handlers: JournalHandlers;
+  /** A jot: it lives in one space at most, so choosing one moves it (radio items). */
+  single?: boolean;
 }) => (
   <Menu label="File to…" icon={<FolderInput aria-hidden="true" />}>
     {(close) =>
@@ -199,10 +214,10 @@ const FileMenu = ({
             <button
               key={space.id}
               type="button"
-              role="menuitemcheckbox"
+              role={single ? 'menuitemradio' : 'menuitemcheckbox'}
               aria-checked={already}
               aria-disabled={already && !canUnfile}
-              title={canUnfile ? `Take out of ${space.name}` : undefined}
+              title={canUnfile ? `Take out of ${space.name}` : single && inSpaces.length ? `Move to ${space.name}` : undefined}
               className={already ? `is-in${canUnfile ? ' can-unfile' : ''}` : undefined}
               style={hue(space)}
               onClick={() => {
@@ -226,10 +241,18 @@ const FileMenu = ({
   </Menu>
 );
 
-const JotMenu = ({ jot, handlers }: { jot: SelfMessage; handlers: JournalHandlers }) => (
+const JotMenu = ({ jot, handlers, onEdit }: { jot: SelfMessage; handlers: JournalHandlers; onEdit?: () => void }) => (
   <Menu label="Jot actions" icon={<Ellipsis aria-hidden="true" />}>
     {(close) => (
       <>
+        {onEdit && (
+          <button type="button" role="menuitem" onClick={() => {
+              // Not close(): focus goes to the edit field, not back to the menu button
+              onEdit();
+            }}>
+            <Pencil aria-hidden="true" /> Edit
+          </button>
+        )}
         <button type="button" role="menuitem" onClick={() => {
             close();
             handlers.onJotToNote(jot);
@@ -320,6 +343,9 @@ const EntryShell = ({
   filer,
   handlers,
   scopeSpaceId,
+  cont,
+  held,
+  found,
 }: {
   entry: Entry;
   className: string;
@@ -328,13 +354,22 @@ const EntryShell = ({
   filer: Filer;
   handlers: JournalHandlers;
   scopeSpaceId?: string;
+  cont?: boolean;
+  held?: boolean;
+  found?: boolean;
 }) => (
-  <article className={`jr-entry ${className}`} data-item-key={entry.id} {...dragAttrs(entry.id, entryTitle(entry))}>
+  <article
+    className={`jr-entry ${className}${cont ? ' is-cont' : ''}${held ? ' is-held' : ''}${found ? ' is-found' : ''}`}
+    data-item-key={entry.id}
+    tabIndex={found ? -1 : undefined}
+    {...dragAttrs(entry.id, entryTitle(entry))}
+  >
     <div className="jr-entry-row">
       {children}
       <div className="jr-actions">{actions}</div>
     </div>
-    <Filing entry={entry} filer={filer} handlers={handlers} scopeSpaceId={scopeSpaceId} />
+    {/* A held jot's filing row (same place, same author as the rest of its thought) shows once, at the end */}
+    {!held && <Filing entry={entry} filer={filer} handlers={handlers} scopeSpaceId={scopeSpaceId} />}
   </article>
 );
 
@@ -413,7 +448,140 @@ const FileAction = ({ entry, spaces, handlers }: { entry: FileableEntry; spaces:
   <FileMenu keys={[entry.id]} label={entryTitle(entry)} inSpaces={entry.spaces} spaces={spaces} handlers={handlers} />
 );
 
-export const PartView = ({ part, filer, spaces, handlers, scopeSpaceId }: PartProps) => {
+const JotEntry = ({
+  entry,
+  shell,
+  spaces,
+  handlers,
+  cont,
+  held,
+}: {
+  entry: Extract<Entry, { kind: 'jot' }>;
+  shell: { entry: Entry; filer: Filer; handlers: JournalHandlers; scopeSpaceId?: string; found?: boolean };
+  spaces: JournalSpace[];
+  handlers: JournalHandlers;
+  cont?: boolean;
+  held?: boolean;
+}) => {
+  const { jot } = entry;
+  const [editing, setEditing] = useState(false);
+  const canEdit = Boolean(handlers.onEditJot) && !jot.id.startsWith('temp-');
+  const startEdit = canEdit ? () => setEditing(true) : undefined;
+  return (
+    <EntryShell
+      {...shell}
+      className={`jr-entry--jot${editing ? ' is-editing' : ''}`}
+      cont={cont}
+      held={held && !editing}
+      actions={
+        editing ? null : (
+          <>
+            {!jot.id.startsWith('temp-') && <FileMenu keys={[entry.id]} label={jot.body} inSpaces={entry.spaces} spaces={spaces} handlers={handlers} single />}
+            <JotMenu jot={jot} handlers={handlers} onEdit={startEdit} />
+          </>
+        )
+      }
+    >
+      {editing ? (
+        <JotEditor
+          jot={jot}
+          onDone={(body, byKeyboard) => {
+            setEditing(false);
+            if (body !== null) handlers.onEditJot?.(jot, body);
+            // Enter / Esc: keep the keyboard where it was, on this jot's menu button
+            if (byKeyboard) {
+              requestAnimationFrame(() =>
+                document
+                  .querySelector<HTMLElement>(`[data-item-key="${CSS.escape(entry.id)}"] button[aria-label="Jot actions"]`)
+                  ?.focus(),
+              );
+            }
+          }}
+        />
+      ) : (
+        <p className="jr-bubble" onDoubleClick={startEdit}>
+          {jot.body}
+          {!held && <Time at={entry.at} />}
+        </p>
+      )}
+    </EntryShell>
+  );
+};
+
+/**
+ * A jot's bubble as a field. Enter (or leaving the field) saves, ⇧↵ adds a
+ * line, Esc cancels. `onDone(null)` means nothing to save.
+ */
+const JotEditor = ({ jot, onDone }: { jot: SelfMessage; onDone: (body: string | null, byKeyboard: boolean) => void }) => {
+  const [draft, setDraft] = useState(jot.body);
+  const [emptyHint, setEmptyHint] = useState(false);
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const finished = useRef(false);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [draft]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+  }, []);
+
+  const finish = (body: string | null, byKeyboard = true) => {
+    if (finished.current) return;
+    finished.current = true;
+    onDone(body, byKeyboard);
+  };
+
+  /** Save if there's a change; an emptied jot stays open on Enter, reverts on blur. */
+  const save = (fromBlur: boolean) => {
+    const result = jotEdit(jot.body, draft);
+    if (result.kind === 'empty') {
+      if (fromBlur) finish(null, false);
+      else setEmptyHint(true);
+      return;
+    }
+    finish(result.kind === 'save' ? result.body : null, !fromBlur);
+  };
+
+  return (
+    <div className="jr-bubble jr-bubble--edit">
+      <textarea
+        ref={ref}
+        className="jr-edit-input"
+        value={draft}
+        rows={1}
+        aria-label="Edit jot"
+        aria-describedby={`jot-edit-hint-${jot.id}`}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          setEmptyHint(false);
+        }}
+        onBlur={() => save(true)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            finish(null);
+          } else if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+            event.preventDefault();
+            save(false);
+          }
+        }}
+      />
+      <span className="jr-edit-hint" id={`jot-edit-hint-${jot.id}`} aria-live="polite">
+        {emptyHint ? 'A jot needs words. Esc keeps the old text; Delete is in the ··· menu.' : '↵ save · esc cancel · ⇧↵ new line'}
+      </span>
+    </div>
+  );
+};
+
+export const PartView = ({ part, filer, spaces, handlers, scopeSpaceId, cont, held, found }: PartProps) => {
   if (part.kind === 'day') {
     return (
       <h2 className="jr-day">
@@ -423,17 +591,10 @@ export const PartView = ({ part, filer, spaces, handlers, scopeSpaceId }: PartPr
   }
   if (part.kind === 'run') return <RunView run={part} spaces={spaces} handlers={handlers} scopeSpaceId={scopeSpaceId} />;
 
-  const shell = { entry: part, filer, handlers, scopeSpaceId };
+  const shell = { entry: part, filer, handlers, scopeSpaceId, found };
   switch (part.kind) {
     case 'jot':
-      return (
-        <EntryShell {...shell} className="jr-entry--jot" actions={<JotMenu jot={part.jot} handlers={handlers} />}>
-          <p className="jr-bubble">
-            {part.jot.body}
-            <Time at={part.at} />
-          </p>
-        </EntryShell>
-      );
+      return <JotEntry entry={part} shell={shell} spaces={spaces} handlers={handlers} cont={cont} held={held} />;
     case 'task':
       return (
         <EntryShell {...shell} className="jr-entry--task" actions={<FileAction entry={part} spaces={spaces} handlers={handlers} />}>

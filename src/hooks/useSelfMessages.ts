@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { repository } from '../data/repository'
-import { SelfMessage } from '@memex/core'
+import type { SelfMessage, UpdateSelfMessageData } from '@memex/core'
 
 export const selfMessageKeys = {
   all: ['self-messages'] as const,
@@ -74,6 +74,35 @@ export const useDeleteSelfMessage = () => {
       return { previous }
     },
     onError: (_error, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(selfMessageKeys.list(), context.previous)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: selfMessageKeys.list() })
+    },
+  })
+}
+
+/**
+ * Edit a jot or move it (`profile_id`: a space, or null for the Journal).
+ * Optimistic: the feed shows the change at once and rolls back on failure.
+ */
+export const useUpdateSelfMessage = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: UpdateSelfMessageData }) =>
+      selfMessagesApi.update(id, updates),
+    onMutate: async ({ id, updates }) => {
+      await queryClient.cancelQueries({ queryKey: selfMessageKeys.list() })
+      const previous = queryClient.getQueryData<SelfMessage[]>(selfMessageKeys.list())
+      queryClient.setQueryData<SelfMessage[]>(selfMessageKeys.list(), (rows) =>
+        (rows ?? []).map((m) => (m.id === id ? { ...m, ...updates } : m)),
+      )
+      return { previous }
+    },
+    onError: (_error, _input, context) => {
       if (context?.previous) {
         queryClient.setQueryData(selfMessageKeys.list(), context.previous)
       }

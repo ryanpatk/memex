@@ -4,13 +4,32 @@
  * tray only when something waits) and 13B (filing chips). Depth follows
  * Joyful Utility: entries are paper, chips and buttons are objects.
  * Pastel Sky tokens only; shared controls keep their components.css look.
+ *
+ * Decision 17B (2026-11-01): the Journal is a notebook page. The paper
+ * shrinks to the writing (--jr-page) and sits centred on the canvas, the
+ * page title lines up over it (and over whatever opens beside it: the Inbox
+ * tray, a space's board), and quick jots stack into one thought.
  */
 
 .jr-page {
+  --jr-page: 760px;
+  /* How wide the title row runs: the page, plus anything open beside it */
+  --jr-head: var(--jr-page);
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
+}
+
+.jr-page.has-inbox {
+  --jr-head: calc(var(--jr-page) + 320px + var(--space-s));
+}
+
+/* The title sits over the page, not over the window */
+.jr-head .memex-page-header-row {
+  width: 100%;
+  max-width: var(--jr-head);
+  margin-inline: auto;
 }
 
 .jr-head {
@@ -22,12 +41,13 @@
   min-height: 0;
   display: flex;
   gap: var(--space-s);
+  justify-content: center;
   padding: 0 var(--layout-gutter, var(--space-m)) var(--space-m);
 }
 
-/* The feed's surface: the same stack as the Library */
+/* The feed's surface, a notebook page: the Library's stack, sized to the writing */
 .jr-main {
-  flex: 1;
+  flex: 0 1 var(--jr-page);
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -55,9 +75,7 @@
   justify-content: flex-end;
   gap: var(--space-s);
   min-height: 100%;
-  max-width: 680px;
-  margin-inline: auto;
-  padding: var(--space-m) var(--space-m) var(--space-s);
+  padding: var(--space-m) var(--space-l) var(--space-s);
 }
 
 .jr-earlier {
@@ -346,6 +364,92 @@
 .jr-bubble .jr-time {
   float: right;
   margin: 5px 0 0 var(--space-s);
+}
+
+/* 17B: quick jots stack into one thought. The ones that continue sit tight
+   under the jot before; the time and filing row show once, at the end. */
+.jr-entry--jot.is-cont {
+  margin-top: calc(var(--space-s) * -1 + 3px);
+}
+
+.jr-entry--jot.is-cont .jr-bubble {
+  border-top-left-radius: var(--radius-xs);
+}
+
+/* Editing a jot in place: the bubble becomes its field */
+.jr-entry--jot.is-editing .jr-entry-row {
+  width: 100%;
+}
+
+.jr-bubble--edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs);
+  width: min(520px, 100%);
+  white-space: normal;
+  box-shadow:
+    var(--surface-lit),
+    0 0 0 var(--border-s) var(--color-1-transparent),
+    0 0 0 3px color-mix(in oklab, var(--color-1) 22%, transparent);
+}
+
+.jr-edit-input {
+  display: block;
+  width: 100%;
+  min-height: var(--line-m);
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: max(16px, var(--size-m));
+  line-height: var(--line-m);
+  letter-spacing: var(--letter-spacing-m);
+  resize: none;
+  outline: none;
+}
+
+.jr-edit-hint {
+  color: var(--neutral-7);
+  font-family: var(--font-ui);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+}
+
+/* Reached from ⌘K (?jot=): a wash behind the entry that fades out */
+.jr-entry.is-found {
+  position: relative;
+  isolation: isolate;
+}
+
+.jr-entry.is-found::before {
+  content: '';
+  position: absolute;
+  inset: calc(var(--space-xxs) * -1) calc(var(--space-xs) * -1);
+  z-index: -1;
+  border-radius: var(--radius-m);
+  background: color-mix(in oklab, var(--color-1) 14%, transparent);
+  box-shadow: 0 0 0 var(--border-s) color-mix(in oklab, var(--color-1) 40%, transparent);
+  pointer-events: none;
+  animation: jr-found 2.4s var(--motion-easing) forwards;
+}
+
+/* The wash marks it; the entry is only focused so screen readers land there */
+.jr-entry.is-found:focus {
+  outline: none;
+}
+
+@keyframes jr-found {
+  0%,
+  45% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
 }
 
 /* Task: a line with the shared task check */
@@ -667,9 +771,7 @@
   position: relative;
   flex: none;
   width: 100%;
-  max-width: 680px;
-  margin-inline: auto;
-  padding: var(--space-xs) var(--space-m) var(--space-s);
+  padding: var(--space-xs) var(--space-l) var(--space-s);
 }
 
 .jr-composer-field {
@@ -1072,6 +1174,14 @@
 /* ------------------------------------------------------------------ */
 
 @media (max-width: 899px) {
+  .jr-page {
+    --jr-head: 100%;
+  }
+
+  .jr-main {
+    flex: 1;
+  }
+
   .jr-body {
     padding: 0 var(--space-xs) calc(68px + env(safe-area-inset-bottom, 0px));
   }
@@ -1105,6 +1215,11 @@
 
 @media (prefers-reduced-motion: reduce) {
   .jr-inbox {
+    animation: none;
+  }
+
+  /* Still marked while it's highlighted; it just doesn't fade */
+  .jr-entry.is-found::before {
     animation: none;
   }
 
