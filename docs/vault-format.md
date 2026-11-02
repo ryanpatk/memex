@@ -80,11 +80,11 @@ Defaults: `title` null, `sourceId` null, `capturedClient` null, `lists` `[]`, `s
 
 ## Notes
 
-Frontmatter `schema`, `type: "note"`, `id`, `title` (may be null), `created`, `updated`, `spaces`, `tags`, `order`. **The body is the note's markdown exactly as stored**, byte for byte, starting right after the closing `---` line (no blank line is added; a body without a final newline ends without one).
+Frontmatter `schema`, `type: "note"`, `id`, `title` (may be null), `created`, `updated`, `capturedBy` / `capturedClient` (only on notes an MCP agent wrote: `"agent"` and the agent token's client name), `spaces`, `tags`, `order`. **The body is the note's markdown exactly as stored**, byte for byte, starting right after the closing `---` line (no blank line is added; a body without a final newline ends without one).
 
 ## Tasks
 
-Frontmatter `schema`, `type: "task"`, `id`, `title`, `done` (boolean), `due` (`"YYYY-MM-DD"` or null), `created`, `updated`, `spaces`, `tags`, `order`. **The body is the task's detail exactly as stored**; an empty body means no detail (null and empty read the same). There's no checkbox in the body on purpose: toggling one in Obsidian would only edit the copy.
+Frontmatter `schema`, `type: "task"`, `id`, `title`, `done` (boolean), `due` (`"YYYY-MM-DD"` or null), `created`, `updated`, `capturedBy` / `capturedClient` (only on tasks an agent wrote), `spaces`, `tags`, `order`. **The body is the task's detail exactly as stored**; an empty body means no detail (null and empty read the same). There's no checkbox in the body on purpose: toggling one in Obsidian would only edit the copy.
 
 ## Journal days
 
@@ -103,6 +103,7 @@ jots:
     updated: "2026-10-24T13:12:00+00:00"
     space: null                               # or "[[spaces/home-reno|Home reno]]" for a space's Journal
     legacyId: "…"                             # self_messages.legacy_id (omitted when null)
+    capturedBy: "agent"                       # only on jots an MCP agent wrote, with capturedClient: "<client name>"
     text: "…"                                 # only when the list item can't hold the text exactly (below)
 ---
 # Saturday, October 24, 2026
@@ -187,7 +188,8 @@ Spaces are index notes, not folders, because an item can be in several spaces. M
 ## What isn't in the vault (yet)
 
 - **UI preferences** (canvas colour, link card style, dark mode, panel state) live in the browser's localStorage, not the database, so the export can't see them. They're cosmetic; ROADMAP §3.3 gives them a `settings/` home in v2.
-- **Accounts and secrets**: `auth.*`, `api_tokens`, `agent_tokens` and the operational `mcp_audit_log` are deliberately left out. Full database backups cover them (`docs/backups.md`).
+- **Accounts and secrets**: `auth.*`, `api_tokens`, `agent_tokens` and the operational `mcp_audit_log` and `agent_write_keys` are deliberately left out.
+- **Agents' Inbox proposals** (`inbox_proposals`): workflow state, not content. An approved proposal's change lives in the item it changed (and so in the vault); pending and rejected ones stay in the database (and its backups). Full database backups cover them (`docs/backups.md`).
 - **Image files in Supabase Storage**: there are none today; images are remote URLs, downloaded into `assets/`. An image that couldn't be fetched (404, 403, an HTML page instead of an image) keeps its URL in the item and gets a `failed` entry in the manifest; each export retries it.
 - **The raw capture** of a save (author, text, media of an X post) isn't stored by memex yet (ROADMAP Phase 3). When it is, it goes in a link's `capture:` frontmatter.
 

@@ -549,6 +549,8 @@ function renderNote(item) {
     title: note.title ?? null,
     created: note.created_at,
     updated: note.updated_at,
+    capturedBy: note.captured_by ?? undefined,
+    capturedClient: note.captured_client ?? undefined,
     spaces: item.spaces.map((s) => wikilink(s.path, s.name)),
     tags: item.tags,
     order: note.order_index ?? 0,
@@ -567,6 +569,8 @@ function renderTask(item) {
     due: task.due_date ?? null,
     created: task.created_at,
     updated: task.updated_at,
+    capturedBy: task.captured_by ?? undefined,
+    capturedClient: task.captured_client ?? undefined,
     spaces: item.spaces.map((s) => wikilink(s.path, s.name)),
     tags: item.tags,
     order: task.order_index ?? 0,
@@ -583,6 +587,9 @@ function renderDay(day, prev, next, timeZone) {
       updated: entry.jot.updated_at,
       space: entry.space ? wikilink(entry.space.path, entry.space.name) : null,
       legacyId: entry.jot.legacy_id ?? undefined,
+      // Written by an MCP agent (2026-11-03 on); omitted for the user's own jots.
+      capturedBy: entry.jot.captured_by ?? undefined,
+      capturedClient: entry.jot.captured_client ?? undefined,
     };
     // Bodies a list item can't hold exactly (CR, leading/trailing blank lines or
     // spaces) also travel verbatim in the frontmatter.

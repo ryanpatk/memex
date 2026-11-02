@@ -262,8 +262,8 @@ The files path works from Phase 2. The server path:
 *2026-11-01: this is v1's headline goal: a hosted MCP server on memex-api so Grok Bots (and Claude) can read and store project context. In v1 it runs on memex-api over Supabase rather than the vault index (decision 19). 7b only if a client needs OAuth; Grok Bots and Claude Code use bearer tokens.*
 - [x] 7a Remote MCP on the Worker with read tools (§3.6), bearer-token auth ✓ 2026-11-02 (M3-A): `/mcp` on memex-api, per-client agent tokens with scopes, expiry, revocation, rate limit and an audit log; smoke-tested with the MCP SDK client (`docs/mcp.md`). Still to come from §3.6: `get_images` (7c), search filters by tag
 - [ ] 7b OAuth so it works as a claude.ai / Claude Desktop custom connector (reuse passkey sign-in). Designed 2026-11-02 in `docs/mcp-auth.md` (M3-C): needed for grok.com and claude.ai connectors, not for the xAI API or CLIs
-- [ ] 7c `get_images` returning thumbnails; canned prompts (weekly review, recent themes, space summary)
-- [ ] 7d Write tools: `add_jot` direct; everything else lands as Inbox proposals you approve
+- [ ] 7c `get_images` returning thumbnails; canned prompts (weekly review, recent themes, space summary) — *2026-11-02 (M3-B): `get_images` ships returning picture URLs (link previews, images in notes), not bytes; thumbnails from R2 wait for the vault (v2). Prompts still to do*
+- [x] 7d Write tools ✓ 2026-11-02 (M3-B): agents add jots, notes, tasks and links (`captured_by = 'agent'` + client name, “via <client>” in the Journal), append directly only to their own notes, and everything that changes existing items lands as an Inbox proposal you approve or reject; no deletes; idempotency keys. Settings → Agent tokens creates (server-side, shown once), revokes and mass-revokes tokens (`docs/mcp.md`)
 - [ ] 7e (**v2**) Semantic search: embeddings (Workers AI + Vectorize, or local in the desktop app), `similar` / `clusters` / `themes`
 
 ### Later

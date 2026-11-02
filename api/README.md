@@ -13,9 +13,18 @@ Cursor…): Streamable HTTP, stateless, read tools (`search`, `get_item`,
 **agent tokens** (`mxa_…`, table `agent_tokens`, made with
 `scripts/agent-token.mjs`), never the extension's `mx_…` tokens, and has its
 own scopes, per-token rate limit (`MCP_RATE_LIMITER`, 60/min) and audit log
-(`mcp_audit_log`). Everything about it, client config included:
-`docs/mcp.md`; auth decisions: `docs/mcp-auth.md`. Smoke test:
-`node --env-file=../.env.agent scripts/mcp-smoke.mjs <url>/mcp`.
+(`mcp_audit_log`). Read tools for every token; write tools (`add_jot`,
+`save_link`, `create_note`, `create_task`, `append_to_note`,
+`propose_change`) for `read_write` tokens only, which add items or file Inbox
+proposals and never delete. Everything about it, client config included:
+`docs/mcp.md`; auth decisions: `docs/mcp-auth.md`. Smoke tests:
+`node --env-file=../.env.agent scripts/mcp-smoke.mjs <url>/mcp` (reads) and
+`scripts/mcp-write-smoke.mjs` (writes, `[test]` content).
+
+`POST /agent-tokens` creates an agent token for the web app (Settings → Agent
+tokens): auth is the app's Supabase session, checked by Supabase Auth; the
+token is generated server-side, only its hash stored, the plaintext returned
+once (`src/agentTokens.ts`).
 
 ## Routes
 
