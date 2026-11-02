@@ -153,10 +153,14 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
 
     useLayoutEffect(() => {
       if (!foundKey || shownFound.current === foundKey) return;
-      const el = scrollRef.current?.querySelector<HTMLElement>(`[data-item-key="${CSS.escape(foundKey)}"]`);
-      if (!el) return;
+      const scroller = scrollRef.current;
+      const el = scroller?.querySelector<HTMLElement>(`[data-item-key="${CSS.escape(foundKey)}"]`);
+      if (!scroller || !el) return;
       shownFound.current = foundKey;
-      el.scrollIntoView({ block: 'center', behavior: 'auto' });
+      // Centre it in the feed's own scroller (scrollIntoView would also move the page)
+      const box = el.getBoundingClientRect();
+      const frame = scroller.getBoundingClientRect();
+      scroller.scrollTop += box.top - frame.top - Math.max(0, (scroller.clientHeight - box.height) / 2);
       el.focus({ preventScroll: true });
     }, [foundKey, rows]);
 

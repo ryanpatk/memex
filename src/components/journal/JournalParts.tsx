@@ -361,7 +361,8 @@ const EntryShell = ({
   <article
     className={`jr-entry ${className}${cont ? ' is-cont' : ''}${held ? ' is-held' : ''}${found ? ' is-found' : ''}`}
     data-item-key={entry.id}
-    tabIndex={found ? -1 : undefined}
+    // Focusable by script only (⌘K lands here), never in the Tab order
+    tabIndex={-1}
     {...dragAttrs(entry.id, entryTitle(entry))}
   >
     <div className="jr-entry-row">

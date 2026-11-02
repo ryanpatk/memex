@@ -436,9 +436,16 @@
   animation: jr-found 2.4s var(--motion-easing) forwards;
 }
 
-/* The wash marks it; the entry is only focused so screen readers land there */
-.jr-entry.is-found:focus {
+/* Entries take focus only from ⌘K: the wash marks it, then a quiet ring
+   while focus stays there */
+.jr-entry:focus {
   outline: none;
+}
+
+.jr-entry:focus-visible:not(.is-found) {
+  outline: var(--focus-ring-outline);
+  outline-offset: var(--space-xxs);
+  border-radius: var(--radius-s);
 }
 
 @keyframes jr-found {

@@ -119,12 +119,12 @@ export const createDemoData = (nowMs: number = Date.now()): MemoryData => {
 
   const jots: SelfMessage[] = [
     { id: 'jt-1', user_id: USER, profile_id: null, body: 'The island should be one material, not two.', ...stamp(5 * HOUR) },
-    { id: 'jt-2', user_id: USER, profile_id: null, body: 'Ask about lime plaster in the hallway too', ...stamp(2 * HOUR) },
+    { id: 'jt-2', user_id: USER, profile_id: null, body: 'Ask about lime plaster in the hallway too', ...stamp(2 * HOUR + 4 * 60 * 1000) },
     { id: 'jt-3', user_id: USER, profile_id: 'sp-kitchen', body: 'Plasterer can start the week of the 18th if we decide on the finish by Friday.', ...stamp(1 * DAY + 3 * HOUR) },
     { id: 'jt-4', user_id: USER, profile_id: 'sp-kitchen', body: 'Sage green island + warm oak shelves. Keep the worktop pale.', ...stamp(3 * HOUR + 20 * 60 * 1000) },
     { id: 'jt-5', user_id: USER, profile_id: 'sp-kyoto', body: 'Gio-ji opens at 9. Go first, before the tour buses.', ...stamp(3 * DAY + 2 * HOUR) },
     // Follow-ups written a minute or two later: the Journal stacks these into one thought (17B)
-    { id: 'jt-6', user_id: USER, profile_id: null, body: 'Or tadelakt? Ask which one the plasterer would rather do.', ...stamp(2 * HOUR - 90_000) },
+    { id: 'jt-6', user_id: USER, profile_id: null, body: 'Or tadelakt? Ask which one the plasterer would rather do.', ...stamp(2 * HOUR + 150_000) },
     { id: 'jt-7', user_id: USER, profile_id: 'sp-kitchen', body: 'Brushed brass pulls, not black.', ...stamp(3 * HOUR + 18 * 60 * 1000) },
     { id: 'jt-8', user_id: USER, profile_id: 'sp-kyoto', body: 'Then Okochi Sanso garden, ten minutes up the hill.', ...stamp(3 * DAY + 2 * HOUR - 2 * 60 * 1000) },
   ];
