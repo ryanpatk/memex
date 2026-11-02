@@ -11,4 +11,5 @@ export const keys = {
   linkMembership: ['space-links', 'membership'],
   noteMembership: ['space-notes', 'membership'],
   taskMembership: ['space-tasks', 'membership'],
+  proposals: ['proposals', 'pending'],
 } as const;

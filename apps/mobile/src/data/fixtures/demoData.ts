@@ -1,4 +1,4 @@
-import type { LinkWithTag, NoteWithTags, Profile, SelfMessage, TaskWithTags } from '@memex/core';
+import { toDayKey, type InboxProposal, type LinkWithTag, type NoteWithTags, type Profile, type SelfMessage, type TaskWithTags } from '@memex/core';
 
 /*
  * DEV-ONLY demo data for the fixture repository (fixtureRepository.ts).
@@ -21,6 +21,8 @@ export interface DemoData {
   links: LinkWithTag[];
   notes: NoteWithTags[];
   tasks: TaskWithTags[];
+  /** An agent's changes waiting in the Inbox (MCP, docs/mcp.md). */
+  proposals: InboxProposal[];
   membership: {
     links: { profile_id: string; link_id: string }[];
     notes: { profile_id: string; note_id: string }[];
@@ -142,19 +144,72 @@ export const buildDemoData = (now = new Date()): DemoData => {
     note('n2', t(0, 9, 30), 'Portfolio — memex case study', 'Problem: scattered capture. Approach: one Journal, files you own. Show the loop: capture → display → analysis.'),
   ];
 
-  const task = (id: string, created_at: string, title: string, is_done = false): TaskWithTags => ({
+  /** A due date `days` from today, as the YYYY-MM-DD day tasks store. */
+  const due = (days: number) => toDayKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + days));
+  const task = (id: string, created_at: string, title: string, is_done = false, due_date?: string): TaskWithTags => ({
     id,
     user_id: USER,
     title,
     is_done,
+    due_date,
     order_index: 0,
     created_at,
     updated_at: created_at,
   });
   const tasks = [
     task('t1', t(3, 18, 20), 'Book the ryokan in Arashiyama', true),
-    task('t2', t(1, 16, 45), 'Sketch the share sheet flow'),
+    task('t5', t(4, 17, 30), 'Return the library books', false, due(-1)),
+    task('t8', t(2, 15, 10), 'Send the deposit for the hallway paint', true),
+    task('t4', t(2, 19, 40), 'Order film for the trip', false, due(5)),
+    task('t2', t(1, 16, 45), 'Sketch the share sheet flow', false, due(1)),
     task('t3', t(0, 10, 2), 'Renew passport photos'),
+    task('t6', t(0, 11, 20), 'Write the case study intro', false, due(0)),
+    task('t7', t(0, 11, 40), 'Pick a colour for the hallway', false, due(12)),
+  ];
+
+  const proposal = (
+    p: Pick<InboxProposal, 'id' | 'kind' | 'item_type' | 'item_id' | 'changes' | 'created_at'> & Partial<InboxProposal>,
+  ): InboxProposal => ({
+    user_id: USER,
+    token_id: 'demo-agent',
+    client_name: 'Grok Bot',
+    space_id: null,
+    reason: null,
+    base_updated_at: null,
+    status: 'pending',
+    decided_at: null,
+    ...p,
+  });
+  const proposals = [
+    proposal({
+      id: 'pr1',
+      kind: 'file',
+      item_type: 'link',
+      item_id: 'o5',
+      space_id: 'studio',
+      changes: {},
+      reason: 'A design reference, like the rest of Studio',
+      created_at: t(0, 7, 5),
+    }),
+    proposal({
+      id: 'pr2',
+      kind: 'append',
+      item_type: 'note',
+      item_id: 'n1',
+      changes: { text: '## Day 3\nNara by the early train; the deer park before nine.' },
+      reason: 'Adds the Nara day you jotted about',
+      base_updated_at: t(3, 13, 5),
+      created_at: t(0, 7, 20),
+    }),
+    proposal({
+      id: 'pr3',
+      kind: 'edit',
+      item_type: 'task',
+      item_id: 't2',
+      changes: { title: 'Sketch the share sheet flow: save and file in one step', due_date: due(3) },
+      base_updated_at: t(1, 16, 45),
+      created_at: t(0, 7, 40),
+    }),
   ];
 
   return {
@@ -163,6 +218,7 @@ export const buildDemoData = (now = new Date()): DemoData => {
     links,
     notes,
     tasks,
+    proposals,
     membership: {
       links: [
         { profile_id: 'reading', link_id: 'l1' },
@@ -180,6 +236,10 @@ export const buildDemoData = (now = new Date()): DemoData => {
         { profile_id: 'kyoto', task_id: 't1' },
         { profile_id: 'studio', task_id: 't2' },
         { profile_id: 'kyoto', task_id: 't3' },
+        { profile_id: 'kyoto', task_id: 't4' },
+        { profile_id: 'studio', task_id: 't6' },
+        { profile_id: 'home', task_id: 't7' },
+        { profile_id: 'home', task_id: 't8' },
       ],
     },
   };

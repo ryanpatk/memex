@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../theme/theme';
-import { useHiddenEntries, useRepository } from './DataProvider';
+import { useDismissed, useHiddenEntries, useRepository } from './DataProvider';
 import { toJournal } from './journal';
 import { keys } from './keys';
 
@@ -16,6 +16,7 @@ export const useJournal = () => {
   const { palette } = useTheme();
   const repository = useRepository();
   const hidden = useHiddenEntries();
+  const dismissed = useDismissed();
   const jots = useQuery({ queryKey: keys.jots, queryFn: () => repository.jots.getAll() });
   const links = useQuery({ queryKey: keys.links, queryFn: () => repository.links.getAll() });
   const notes = useQuery({ queryKey: keys.notes, queryFn: () => repository.notes.getAll() });
@@ -44,8 +45,10 @@ export const useJournal = () => {
         membership: { links: linkRows.data ?? [], notes: noteRows.data ?? [], tasks: taskRows.data ?? [] },
       },
       palette.spaceFallback,
+      new Date(),
+      dismissed,
     );
-  }, [isLoading, hidden, jots.data, links.data, notes.data, tasks.data, spaces.data, linkRows.data, noteRows.data, taskRows.data, palette.spaceFallback]);
+  }, [isLoading, hidden, dismissed, jots.data, links.data, notes.data, tasks.data, spaces.data, linkRows.data, noteRows.data, taskRows.data, palette.spaceFallback]);
 
   const refetchers = all.map((q) => q.refetch);
   const refresh = useCallback(async () => {

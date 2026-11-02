@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildDemoData } from './fixtures/demoData';
 import { createFixtureRepository } from './fixtures/fixtureRepository';
-import { toJournal } from './journal';
+import { spaceFeed, summarizeSpaces, toJournal } from './journal';
 
 const NOW = new Date(2026, 10, 1, 12, 0);
 
@@ -30,8 +30,43 @@ describe('toJournal on the demo data', () => {
   it('gives spaces hex colours and counts', () => {
     expect(journal.spaces.map((s) => s.name)).toEqual(['Studio', 'Kyoto trip', 'Reading', 'Home']);
     journal.spaces.forEach((s) => expect(s.color).toMatch(/^#[0-9a-f]{6}$/));
-    expect(journal.perSpace.get('kyoto')).toBe(3);
-    expect(journal.counts).toEqual({ jot: 5, link: 24, note: 2, task: 3 });
+    expect(journal.perSpace.get('kyoto')).toBe(4);
+    expect(journal.counts).toEqual({ jot: 5, link: 24, note: 2, task: 8 });
+    expect(Object.fromEntries(journal.openTasks)).toEqual({ kyoto: 2, studio: 2, home: 1, unfiled: 1 });
+  });
+
+  it('leaves dismissed suggestions out of the Inbox and the filer', () => {
+    expect(journal.inbox.map((x) => x.entry.id)).toContain('link:l3');
+    const l3 = journal.entries.find((e) => e.id === 'link:l3')!;
+    expect(journal.filer.suggest(l3)?.space.name).toBe('Reading');
+    const dismissed = toJournal(buildDemoData(NOW), '#5077ff', NOW, new Set(['link:l3']));
+    expect(dismissed.inbox.map((x) => x.entry.id)).not.toContain('link:l3');
+    expect(dismissed.inbox).toHaveLength(journal.inbox.length - 1);
+    expect(dismissed.filer.suggest(l3)).toBeUndefined();
+  });
+});
+
+describe('spaces', () => {
+  const journal = toJournal(buildDemoData(NOW), '#5077ff', NOW);
+
+  it('summarizes each space: counts, open tasks, newest entries first', () => {
+    const [studio, kyoto, reading, home] = summarizeSpaces(journal);
+    expect(studio).toMatchObject({ count: 7, openTasks: 2 });
+    expect(studio.recent.map((e) => e.id)).toEqual(['task:t6', 'note:n2', 'link:x0']);
+    expect(kyoto).toMatchObject({ count: 4, openTasks: 2 });
+    expect(reading).toMatchObject({ count: 3, openTasks: 0 });
+    expect(reading.recent[0].id).toBe('jot:j3');
+    expect(home.lastAt).toBe(journal.entries.find((e) => e.id === 'task:t7')!.at);
+    expect(summarizeSpaces(journal, 1).every((s) => s.recent.length === 1)).toBe(true);
+  });
+
+  it('builds a space’s own feed from core’s model', () => {
+    const { entries, feed, counts } = spaceFeed(journal, 'kyoto', NOW);
+    expect(entries.map((e) => e.id).sort()).toEqual(['note:n1', 'task:t1', 'task:t3', 'task:t4']);
+    expect(counts).toEqual({ jot: 0, link: 0, note: 1, task: 3 });
+    expect(feed[0]).toMatchObject({ kind: 'task', id: 'task:t3' });
+    expect(feed.filter((p) => p.kind === 'day').map((p) => (p.kind === 'day' ? p.label : ''))[0]).toBe('Today');
+    expect(spaceFeed(journal, 'nope', NOW).feed).toEqual([]);
   });
 });
 

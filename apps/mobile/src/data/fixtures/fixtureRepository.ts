@@ -28,6 +28,7 @@ export const toMemoryData = (data: DemoData): MemoryData => ({
   spaceNotes: data.membership.notes,
   spaceTasks: data.membership.tasks,
   views: [],
+  proposals: data.proposals,
 });
 
 export const createFixtureRepository = ({ signedIn = true, now = new Date() } = {}): Repository => {

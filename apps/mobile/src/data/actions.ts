@@ -2,6 +2,7 @@ import type { QueryClient, QueryKey } from '@tanstack/react-query';
 import {
   getHostname,
   type ComposerResult,
+  type InboxProposal,
   type LinkWithTag,
   type NoteWithTags,
   type Repository,
@@ -15,6 +16,7 @@ import {
   type CapturedLink,
   type PageMetadata,
 } from '@memex/core/capture';
+import { applyProposal, rejectProposal, type ProposalTarget } from '@memex/core/agent';
 import { keys } from './keys';
 
 /*
@@ -97,6 +99,27 @@ export const createJournalActions = ({ queryClient, repository, client, enrich, 
     setList<T>(key, (rows) => (rows.some((r) => r.id === id) ? rows.map((r) => (r.id === id ? next : r)) : [...rows, next]));
   const settle = (...queryKeys: QueryKey[]) => Promise.all(queryKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
   const stamp = () => now().toISOString();
+
+  /**
+   * Change fields of one cached row at once, write it, and put just those
+   * fields back if the write fails.
+   */
+  const patchRow = async <T extends Row>(key: QueryKey, id: string, changes: Partial<T>, write: () => Promise<unknown>) => {
+    await queryClient.cancelQueries({ queryKey: key });
+    const before = list<T>(key)?.find((r) => r.id === id);
+    const previous = before
+      ? (Object.fromEntries(Object.keys(changes).map((field) => [field, before[field as keyof T]])) as Partial<T>)
+      : null;
+    setList<T>(key, (rows) => rows.map((r) => (r.id === id ? { ...r, ...changes } : r)));
+    try {
+      await write();
+    } catch (error) {
+      if (previous) setList<T>(key, (rows) => rows.map((r) => (r.id === id ? { ...r, ...previous } : r)));
+      throw error;
+    } finally {
+      void settle(key);
+    }
+  };
 
   const memberRow = (kind: FileableKind, id: string, spaceId: string): MembershipRow =>
     ({ profile_id: spaceId, [MEMBERSHIP[kind].column]: id }) as MembershipRow;
@@ -251,20 +274,63 @@ export const createJournalActions = ({ queryClient, repository, client, enrich, 
       }
     },
 
-    /** Tick or untick a task. */
+    /**
+     * Tick or untick a task. `updated_at` moves with it, so a task you just
+     * ticked sorts first in Done (core's compareDoneTasks) before the refetch.
+     */
     async setTaskDone(task: TaskWithTags, done: boolean) {
       if (task.id.startsWith('temp-')) return;
-      await queryClient.cancelQueries({ queryKey: keys.tasks });
-      const patch = (is_done: boolean) =>
-        setList<TaskWithTags>(keys.tasks, (rows) => rows.map((t) => (t.id === task.id ? { ...t, is_done } : t)));
-      patch(done);
+      await patchRow<TaskWithTags>(keys.tasks, task.id, { is_done: done, updated_at: stamp() }, () =>
+        repository.tasks.update(task.id, { is_done: done }),
+      );
+    },
+
+    /** Set a task's due date (a `YYYY-MM-DD` day), or clear it with null. */
+    async setTaskDue(task: TaskWithTags, due: string | null) {
+      if (task.id.startsWith('temp-')) return;
+      await patchRow<TaskWithTags>(keys.tasks, task.id, { due_date: due ?? undefined }, () =>
+        repository.tasks.update(task.id, { due_date: due }),
+      );
+    },
+
+    /** Rename a task (one line, up to 200 characters, like the composer's tasks). */
+    async renameTask(task: TaskWithTags, title: string) {
+      const clean = title.replace(/\s+/g, ' ').trim().slice(0, 200);
+      if (task.id.startsWith('temp-') || !clean || clean === task.title) return;
+      await patchRow<TaskWithTags>(keys.tasks, task.id, { title: clean }, () => repository.tasks.update(task.id, { title: clean }));
+    },
+
+    /**
+     * Save a note's title and markdown. Plain text in, plain text stored
+     * (notes stay portable); an empty title is stored as null, like the web.
+     */
+    async updateNote(note: NoteWithTags, changes: { title: string; body: string }) {
+      if (note.id.startsWith('temp-')) return;
+      const title = changes.title.trim();
+      const at = stamp();
+      await patchRow<NoteWithTags>(keys.notes, note.id, { title: title || undefined, body: changes.body, updated_at: at }, () =>
+        repository.notes.update(note.id, { title: title || null, body: changes.body }),
+      );
+    },
+
+    /**
+     * Approve or reject an agent's Inbox proposal with core's applyProposal /
+     * rejectProposal (the web Inbox's path). It leaves the list at once and
+     * comes back if that fails; approving refreshes the item it changed.
+     */
+    async decideProposal(proposal: InboxProposal, target: ProposalTarget | null, decision: 'apply' | 'reject') {
+      await queryClient.cancelQueries({ queryKey: keys.proposals });
+      const before = list<InboxProposal>(keys.proposals);
+      drop(keys.proposals, proposal.id);
       try {
-        await repository.tasks.update(task.id, { is_done: done });
+        if (decision === 'apply') await applyProposal(repository, proposal, target);
+        else await rejectProposal(repository, proposal);
       } catch (error) {
-        patch(!done);
+        if (before) queryClient.setQueryData(keys.proposals, before);
         throw error;
       } finally {
-        void settle(keys.tasks);
+        const kind = proposal.item_type;
+        void settle(keys.proposals, ...(decision === 'apply' ? [LIST[kind], MEMBERSHIP[kind].key] : []));
       }
     },
 

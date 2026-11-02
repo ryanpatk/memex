@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { QueryClient } from '@tanstack/react-query';
-import { parseComposer, type LinkWithTag, type Repository, type SelfMessage, type TaskWithTags } from '@memex/core';
+import { parseComposer, type InboxProposal, type LinkWithTag, type NoteWithTags, type Repository, type SelfMessage, type TaskWithTags } from '@memex/core';
 import { createFixtureRepository } from './fixtures/fixtureRepository';
 import { createJournalActions, faviconFor, parseEntryId, type Composed } from './actions';
 import { keys } from './keys';
@@ -23,6 +23,7 @@ const setup = async (repository: Repository = createFixtureRepository({ now: NOW
     prime(keys.linkMembership, () => repository.spaceLinks.listMembership()),
     prime(keys.noteMembership, () => repository.spaceNotes.listMembership()),
     prime(keys.taskMembership, () => repository.spaceTasks.listMembership()),
+    prime(keys.proposals, () => repository.proposals.getPending()),
   ]);
   const enrich = vi.fn(async () => ({ title: '[test] Scraped title', image: 'https://img.test/a.jpg' }));
   const actions = createJournalActions({ queryClient, repository, client: 'memex-ios/test', enrich, now: () => NOW });
@@ -153,5 +154,103 @@ describe('task, filing and delete actions', () => {
 
   it('parses entry ids', () => {
     expect(parseEntryId('link:abc:1')).toEqual({ kind: 'link', id: 'abc:1' });
+  });
+});
+
+describe('Tasks and note writes', () => {
+  it('sets and clears a due date, rolling back on failure', async () => {
+    const base = createFixtureRepository({ now: NOW });
+    let fail = false;
+    const repo: Repository = {
+      ...base,
+      tasks: { ...base.tasks, update: (id, u) => (fail ? Promise.reject(new Error('x')) : base.tasks.update(id, u)) },
+    };
+    const { queryClient, actions, repository } = await setup(repo);
+    const cached = () => queryClient.getQueryData<TaskWithTags[]>(keys.tasks)!.find((t) => t.id === 't3')!;
+    await actions.setTaskDue(cached(), '2026-11-06');
+    expect(cached().due_date).toBe('2026-11-06');
+    expect((await repository.tasks.getAll()).find((t) => t.id === 't3')?.due_date).toBe('2026-11-06');
+    fail = true;
+    await expect(actions.setTaskDue(cached(), null)).rejects.toThrow();
+    expect(cached().due_date).toBe('2026-11-06');
+    fail = false;
+    await actions.setTaskDue(cached(), null);
+    expect((await repository.tasks.getAll()).find((t) => t.id === 't3')?.due_date).toBeUndefined();
+  });
+
+  it('moves a ticked task’s updated_at so it sorts first in Done', async () => {
+    const { queryClient, actions } = await setup();
+    const task = queryClient.getQueryData<TaskWithTags[]>(keys.tasks)!.find((t) => t.id === 't3')!;
+    await actions.setTaskDone(task, true);
+    expect(queryClient.getQueryData<TaskWithTags[]>(keys.tasks)!.find((t) => t.id === 't3')?.updated_at).not.toBe(task.updated_at);
+  });
+
+  it('renames a task (one line, trimmed) and ignores empty or unchanged titles', async () => {
+    const { queryClient, actions, repository } = await setup();
+    const task = queryClient.getQueryData<TaskWithTags[]>(keys.tasks)!.find((t) => t.id === 't3')!;
+    const update = vi.spyOn(repository.tasks, 'update');
+    await actions.renameTask(task, '   ');
+    await actions.renameTask(task, task.title);
+    expect(update).not.toHaveBeenCalled();
+    await actions.renameTask(task, '  [test] Renew\n passport  ');
+    expect((await repository.tasks.getAll()).find((t) => t.id === 't3')?.title).toBe('[test] Renew passport');
+  });
+
+  it('saves a note’s title and markdown, storing an empty title as null', async () => {
+    const { queryClient, actions, repository } = await setup();
+    const note = queryClient.getQueryData<NoteWithTags[]>(keys.notes)!.find((n) => n.id === 'n2')!;
+    const update = vi.spyOn(repository.notes, 'update');
+    await actions.updateNote(note, { title: '[test] Case study', body: '## Problem\nScattered capture.' });
+    expect(update).toHaveBeenLastCalledWith('n2', { title: '[test] Case study', body: '## Problem\nScattered capture.' });
+    expect(queryClient.getQueryData<NoteWithTags[]>(keys.notes)!.find((n) => n.id === 'n2')).toMatchObject({ title: '[test] Case study' });
+    await actions.updateNote(note, { title: '  ', body: '[test] body only' });
+    expect(update).toHaveBeenLastCalledWith('n2', { title: null, body: '[test] body only' });
+  });
+
+  it('rolls a note back when the save fails', async () => {
+    const base = createFixtureRepository({ now: NOW });
+    const repo: Repository = { ...base, notes: { ...base.notes, update: () => Promise.reject(new Error('offline')) } };
+    const { queryClient, actions } = await setup(repo);
+    const note = queryClient.getQueryData<NoteWithTags[]>(keys.notes)!.find((n) => n.id === 'n2')!;
+    await expect(actions.updateNote(note, { title: 'x', body: 'y' })).rejects.toThrow('offline');
+    expect(queryClient.getQueryData<NoteWithTags[]>(keys.notes)!.find((n) => n.id === 'n2')).toMatchObject({ title: note.title, body: note.body });
+  });
+});
+
+describe('agent proposals', () => {
+  const pending = (queryClient: QueryClient) => queryClient.getQueryData<InboxProposal[]>(keys.proposals)!.map((p) => p.id);
+
+  it('approves through core’s applyProposal: files the link and marks it applied', async () => {
+    const { queryClient, actions, repository } = await setup();
+    const proposal = queryClient.getQueryData<InboxProposal[]>(keys.proposals)!.find((p) => p.id === 'pr1')!;
+    const link = (await repository.links.getById('o5'))!;
+    await actions.decideProposal(proposal, { type: 'link', item: link }, 'apply');
+    expect(pending(queryClient)).toEqual(['pr2', 'pr3']);
+    expect((await repository.spaceLinks.listMembership()).some((r) => r.link_id === 'o5' && r.profile_id === 'studio')).toBe(true);
+    expect((await repository.proposals.getPending()).map((p) => p.id)).toEqual(['pr2', 'pr3']);
+  });
+
+  it('approves an append onto the note as it is now', async () => {
+    const { queryClient, actions, repository } = await setup();
+    const proposal = queryClient.getQueryData<InboxProposal[]>(keys.proposals)!.find((p) => p.id === 'pr2')!;
+    const note = queryClient.getQueryData<NoteWithTags[]>(keys.notes)!.find((n) => n.id === 'n1')!;
+    await actions.decideProposal(proposal, { type: 'note', item: note }, 'apply');
+    expect((await repository.notes.getAll()).find((n) => n.id === 'n1')?.body).toMatch(/tea in Okazaki\.\n\n## Day 3\nNara/);
+  });
+
+  it('rejects without touching the item', async () => {
+    const { queryClient, actions, repository } = await setup();
+    const proposal = queryClient.getQueryData<InboxProposal[]>(keys.proposals)!.find((p) => p.id === 'pr3')!;
+    const before = (await repository.tasks.getAll()).find((t) => t.id === 't2');
+    await actions.decideProposal(proposal, null, 'reject');
+    expect(pending(queryClient)).toEqual(['pr1', 'pr2']);
+    expect((await repository.tasks.getAll()).find((t) => t.id === 't2')).toEqual(before);
+  });
+
+  it('puts the proposal back when approving fails (the item is gone)', async () => {
+    const { queryClient, actions } = await setup();
+    const proposal = queryClient.getQueryData<InboxProposal[]>(keys.proposals)!.find((p) => p.id === 'pr1')!;
+    await expect(actions.decideProposal(proposal, null, 'apply')).rejects.toThrow('no longer exists');
+    expect(pending(queryClient)).toEqual(['pr1', 'pr2', 'pr3']);
   });
 });

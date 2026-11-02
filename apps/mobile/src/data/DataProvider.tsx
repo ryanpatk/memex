@@ -7,17 +7,20 @@ import type { PageMetadata } from '@memex/core/capture';
 import { useToast } from '../ui/Toast';
 import { createJournalActions, parseEntryId, type JournalActions } from './actions';
 import { createDeleteQueue, type DeleteQueue } from './deleteQueue';
+import { createDismissals, type DismissalStorage, type Dismissals } from './dismissals';
 
 /*
  * The app's data context: the Repository every hook reads through, the
- * Journal's write actions over the React Query cache, and the delete queue
- * behind Undo. Tests mount it with the demo repository.
+ * Journal's write actions over the React Query cache, the delete queue
+ * behind Undo, and the suggestions dismissed on this phone. Tests mount it
+ * with the demo repository (and no storage, so dismissals stay in memory).
  */
 
 interface DataContextValue {
   repository: Repository;
   actions: JournalActions;
   deletes: DeleteQueue;
+  dismissals: Dismissals;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -26,11 +29,14 @@ export const DataProvider = ({
   repository,
   client,
   enrich,
+  dismissalStorage,
   children,
 }: {
   repository: Repository;
   client: string;
   enrich?: (url: string) => Promise<PageMetadata>;
+  /** Where dismissed suggestions persist (AsyncStorage in the app). */
+  dismissalStorage?: DismissalStorage;
   children: ReactNode;
 }) => {
   const queryClient = useQueryClient();
@@ -52,6 +58,11 @@ export const DataProvider = ({
     return { repository, actions, deletes };
   }, [client, enrich, queryClient, repository, toast]);
 
+  const dismissals = useMemo(() => createDismissals({ storage: dismissalStorage }), [dismissalStorage]);
+  useEffect(() => {
+    void dismissals.load();
+  }, [dismissals]);
+
   // Pending deletes run before the app can be suspended or killed.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
@@ -60,7 +71,8 @@ export const DataProvider = ({
     return () => sub.remove();
   }, [value]);
 
-  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
+  const context = useMemo(() => ({ ...value, dismissals }), [value, dismissals]);
+  return <DataContext.Provider value={context}>{children}</DataContext.Provider>;
 };
 
 const useData = () => {
@@ -77,4 +89,12 @@ export const useDeleteQueue = () => useData().deletes;
 export const useHiddenEntries = () => {
   const deletes = useDeleteQueue();
   return useSyncExternalStore(deletes.subscribe, deletes.hidden);
+};
+
+export const useDismissals = () => useData().dismissals;
+
+/** Entry ids whose filing suggestion was dismissed on this phone. */
+export const useDismissed = () => {
+  const dismissals = useDismissals();
+  return useSyncExternalStore(dismissals.subscribe, dismissals.current);
 };
