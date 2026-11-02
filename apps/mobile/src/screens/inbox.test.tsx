@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { createFixtureRepository } from '../data/fixtures/fixtureRepository';
 import { NOW, renderWithData } from '../testing/render';
@@ -7,9 +7,13 @@ import InboxScreen from '../app/(tabs)/inbox';
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const routerMock = require('expo-router') as { __router: { push: jest.Mock } };
 
+/** Repository promises and React Query's batched updates, with the fake clock ticking. */
 const flush = () =>
   act(async () => {
-    for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+    for (let i = 0; i < 20; i += 1) {
+      jest.advanceTimersByTime(1);
+      await new Promise((resolve) => setImmediate(resolve));
+    }
   });
 
 const mount = async () => {
@@ -21,8 +25,13 @@ const mount = async () => {
 const inSpace = async (repository: ReturnType<typeof createFixtureRepository>, linkId: string, space: string) =>
   (await repository.spaceLinks.listMembership()).some((r) => r.link_id === linkId && r.profile_id === space);
 
+// The Inbox holds the last 30 days of the demo data, which is dated around NOW.
 beforeEach(() => {
+  jest.useFakeTimers({ now: NOW, doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
   routerMock.__router.push.mockClear();
+});
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 describe('Inbox', () => {

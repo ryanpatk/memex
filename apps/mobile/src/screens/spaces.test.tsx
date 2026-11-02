@@ -1,20 +1,38 @@
-import { beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { renderWithData } from '../testing/render';
+import { lastLabel } from '../spaces/SpaceCard';
+import { NOW, renderWithData } from '../testing/render';
 import SpacesScreen from '../app/(tabs)/spaces';
 import SpaceScreen from '../app/space/[id]';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const routerMock = require('expo-router') as { __router: { push: jest.Mock; replace: jest.Mock }; __setParams: (p: object) => void };
 
+/** Repository promises and React Query's batched updates, with the fake clock ticking. */
 const flush = () =>
   act(async () => {
-    for (let i = 0; i < 20; i += 1) await new Promise((resolve) => setTimeout(resolve, 0));
+    for (let i = 0; i < 20; i += 1) {
+      jest.advanceTimersByTime(1);
+      await new Promise((resolve) => setImmediate(resolve));
+    }
   });
 
+// The demo data is dated around NOW; “today” has to mean the same day here.
 beforeEach(() => {
+  jest.useFakeTimers({ now: NOW, doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
   routerMock.__router.push.mockClear();
   routerMock.__router.replace.mockClear();
+});
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+describe('lastLabel', () => {
+  it('says today with the time, yesterday, or the date', () => {
+    expect(lastLabel(new Date(2026, 10, 1, 9, 5).toISOString(), NOW)).toMatch(/^today 9:05/);
+    expect(lastLabel(new Date(2026, 9, 31, 23, 0).toISOString(), NOW)).toBe('yesterday');
+    expect(lastLabel(new Date(2026, 9, 28, 8, 0).toISOString(), NOW)).toMatch(/Oct 28/);
+  });
 });
 
 describe('Spaces tab', () => {
