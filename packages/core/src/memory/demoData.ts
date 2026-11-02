@@ -1,5 +1,6 @@
 import type { AgentToken, InboxProposal, Link, Note, Profile, SavedView, SelfMessage, Tag, Task } from '../types';
 import type { MemoryData } from './repository';
+import { toDayKey } from '../time';
 
 /*
  * Demo data for the memory Repository: a believable, made-up person's
@@ -40,6 +41,12 @@ const favicon = (letter: string, hue: number) =>
 export const createDemoData = (nowMs: number = Date.now()): MemoryData => {
   const ago = (ms: number) => new Date(nowMs - ms).toISOString();
   const stamp = (ms: number) => ({ created_at: ago(ms), updated_at: ago(ms) });
+  /** A local calendar day `days` from now, as a task due date (YYYY-MM-DD). */
+  const dayKey = (days: number) => {
+    const date = new Date(nowMs);
+    date.setDate(date.getDate() + days);
+    return toDayKey(date);
+  };
 
   const spaces: Profile[] = [
     { id: 'sp-kitchen', user_id: USER, name: 'Kitchen reno', ...stamp(60 * DAY) },
@@ -104,6 +111,10 @@ export const createDemoData = (nowMs: number = Date.now()): MemoryData => {
     { id: 'tk-3', user_id: USER, title: 'Book the ryokan in Higashiyama', is_done: true, order_index: 2, created_at: ago(9 * DAY), updated_at: ago(2 * DAY) },
     { id: 'tk-4', user_id: USER, title: 'Call the electrician about the island outlet', is_done: false, order_index: 3, ...stamp(4 * DAY) },
     { id: 'tk-5', user_id: USER, title: 'Renew passport', is_done: true, order_index: 4, created_at: ago(30 * DAY), updated_at: ago(12 * DAY) },
+    { id: 'tk-6', user_id: USER, title: 'Confirm the plasterer’s quote', is_done: false, due_date: dayKey(0), order_index: 5, ...stamp(2 * DAY) },
+    { id: 'tk-7', user_id: USER, title: 'Reply to Dana about the design exercise', is_done: false, due_date: dayKey(-1), order_index: 6, ...stamp(3 * DAY) },
+    { id: 'tk-8', user_id: USER, title: 'Buy a JR Pass', is_done: false, due_date: dayKey(5), order_index: 7, ...stamp(6 * DAY) },
+    { id: 'tk-9', user_id: USER, title: 'Return the library books', is_done: false, order_index: 8, ...stamp(5 * HOUR) },
   ];
 
   const jots: SelfMessage[] = [
@@ -124,6 +135,7 @@ export const createDemoData = (nowMs: number = Date.now()): MemoryData => {
 
   const spaceTasks = [
     ['sp-kitchen', 'tk-1'], ['sp-jobs', 'tk-2'], ['sp-kyoto', 'tk-3'], ['sp-kitchen', 'tk-4'],
+    ['sp-kitchen', 'tk-6'], ['sp-jobs', 'tk-7'], ['sp-kyoto', 'tk-8'],
   ].map(([profile_id, task_id]) => ({ profile_id, task_id }));
 
   const views: SavedView[] = [

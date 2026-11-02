@@ -30,6 +30,15 @@ describe('memory repository', () => {
     expect(await repo.views.getAll()).toHaveLength(before.length);
   });
 
+  it('keeps a task’s due date unless an update sets or clears it', async () => {
+    const repo = createMemoryRepository(createDemoData());
+    const dated = (await repo.tasks.getAll()).find((t) => t.due_date)!;
+    await repo.tasks.update(dated.id, { title: 'Renamed', is_done: true });
+    expect((await repo.tasks.getAll()).find((t) => t.id === dated.id)?.due_date).toBe(dated.due_date);
+    await repo.tasks.update(dated.id, { due_date: null });
+    expect((await repo.tasks.getAll()).find((t) => t.id === dated.id)?.due_date).toBeUndefined();
+  });
+
   it('returns copies, never the store itself', async () => {
     const repo = createMemoryRepository(createDemoData());
     const [first] = await repo.links.getAll();

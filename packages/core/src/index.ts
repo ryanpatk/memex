@@ -20,6 +20,7 @@ export * from './composer';
 export * from './sources';
 export * from './journal/feed';
 export * from './journal/filer';
+export * from './tasks/tasks';
 export * from './tokens/canvasColors';
 export * from './tokens/color';
 export * from './tokens/spaceColors';

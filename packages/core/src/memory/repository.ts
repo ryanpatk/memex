@@ -244,8 +244,14 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
         db.tasks.push(task);
         return wait(task);
       },
+      // null clears the due date; an update that leaves it out keeps it
       update: (id, updates) =>
-        wait(patch(db.tasks, id, { ...updates, due_date: updates.due_date ?? undefined } as Partial<Task>)),
+        wait(
+          patch(db.tasks, id, {
+            ...updates,
+            ...('due_date' in updates ? { due_date: updates.due_date ?? undefined } : {}),
+          } as Partial<Task>),
+        ),
       delete: (id) => {
         remove(db.tasks, id);
         db.spaceTasks = db.spaceTasks.filter((row) => row.task_id !== id);
