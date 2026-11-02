@@ -8,7 +8,7 @@ v1 stays on Supabase + Cloudflare Workers. Details and phase mapping: `ROADMAP.m
 
 - [x] **Safety rails** ✓ 2026-11-01 — `scripts/backup-supabase.sh` (first backup in `~/memex-backups/`, restore tested locally, `docs/backups.md`); gitleaks on every push/PR + local command (`SETUP.md`); “Safety rules for agents” in `CLAUDE.md`; signed-out app routes go to sign-in and come back
 - [ ] **Hosted MCP on memex-api** (headline) — Grok Bots read and store project context; token auth first (ROADMAP Phase 7a, 7d)
-- [ ] **Journal-first web for desktop** — finish Phase 1 (space board, Library views, drag to space, Tasks view)
+- [ ] **Journal-first web for desktop** — finish Phase 1 (space board, ~~Library views~~ ✓ 2026-11-02, drag to space, Tasks view)
 - [ ] **Live capture** — extension + memex-api deployed and verified on the real sites (Phase 3; memex-api first deploy ✓ 2026-11-01, `docs/extension-setup.md`)
 - [x] **Walk-away export** ✓ 2026-11-01 — `scripts/export-vault.mjs` writes everything (images included) to `~/memex-vault/` as an Obsidian-ready vault; format + fixture in `docs/vault-format.md` / `docs/vault-fixture/`; nightly at 03:30 via launchd (`scripts/install-export-agent.sh`, log `~/Library/Logs/memex-export.log`). Next: a parser + round-trip test in `packages/core` (Phase 2)
 - [x] **`packages/core` + first tests** ✓ 2026-11-01 — npm workspace, shared logic and tokens in `@memex/core`, the `Repository` interface with a Supabase adapter (no supabase-js imports left in `src/`), 185 Vitest tests, CI (typecheck, lint, test, build)
@@ -69,7 +69,8 @@ These unlock everything built this session. Roughly 10 minutes total, in order:
 ## 🔨 Next build tasks (ask Claude, no credentials needed)
 
 - [x] **Phase 1, slice 1** ✓ 2026-10-25 — Journal home at `/` (11D entries, composer syntax, filing chips + one-press suggestions + “File to…”, Inbox per 12B), Library at `/library`, `/home` redirects, Joyful Utility depth pass. Try it: jot, paste a link, `[] ` a task, `@Space` to file, accept a suggestion
-- [ ] **Phase 1, next** — 14B space board (scoped Journal + board column; retires the Journal panel in space pages), 15A Library view tabs (All · Unfiled · From X · From YouTube · Table), 16A phone tab bar (Journal · Library · Spaces · Inbox), drag an entry onto a sidebar space, a real Tasks view
+- [x] **15A Library views** ✓ 2026-11-02 — tabs (Everything · Unfiled · From X/Pinterest/YouTube · your views · Save view), Source/Space/Sort menus, Table view; `saved_views` migration applied after backup `~/memex-backups/2026-11-02T000351Z`; spec + choices to confirm in `docs/library-views.md`. **Ryan to check signed in**: save a view, reopen it, try the Table (sort, ⌘/Shift-click, X/Delete keys, Undo)
+- [ ] **Phase 1, next** — 14B space board (scoped Journal + board column; retires the Journal panel in space pages), 16A phone tab bar (Journal · Library · Spaces · Inbox), drag an entry onto a sidebar space, a real Tasks view
 - [ ] **Journal polish**: edit a jot in place, move a jot between scopes, jots in the command palette, markdown-lite in jots
 - [x] **JOYFUL pass** ✓ 2026-09-08: color model (hue-keyed neutrals, paper-first canvas, tint pairs), Geist Mono for data, press travel, canvas grain, capture pop-in — listen/look test in both themes; next candidates: a hue per space, haptics on mobile
 - [ ] **Stream refinements** (layout refactor landed 2026-09-07): ~~visual pass on note/task cards vs. the link card~~ ✓ 2026-10-16 (one card surface, shared selection check, note cards show last-edited, keyboard-selectable task rows); ~~space rename/delete from the sidebar~~ ✓ 2026-09-08; empty-space onboarding copy; keyboard nav across cards

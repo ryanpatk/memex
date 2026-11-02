@@ -206,14 +206,14 @@ Validate the product direction before rebuilding the plumbing.
 - [ ] Filing affordances on entries: space chips ✓, one-press suggestions ✓, “File to…” ✓ (2026-10-25); drag to sidebar space still to do
 - [x] ~~Back-office rail~~ → decision 12B: Inbox in the sidebar and a header button, both only while suggestions wait; the tray opens beside the feed (`/?inbox=1`); Tasks in the sidebar (Library filtered to tasks for now) ✓ 2026-10-25
 - [ ] Space page becomes a board (pinned sites · tasks · notes · saves) with a scoped Journal column
-- [ ] Library: Table view and saved views (Unfiled, From X, From YouTube)
+- [x] Library: Table view and saved views (Unfiled, From X, From YouTube) ✓ 2026-11-02 (decision 15A: tabs over the Library with counts, Save view, Source/Space/Sort, Table with sortable columns; spec `docs/library-views.md`; saved views in `saved_views`, exported to `views/*.json`)
 - [ ] Mobile web gets the same Journal-first layout (bridge until Phase 6) — *2026-11-01: not a v1 goal; v1 is desktop web and the phone gets the Expo app. Keep mobile web usable, no new layout work*
 
 ### Phase 2 — The seam + walk-away export · **v1**
 *2026-11-01: the export script is the v1 walk-away guarantee; `packages/core` is what the Expo app shares with the web. The `Repository` interface keeps Supabase as the only adapter in v1.*
 - [x] npm workspaces with `packages/core` ✓ 2026-11-01. The web app stays at the repo root (moving it to `apps/web` is churn with no v1 payoff); `api/`, `scraper/`, `extension/` keep their own installs for now
 - [x] Move types, `streamItems`, entry model, composer parsing, filters, source registry into core; Vitest for them (first tests in the repo) ✓ 2026-11-01, CI runs them on every push
-- [x] `Repository` interface (`auth`, `links`, `notes`, `tasks`, `tags`, `spaces`, `jots`, space membership, `apiTokens`, legacy `projects`); Supabase is its one adapter (`@memex/core/supabase`) ✓ 2026-11-01. `views` waits for 15A
+- [x] `Repository` interface (`auth`, `links`, `notes`, `tasks`, `tags`, `spaces`, `jots`, space membership, `apiTokens`, legacy `projects`); Supabase is its one adapter (`@memex/core/supabase`) ✓ 2026-11-01; `views` ✓ 2026-11-02 (15A). An in-memory adapter with demo data (`@memex/core/memory`) backs dev fixture mode
 - [x] Remove direct `supabase` imports from components into the auth adapter ✓ 2026-11-01 (none left anywhere in `src/` outside `src/data/repository.ts`)
 - [x] Design tokens exported as TS from core ✓ 2026-11-01 (`tokens/`; a test keeps them matched to `pastel-sky.css`)
 - [ ] `docs/vault-format.md` v1 + fixture vault + a parser in core with a round-trip test

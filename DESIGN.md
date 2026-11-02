@@ -249,6 +249,12 @@ Three rules, all derived at runtime from the chosen canvas swatch in `src/utils/
 - **Select/Done** + **Clear** float bottom-center of stack (prominent + secondary chips, 6.75rem width).
 - New bookmarks prepend to top of list.
 
+### Library views (15A, 2026-11-02)
+
+- **Tabs** sit inside the stack between the search and the filter row: underline tabs on one hairline, label + count (data face, tabular). They're navigation, so they stay still and tint on hover; the lit tab's 3px bar is “on”, so it carries the gloss and grows in from the centre. The count of the lit tab takes the option-badge tint. Overflow scrolls sideways with faded edges. **Save view** is a dashed slot where the next tab will go (an object: it swells); it turns into a text field + primary button. The open saved view has a ghost ··· menu (Rename…, Save layout and sort, Delete with Undo).
+- **Filter menus** (Source, Space, Sort) are filter chips with a caret; a chip with a value is “on” (raised tile) and names it (“From X”, “Kyoto trip” with its dot). Menus use the shared `.memex-menu` with check (square) and radio (round) marks; checked = color-1 + gloss.
+- **Table** is paper: neutral-1 surface, hairline ring, `--shadow-s`, sticky header. Rows tint, never lift; selected rows take `--navigation-active-background`. Titles use the reading face; dates, hosts and counts the data face. Spaces are pills in their own hue (13% mix) with the dot. Selection checks and row actions appear on hover/focus (always on touch). Narrow tables shed columns by priority (Type, then Updated/Tags, then Source; spaces become dots).
+
 ### Feedback toast
 
 - **Position:** Absolute bottom-right of dashboard, above footer (`calc(var(--bookmark-footer-offset) + 12–24px)`).

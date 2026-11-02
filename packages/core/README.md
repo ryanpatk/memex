@@ -19,6 +19,9 @@ The logic every memex client shares: the web app today, the Expo app (Phase 6) a
 | `journal/filer.ts` | `createFiler` (the filing suggester, decision 13), `inboxOf`; types `Filer`, `Suggestion` |
 | `stream/items.ts` | `StreamItem`, `buildStreamItems`, `linkToItem` / `noteToItem` / `taskToItem`, `mergeTags`, `itemKey` / `parseItemKey`, `itemMatchesSearch`, `byUpdatedDesc`, `isPendingItem` |
 | `stream/filters.ts` | The Library's filters: `parseList`, `parseTypeFilter`, `matchesTypeFilter`, `matchesTagFilter`, `countByType`, `countTags`, `countUntagged`, `orderTagsForRow`, `itemKeysInSpace`, `pinnedLinks`, `isDoneTask` |
+| `stream/views.ts` | Saved Library views (decision 15A, `docs/library-views.md`): `LibraryFilters`, `EMPTY_FILTERS`, `BUILT_IN_VIEWS`, `parseLibraryFilters` / `formatLibraryFilters`, `matchesLibraryFilters` (type, source, space incl. `UNFILED`, tags), `spaceIdsByItem`, `countMatching`, `sanitizeFilters`, `sameFilters`, `findActiveView`, `viewDiffers`, `parseViewDefinition` (forgiving) / `serializeViewDefinition`, `savedViewsToTabs`, `nextViewPosition`, `normalizeViewName`, `suggestViewName`, `uniqueViewName`; types `LibraryView`, `ViewDefinition`, `LibraryLayout` |
+| `stream/sort.ts` | One sort for every Library layout: `LibrarySort`, `DEFAULT_SORT` (recently updated), `SORT_FIELDS`, `SORT_OPTIONS`, `parseSort` / `formatSort` (`?sort=field:dir`), `nextSort` (header clicks), `sortLabel`, `sortItems`, `groupDateFor`, item accessors `itemTitle` / `itemSavedAt` / `itemSourceLabel` / `itemTypeLabel` |
+| `stream/table.ts` | The Library Table's columns: `TABLE_COLUMNS` (with hide-first `priority`), `tableColumns`, `ariaSortFor`, `nextRowIndex` (row keyboard moves) |
 | `sources.ts` | The source registry: `SOURCES`, `sourceOf`, `hostOf` |
 | `url.ts`, `tlds.ts` | `normalizeUrlInput`, `isUrlLike`, `normalizeLooseUrl`, `noteAsUrl`, `ACCEPTED_TLDS` |
 | `links.ts` | `getHostname`, `getUrlLabel`, `getUrlTitle`, `getLinkTitle`, `getTagsForLink`, `getTagIdsForLink` |
@@ -28,6 +31,10 @@ The logic every memex client shares: the web app today, the Expo app (Phase 6) a
 | `tokens/` | Canvas swatches (`CANVAS_COLOR_OPTIONS`, `getCanvasColorOption`, …), OKLCH maths (`buildThemeSurfaceColors`, `buildCanvasGradient`, `parseOklch`, …), `buildSpaceColors`, and Pastel Sky constants (`PASTEL_SKY_COLORS`, `TYPE_SCALE`, `SPACE`, `RADIUS`, `FONT_WEIGHTS`, `MOTION`, `DEPTH`, `WORDMARK_INK`). `src/styles/pastelSky.test.ts` in the web app fails if these drift from `pastel-sky.css` |
 | `repository.ts` | The `Repository` interface and its parts (below), plus `AuthUser` / `AuthSession` |
 | `capture/` | Capture rules shared by memex-api and the MCP write tools (below; also at `@memex/core/capture`) |
+
+### `@memex/core/memory`
+
+`createMemoryRepository(data, { signedOut? })`: the whole `Repository` over plain arrays (nothing persists), and `createDemoData(now?)`: an invented, screenshot-safe Library (kitchen reno, Kyoto trip, job search; saves from X, Pinterest and YouTube; generated SVG pictures; two saved views). The web app runs on it with `VITE_MEMEX_FIXTURES=1 npm run dev` (`=signed-out` to start signed out); production builds never include it.
 
 ### `@memex/core/supabase`
 
@@ -67,6 +74,7 @@ interface Repository {
   spaceNotes: SpaceNotesRepository;  // listMembership, addNotes, removeNote
   spaceTasks: SpaceTasksRepository;  // listMembership, addTasks, removeTask
   apiTokens: ApiTokensRepository;    // getAll, create({ name, token_hash }), delete
+  views: SavedViewsRepository;       // getAll, create, update, delete         (table: saved_views)
   projects: ProjectsRepository;      // legacy pre-spaces projects, slated for retirement
 }
 ```
