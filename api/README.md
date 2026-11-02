@@ -67,8 +67,13 @@ npx wrangler secret put SUPABASE_SERVICE_KEY # paste the service-role key
 npm run deploy                              # → https://memex-api.<account>.workers.dev
 ```
 
-Set `SCRAPER_URL` in `wrangler.jsonc` to your deployed memex-scraper URL so
-captures get titles/descriptions/preview images. Apply the token table first:
+Captures get titles, descriptions and preview images from memex-scraper
+through the `SCRAPER` **service binding** in `wrangler.jsonc` (deploy
+`scraper/` first). Don't swap it for a URL fetch: Cloudflare refuses a
+Worker's fetch to another Worker's `workers.dev` URL on the same account
+(`error code: 1042`), which silently left every capture unscraped until
+2026-11-02. `SCRAPER_URL` is only the fallback for local dev; failed scrapes
+are logged (`npx wrangler tail`). Apply the token table first:
 
 ```bash
 supabase db push   # applies api_tokens, links.source and capture provenance migrations

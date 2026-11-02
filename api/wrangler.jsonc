@@ -6,9 +6,13 @@
   "vars": {
     // Supabase project URL (the anon-visible one; the service key is a secret).
     "SUPABASE_URL": "https://zwgotlojioprtjvrxltc.supabase.co",
-    // Optional: memex-scraper worker; enriches captures with page metadata.
+    // memex-scraper by URL: only a fallback for local dev. On Cloudflare a
+    // Worker can't fetch another Worker's workers.dev URL (error 1042), so
+    // production goes through the SCRAPER service binding below.
     "SCRAPER_URL": "https://memex-scraper.joyfulsystems.workers.dev"
   },
+  // memex-scraper, called Worker-to-Worker (enriches captures with page metadata).
+  "services": [{ "binding": "SCRAPER", "service": "memex-scraper" }],
   // Per-token rate limit (Workers rate limiting; counts are per Cloudflare
   // location, so it's a brake on runaway clients, not an exact quota).
   "ratelimits": [

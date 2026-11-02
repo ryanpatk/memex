@@ -27,6 +27,9 @@ import { tryScrape } from './scraper';
 import { createPostgrestCaptureStore } from './store';
 
 export interface Env extends DbEnv {
+  /** memex-scraper service binding (wrangler.jsonc → services); required on Cloudflare. */
+  SCRAPER?: { fetch(input: string): Promise<Response> };
+  /** Fallback for local dev without the binding. */
   SCRAPER_URL: string;
   /** Workers rate limiting binding (wrangler.jsonc → ratelimits); optional. */
   RATE_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
@@ -119,7 +122,7 @@ export default {
 
     const user = userScope(db, auth.user_id);
     const capture = createCaptureService(createPostgrestCaptureStore(user), {
-      enrich: (url) => tryScrape(env.SCRAPER_URL, url),
+      enrich: (url) => tryScrape({ binding: env.SCRAPER, url: env.SCRAPER_URL }, url),
     });
 
     try {
