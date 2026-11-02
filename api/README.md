@@ -5,9 +5,21 @@ any future client). Token-authenticated; today it writes through to Supabase
 with a service-role key, and when the database migrates only this worker
 changes — clients keep the same contract.
 
+## Hosted MCP server (`/mcp`)
+
+`POST /mcp` is memex's remote MCP server for agents (Grok Bots, Claude Code,
+Cursor…): Streamable HTTP, stateless, read tools (`search`, `get_item`,
+`get_journal`, `list_spaces`, `space_overview`, `timeline_stats`). It takes
+**agent tokens** (`mxa_…`, table `agent_tokens`, made with
+`scripts/agent-token.mjs`), never the extension's `mx_…` tokens, and has its
+own scopes, per-token rate limit (`MCP_RATE_LIMITER`, 60/min) and audit log
+(`mcp_audit_log`). Everything about it, client config included:
+`docs/mcp.md`; auth decisions: `docs/mcp-auth.md`. Smoke test:
+`node --env-file=../.env.agent scripts/mcp-smoke.mjs <url>/mcp`.
+
 ## Routes
 
-All routes require `Authorization: Bearer mx_…` (create tokens in memex under
+All `/api/*` routes require `Authorization: Bearer mx_…` (create tokens in memex under
 **Settings → Access tokens**). Responses are `{ success: true, data }` or
 `{ success: false, error }`.
 
@@ -52,10 +64,15 @@ and are still matched by URL.
   delete and stamps `user_id` on every insert
 - `src/store.ts`: the `CaptureStore` adapter over `userScope`
 - `src/scraper.ts`: memex-scraper enrichment
+- `src/mcp/`: the MCP endpoint (`handler.ts`: auth → rate limit → MCP SDK →
+  audit), agent-token auth (`auth.ts`), the tools and their scopes
+  (`tools.ts`) and the `AgentReadStore` over `userScope` (`store.ts`). The
+  read logic itself (validation, caps, keyset paging) is `@memex/core/agent`
 - The rules themselves (identify, normalize, validate, dedupe) are
   `@memex/core/capture` (`packages/core/src/capture/`), so the hosted MCP
   server's write tools call the same `createCaptureService`
-- Tests: `src/*.test.ts`, run by the root `npm test`
+- Tests: `src/**/*.test.ts`, run by the root `npm test` (install `api/` first:
+  the MCP tests import the SDK from `api/node_modules`)
 
 ## Deploy
 
@@ -107,3 +124,6 @@ curl -X POST http://localhost:8788/api/capture \
   requests a minute (`ratelimits` in `wrangler.jsonc`; per Cloudflare
   location, so a brake rather than a quota).
 - Database errors are logged and returned as a generic 502, never echoed.
+- `/mcp`: agent tokens are checked for revocation and expiry on every
+  request, tools are filtered by scope, and every message is audited without
+  its content. Details: `docs/mcp.md` → Security model.

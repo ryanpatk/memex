@@ -31,6 +31,19 @@ The logic every memex client shares: the web app today, the Expo app (Phase 6) a
 | `tokens/` | Canvas swatches (`CANVAS_COLOR_OPTIONS`, `getCanvasColorOption`, …), OKLCH maths (`buildThemeSurfaceColors`, `buildCanvasGradient`, `parseOklch`, `oklchToHex` for renderers without OKLCH, …), `buildSpaceColors`, and Pastel Sky constants (`PASTEL_SKY_COLORS`, `TYPE_SCALE`, `SPACE`, `RADIUS`, `FONT_WEIGHTS`, `MOTION`, `DEPTH`, `WORDMARK_INK`). `src/styles/pastelSky.test.ts` in the web app fails if these drift from `pastel-sky.css` |
 | `repository.ts` | The `Repository` interface and its parts (below), plus `AuthUser` / `AuthSession` |
 | `capture/` | Capture rules shared by memex-api and the MCP write tools (below; also at `@memex/core/capture`) |
+| `agent/` | The MCP read model, at `@memex/core/agent` only (below) |
+
+### `@memex/core/agent`
+
+What memex's MCP server reads and how it pages, independent of the Worker (ROADMAP §3.6; memex-api's `/mcp` is the first consumer, `docs/mcp.md`). Subpath only, so its helper names stay out of the main entry point.
+
+- `createAgentReadService(store, { now? })`: `search`, `getItem`, `getJournal`, `listSpaces`, `spaceOverview`, `timelineStats`. Each validates its own arguments (throws `AgentInputError` / `AgentNotFoundError` with messages fit for an agent), caps sizes (`AGENT_LIMITS`: page sizes, 280-character excerpts, 20,000-character full text, date ranges) and pages with keyset cursors across all four types.
+- `AgentReadStore`, the storage port for one user: `listItems` (terms, space, `[from, to)` range, keyset, order; `source` is only a hint the service re-checks with `sourceOf`), `getItem`, `listSpaces` (with counts), `activity`. memex-api's PostgREST version is `api/src/mcp/store.ts`; `createMemoryAgentStore` is the in-memory one for tests. The v2 vault index can implement the same port (decision 19).
+- Cursors: `canonicalTimestamp` (microsecond UTC, sortable as strings), `PageKey`, `compareKeys`, `keysetBound` (the per-table condition that continues a merged scan), `encodeCursor` / `decodeCursor`.
+- Days in a zone, Intl only: `isDay`, `isTimeZone`, `dayOf`, `dayStartMs`, `addDays`, `daySpan`, `bucketStart`.
+- Agent tokens: `AGENT_TOKEN_RE` (`mxa_` + 43), `agentBearerToken`, `checkAgentToken` (revoked / expired / invalid), `AgentScope` (`read` · `read_write`), `scopeAllows`, `scopeList`, `normalizeClientName`.
+- Audit: `summarizeArgs` (keeps ids, enums, dates, numbers; free text becomes `{ chars }`), `AUDIT_STATUSES`.
+- Text: `searchTerms` (≤ 6 lowercased words, wildcards stripped), `matchesTerms`, `clip`.
 
 ### `@memex/core/memory`
 

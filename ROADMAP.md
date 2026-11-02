@@ -259,8 +259,8 @@ Re-sync only needs `/api/capture`, so 5b–5d can start after Phase 3, before th
 ### Phase 7 — Agents (MCP) · **v1 (7a–7d), v2 (7e)**
 The files path works from Phase 2. The server path:
 *2026-11-01: this is v1's headline goal: a hosted MCP server on memex-api so Grok Bots (and Claude) can read and store project context. In v1 it runs on memex-api over Supabase rather than the vault index (decision 19). 7b only if a client needs OAuth; Grok Bots and Claude Code use bearer tokens.*
-- [ ] 7a Remote MCP on the Worker with read tools (§3.6), bearer-token auth; test from Claude Code
-- [ ] 7b OAuth so it works as a claude.ai / Claude Desktop custom connector (reuse passkey sign-in)
+- [x] 7a Remote MCP on the Worker with read tools (§3.6), bearer-token auth ✓ 2026-11-02 (M3-A): `/mcp` on memex-api, per-client agent tokens with scopes, expiry, revocation, rate limit and an audit log; smoke-tested with the MCP SDK client (`docs/mcp.md`). Still to come from §3.6: `get_images` (7c), search filters by tag
+- [ ] 7b OAuth so it works as a claude.ai / Claude Desktop custom connector (reuse passkey sign-in). Designed 2026-11-02 in `docs/mcp-auth.md` (M3-C): needed for grok.com and claude.ai connectors, not for the xAI API or CLIs
 - [ ] 7c `get_images` returning thumbnails; canned prompts (weekly review, recent themes, space summary)
 - [ ] 7d Write tools: `add_jot` direct; everything else lands as Inbox proposals you approve
 - [ ] 7e (**v2**) Semantic search: embeddings (Workers AI + Vectorize, or local in the desktop app), `similar` / `clusters` / `themes`

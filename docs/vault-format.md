@@ -187,7 +187,7 @@ Spaces are index notes, not folders, because an item can be in several spaces. M
 ## What isn't in the vault (yet)
 
 - **UI preferences** (canvas colour, link card style, dark mode, panel state) live in the browser's localStorage, not the database, so the export can't see them. They're cosmetic; ROADMAP §3.3 gives them a `settings/` home in v2.
-- **Accounts and secrets**: `auth.*` and `api_tokens` are deliberately left out. Full database backups cover them (`docs/backups.md`).
+- **Accounts and secrets**: `auth.*`, `api_tokens`, `agent_tokens` and the operational `mcp_audit_log` are deliberately left out. Full database backups cover them (`docs/backups.md`).
 - **Image files in Supabase Storage**: there are none today; images are remote URLs, downloaded into `assets/`. An image that couldn't be fetched (404, 403, an HTML page instead of an image) keeps its URL in the item and gets a `failed` entry in the manifest; each export retries it.
 - **The raw capture** of a save (author, text, media of an X post) isn't stored by memex yet (ROADMAP Phase 3). When it is, it goes in a link's `capture:` frontmatter.
 
