@@ -96,7 +96,7 @@ npm run deploy             # Build + deploy to Cloudflare (Workers static assets
 
 ### Data Schema (current)
 All tables user-scoped via RLS:
-- **links** — URL + metadata (title, description, favicon, preview image), global super-favorite flag (Home header), ordering, `source` (capture origin set by memex-api: `extension`, `x:bookmark`, `pinterest:save`; NULL = saved in the app; migration `20261018120000_add_link_source.sql`)
+- **links** — URL + metadata (title, description, favicon, preview image), global super-favorite flag (Home header), ordering, and capture provenance: `source` (platform `x` · `pinterest` · `youtube` · `web`, written by memex-api since 2026-11-01; older captures hold a tag like `x:bookmark`, read with `parseSourceTag`; NULL = saved in the app), `source_id`, `lists` (`bookmarked` · `saved` · `liked`), `captured_by`, `captured_client`, `url_key` (migrations `20261018120000_add_link_source.sql`, `20261101120000_add_capture_provenance.sql`; unique on `(user_id, source, source_id)`). Capture/dedupe rules: `@memex/core/capture`
 - **tags** / **link_tags** / **note_tags** / **task_tags** — shared tag vocabulary, many-to-many with each primitive
 - **self_messages** — "Notes to Self": short chat-style messages, `profile_id` NULL = Home feed, otherwise one feed per space; `legacy_id` marks rows migrated from the legacy app (migration `20260907150000_add_self_messages.sql`, script `scripts/migrate-self-messages.mjs`)
 - **profiles** / **profile_links** / **profile_notes** / **profile_tasks** — spaces (still named profiles in the DB) and their membership joins; `profile_links.is_super_favorite` pins a link to the header inside that space (migration `20260907120000_add_profile_link_super_favorite.sql`)

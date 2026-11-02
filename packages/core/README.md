@@ -27,6 +27,7 @@ The logic every memex client shares: the web app today, the Expo app (Phase 6) a
 | `errors.ts` | `getErrorMessage` |
 | `tokens/` | Canvas swatches (`CANVAS_COLOR_OPTIONS`, `getCanvasColorOption`, …), OKLCH maths (`buildThemeSurfaceColors`, `buildCanvasGradient`, `parseOklch`, …), `buildSpaceColors`, and Pastel Sky constants (`PASTEL_SKY_COLORS`, `TYPE_SCALE`, `SPACE`, `RADIUS`, `FONT_WEIGHTS`, `MOTION`, `DEPTH`, `WORDMARK_INK`). `src/styles/pastelSky.test.ts` in the web app fails if these drift from `pastel-sky.css` |
 | `repository.ts` | The `Repository` interface and its parts (below), plus `AuthUser` / `AuthSession` |
+| `capture/` | Capture rules shared by memex-api and the MCP write tools (below; also at `@memex/core/capture`) |
 
 ### `@memex/core/supabase`
 
@@ -71,6 +72,35 @@ interface Repository {
 ```
 
 Methods throw on failure, except auth calls, which return `{ error }` so forms can show the message. To add data access, add the method to the interface in `repository.ts` and implement it in `src/supabase/`. Apps never import supabase-js themselves.
+
+## Capture (`@memex/core/capture`)
+
+The rules for saving a link once (ROADMAP Phase 3; vocabulary in `CONTEXT.md` → Sources). memex-api's routes use it today; the hosted MCP server's write tools should call the same service so agents dedupe exactly like the extension.
+
+```ts
+import { createCaptureService, parseCaptureInput, CaptureError } from '@memex/core/capture';
+
+// 1. Validate what the caller sent. The URL decides source + sourceId; ids must be UUIDs.
+const parsed = parseCaptureInput(args, {
+  defaultCapturedBy: 'agent',          // servers pin this; clients can't claim it
+  allowedCapturedBy: [],               // memex-api allows ['extension', 'resync', 'share', 'api']
+  defaultClient: 'claude-code',        // e.g. the MCP client's name
+});
+if (!parsed.ok) throw new Error(parsed.error);
+
+// 2. One service per request, over a store already scoped to the token's user.
+const capture = createCaptureService(store, { enrich: (url) => scrape(url) });
+const { link, duplicate, listsAdded, attached } = await capture.capture(parsed.value);
+await capture.lookup(url);              // { found: false } | { found: true, link }, read-only
+await capture.addToSpace(linkId, spaceId);
+await capture.remove(linkId);           // undo; false if not the user's
+// Bad input / unowned ids throw CaptureError with .status 400 | 404.
+```
+
+- **`CaptureStore`** is the storage port, for one user: `findCandidates`, `insertLink` (throws `CaptureConflictError` on the unique `(user, source, source_id)` index; the service then returns the winner), `setLists`, `ownedLinkIds` / `ownedSpaceIds` / `ownedTagIds`, `addToSpace`, `addTags`, `deleteLink`. memex-api's PostgREST version is `api/src/store.ts` (every query through `userScope`, `api/src/db.ts`); `createMemoryCaptureStore` is an in-memory one for tests.
+- **Dedupe order**: same `(source, source_id)` → the same item under another URL (`identifySource`: X status, Pinterest pin, YouTube watch / youtu.be / shorts / embed / live) → the same `normalizeUrlKey` (no scheme, `www.`, trailing slash, fragment or tracking parameters). Stores may over-fetch; `pickMatch` re-checks every candidate. Older rows without `source_id` / `url_key` still match through `urlVariants` and `legacyIdFragments`.
+- **Duplicates** merge new `lists` (e.g. saved from the toolbar, later bookmarked) and still apply the requested space and tags.
+- **Helpers**: `identifySource`, `canonicalUrl`, `isValidSourceId`, `normalizeUrlKey`, `urlVariants`, `isUuid`, `httpUrl`, `parseSourceTag` (reads the pre-2026-11-01 `links.source` tags), `linkMatchFor`, `matchStrength`, `pickMatch`, `LIMITS`.
 
 ## Not here (yet)
 

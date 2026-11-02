@@ -222,9 +222,9 @@ Validate the product direction before rebuilding the plumbing.
 ### Phase 3 — Capture: extension (parallel) · **v1**
 *2026-11-01: memex-api's first deploy and `GET /api/lookup` landed (commit `28f283c`, guide in `docs/extension-setup.md`).*
 - [ ] Ops: deploy v0.2 for real (checklist in `docs/browser-extension-plan.md`)
-- [ ] Data model: `source` (platform) + `sourceId` + `lists` + `capturedBy` instead of the single `links.source` string; dedupe on `(source, sourceId)`; keep the raw `capture` block
-- [ ] YouTube: likes → link with thumbnail, channel, duration (port pond's hooks, keep MIT attribution)
-- [ ] Already-saved badge (`GET /api/lookup`), post-capture space/tags in the popup, per-source and per-board default space
+- [x] Data model ✓ 2026-11-01: `source` (platform) + `source_id` + `lists` + `captured_by` (+ `captured_client`, `url_key`) on links, additive (older rows keep their tag); unique on `(user, source, source_id)`, normalized-URL fallback; rules in `@memex/core/capture` for memex-api and the MCP write tools. Still open: keep the raw `capture` block
+- [x] YouTube likes ✓ 2026-11-01 (extension v0.3.0): link with thumbnail, title, “Channel · length” (matching after pond, MIT)
+- [ ] Already-saved badge ✓ and post-capture space ✓ (2026-11-01); still open: post-capture tags, per-source and per-board default space
 - [ ] Captures appear in the Journal as grouped auto-save entries (falls out of Phase 1)
 
 ### Phase 4 — Vault backend (leave Supabase) · **v2**
