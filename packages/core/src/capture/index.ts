@@ -9,3 +9,4 @@ export * from './input';
 export * from './service';
 export * from './memoryStore';
 export * from './repositoryStore';
+export * from './provenance';

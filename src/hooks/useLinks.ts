@@ -7,6 +7,8 @@ import {
   CreateLinkData,
   UpdateLinkData,
   getUrlTitle,
+  WEB_CLIENT,
+  withAppProvenance,
 } from '@memex/core'
 import { urlScraperApi } from './useUrlScraper'
 
@@ -79,7 +81,9 @@ export const useCreateLink = () => {
   const addLink = useAppStore(state => state.addLink)
 
   return useMutation({
-    mutationFn: async (linkData: CreateLinkData) => {
+    mutationFn: async (input: CreateLinkData) => {
+      // Saved in the web app: captured_by 'app', like the phone's saves
+      const linkData = withAppProvenance(input, WEB_CLIENT)
       // Fill missing metadata: real page metadata from the scraper worker when
       // available, URL-derived fallbacks otherwise. Stored once at capture so
       // display never needs live scraping.
