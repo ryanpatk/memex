@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type KeyboardEvent,
   type ReactNode,
 } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -17,10 +16,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  Ellipsis,
   ListTodo,
-  Pencil,
-  Trash2,
 } from 'lucide-react';
 import {
   UNFILED_TASKS,
@@ -28,37 +24,34 @@ import {
   compareOpenTasks,
   countOpenTasksBySpace,
   dueDayKey,
-  dueLabel,
   dueShortcuts,
   filterTasksBySpace,
   groupTasks,
   isOverdue,
-  itemKey,
   parseTaskGrouping,
-  relativeTime,
   taskSpaceMap,
   toJournalSpaces,
   type JournalSpace,
   type TaskGrouping,
   type TaskWithTags,
 } from '@memex/core';
-import { useAllTasks, useCreateTask, useDeleteTask, useUpdateTask } from '../hooks/useTasks';
+import { useAllTasks, useCreateTask } from '../hooks/useTasks';
 import {
   profileTaskKeys,
   useAddTasksToProfile,
   useProfileTaskMembership,
-  useRemoveTaskFromProfile,
 } from '../hooks/useProfileTasks';
 import { useProfiles } from '../hooks/useProfiles';
 import { useSpaceColors } from '../hooks/useSpaceColors';
 import { useFeedbackToast } from '../hooks/useFeedbackToast';
-import { useAddToSpace } from '../hooks/useAddToSpace';
+import { useTaskActions } from '../hooks/useTaskActions';
+import { TaskRow } from '../components/tasks/TaskRow';
+import { focusTaskRow, nextFocusAfter, taskListKeyDown } from '../components/tasks/taskList';
 import MenuButton, { type MenuEntry } from '../components/library/MenuButton';
 import TaskComposer, { type TaskComposerHandle } from '../components/tasks/TaskComposer';
 import { FeedbackToast } from '../components/ui';
 import { DONE_PARAM, GROUP_PARAM, SPACE_PARAM } from '../constants/modules';
 import { cue } from '../utils/sound';
-import { dragAttrs } from '../utils/itemDrag';
 import '../styles/journal.css';
 import '../styles/tasks.css';
 
@@ -72,9 +65,6 @@ import '../styles/tasks.css';
  * `?done=1`. Model: @memex/core `tasks/tasks.ts`. Styles: styles/tasks.css.
  */
 
-const UNDO_WINDOW_MS = 6000;
-/** How long a ticked task stays in the open list, checked, before it moves to Done. */
-const SETTLE_MS = 1100;
 const DONE_PAGE = 50;
 
 const isEditingTarget = (target: EventTarget | null) => {
@@ -97,12 +87,8 @@ const TasksPage = () => {
   const colors = useSpaceColors();
   const { data: taskRows } = useProfileTaskMembership();
   const createTask = useCreateTask();
-  const updateTask = useUpdateTask();
-  const deleteTask = useDeleteTask();
   const addTasks = useAddTasksToProfile();
-  const removeTask = useRemoveTaskFromProfile();
   const { toast, flash, dismiss: dismissToast, handleAnimationEnd } = useFeedbackToast();
-  const addToSpace = useAddToSpace(flash);
 
   const spaces = useMemo(() => toJournalSpaces(profiles ?? [], colors), [colors, profiles]);
   const spaceById = useMemo(() => new Map(spaces.map((s) => [s.id, s])), [spaces]);
@@ -118,15 +104,22 @@ const TasksPage = () => {
   );
   const filterSpace = spaceFilter.length === 1 ? spaceById.get(spaceFilter[0]) : undefined;
 
-  const [hidden, setHidden] = useState<Set<string>>(() => new Set());
-  const [settling, setSettling] = useState<Set<string>>(() => new Set());
   const [doneLimit, setDoneLimit] = useState(DONE_PAGE);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
-  const settleTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
-  const pendingDeletes = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; commit: () => void }>());
   const composerRef = useRef<TaskComposerHandle>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const focusAfter = useRef<string | null>(null);
+
+  const { hidden, settling, renamingId, handlers: rowHandlers } = useTaskActions({
+    flash,
+    dismiss: dismissToast,
+    membership,
+    spaceById,
+    // A focused row that leaves (ticked, deleted) hands focus to its neighbour, else the add field
+    beforeRowLeaves: (taskId) => {
+      const next = nextFocusAfter(listRef.current, taskId, 'composer');
+      if (next) focusAfter.current = next;
+    },
+  });
 
   /* ---------- URL state ---------- */
 
@@ -177,14 +170,6 @@ const TasksPage = () => {
 
   /* ---------- Focus that would be lost when a row leaves ---------- */
 
-  const rememberNextFocus = (taskId: string) => {
-    const rows = Array.from(listRef.current?.querySelectorAll<HTMLElement>('[data-task-row]') ?? []);
-    const index = rows.findIndex((row) => row.dataset.taskId === taskId);
-    if (index === -1 || !rows[index].contains(document.activeElement)) return;
-    const next = rows[index + 1] ?? rows[index - 1];
-    focusAfter.current = next?.dataset.taskId ?? 'composer';
-  };
-
   useLayoutEffect(() => {
     const id = focusAfter.current;
     if (!id) return;
@@ -193,158 +178,10 @@ const TasksPage = () => {
       composerRef.current?.focus();
       return;
     }
-    listRef.current
-      ?.querySelector<HTMLElement>(`[data-task-id="${CSS.escape(id)}"] [data-col="check"]`)
-      ?.focus();
+    focusTaskRow(listRef.current, id);
   });
 
-  /* ---------- Timers: settle and pending deletes ---------- */
-
-  useEffect(() => {
-    const timers = settleTimers.current;
-    const deletes = pendingDeletes.current;
-    return () => {
-      timers.forEach((timer) => clearTimeout(timer));
-      // Leaving the page commits anything still waiting for Undo
-      deletes.forEach(({ timer, commit }) => {
-        clearTimeout(timer);
-        commit();
-      });
-      deletes.clear();
-    };
-  }, []);
-
-  const unsettle = useCallback((id: string) => {
-    const timer = settleTimers.current.get(id);
-    if (timer) clearTimeout(timer);
-    settleTimers.current.delete(id);
-    setSettling((prev) => {
-      if (!prev.has(id)) return prev;
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-  }, []);
-
   /* ---------- Writes ---------- */
-
-  const handleToggle = useCallback(
-    (task: TaskWithTags) => {
-      if (task.id.startsWith('temp-')) return;
-      cue('toggle');
-      if (task.is_done) {
-        // Unticking: a just-ticked row or one from the Done list
-        unsettle(task.id);
-        updateTask.mutate({ id: task.id, updates: { is_done: false } });
-        flash(`Reopened “${task.title}”.`);
-        return;
-      }
-      updateTask.mutate({ id: task.id, updates: { is_done: true } });
-      setSettling((prev) => new Set(prev).add(task.id));
-      settleTimers.current.set(
-        task.id,
-        setTimeout(() => {
-          rememberNextFocus(task.id);
-          unsettle(task.id);
-        }, SETTLE_MS),
-      );
-      flash(`Done: “${task.title}”.`, {
-        label: 'Undo',
-        onClick: () => {
-          unsettle(task.id);
-          updateTask.mutate({ id: task.id, updates: { is_done: false } });
-          cue('confirm');
-          dismissToast();
-        },
-      });
-    },
-    [dismissToast, flash, unsettle, updateTask],
-  );
-
-  const handleRename = useCallback(
-    (task: TaskWithTags, title: string) => {
-      setRenamingId(null);
-      const next = title.replace(/\s+/g, ' ').trim().slice(0, 200);
-      if (!next || next === task.title || task.id.startsWith('temp-')) return;
-      updateTask.mutate({ id: task.id, updates: { title: next } });
-    },
-    [updateTask],
-  );
-
-  const handleSetDue = useCallback(
-    (task: TaskWithTags, due: string | null) => {
-      if (task.id.startsWith('temp-')) return;
-      if ((dueDayKey(task.due_date) ?? null) === due) return;
-      cue('toggle');
-      updateTask.mutate({ id: task.id, updates: { due_date: due } });
-    },
-    [updateTask],
-  );
-
-  const handleFileToggle = useCallback(
-    (task: TaskWithTags, spaceId: string) => {
-      if (task.id.startsWith('temp-')) return;
-      const filed = (membership.get(task.id) ?? []).includes(spaceId);
-      if (!filed) {
-        void addToSpace(spaceId, [itemKey('task', task.id)]);
-        return;
-      }
-      const name = spaceById.get(spaceId)?.name ?? 'space';
-      cue('move');
-      removeTask.mutate(
-        { profileId: spaceId, taskId: task.id },
-        {
-          onError: () => {
-            cue('error');
-            flash(`Couldn’t take it out of “${name}”.`);
-          },
-        },
-      );
-      flash(`Took “${task.title}” out of “${name}”.`, {
-        label: 'Undo',
-        onClick: () => {
-          addTasks.mutate({ profileId: spaceId, taskIds: [task.id] });
-          cue('confirm');
-          dismissToast();
-        },
-      });
-    },
-    [addTasks, addToSpace, dismissToast, flash, membership, removeTask, spaceById],
-  );
-
-  const handleDelete = useCallback(
-    (task: TaskWithTags) => {
-      if (task.id.startsWith('temp-')) return;
-      rememberNextFocus(task.id);
-      cue('dismiss');
-      const unhide = () =>
-        setHidden((prev) => {
-          const next = new Set(prev);
-          next.delete(task.id);
-          return next;
-        });
-      setHidden((prev) => new Set(prev).add(task.id));
-      const commit = () => deleteTask.mutate(task.id, { onSettled: unhide });
-      const timer = setTimeout(() => {
-        pendingDeletes.current.delete(task.id);
-        commit();
-      }, UNDO_WINDOW_MS);
-      pendingDeletes.current.set(task.id, { timer, commit });
-      flash(`Deleted “${task.title}”.`, {
-        label: 'Undo',
-        onClick: () => {
-          const pending = pendingDeletes.current.get(task.id);
-          if (!pending) return;
-          clearTimeout(pending.timer);
-          pendingDeletes.current.delete(task.id);
-          unhide();
-          cue('confirm');
-          dismissToast();
-        },
-      });
-    },
-    [deleteTask, dismissToast, flash],
-  );
 
   const handleCreate = useCallback(
     async ({ title, spaces: filing }: { title: string; spaces: JournalSpace[] }) => {
@@ -388,36 +225,7 @@ const TasksPage = () => {
   }, []);
 
   // Rows: ↑/↓ (Home/End) move between rows, keeping the column; Delete deletes
-  const onListKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.defaultPrevented || isEditingTarget(event.target)) return;
-    const target = event.target as HTMLElement;
-    if (target.closest('[role="menu"]')) return;
-    const row = target.closest<HTMLElement>('[data-task-row]');
-    if (!row) return;
-    const taskId = row.dataset.taskId ?? '';
-    const task = (tasks ?? []).find((t) => t.id === taskId);
-
-    if ((event.key === 'Delete' || event.key === 'Backspace') && task) {
-      event.preventDefault();
-      handleDelete(task);
-      return;
-    }
-    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
-    const rows = Array.from(listRef.current?.querySelectorAll<HTMLElement>('[data-task-row]') ?? []);
-    const index = rows.indexOf(row);
-    const nextIndex =
-      event.key === 'ArrowDown'
-        ? Math.min(index + 1, rows.length - 1)
-        : event.key === 'ArrowUp'
-          ? Math.max(index - 1, 0)
-          : event.key === 'Home'
-            ? 0
-            : rows.length - 1;
-    event.preventDefault();
-    const col = target.closest<HTMLElement>('[data-col]')?.dataset.col ?? 'check';
-    const next = rows[nextIndex];
-    (next.querySelector<HTMLElement>(`[data-col="${col}"]`) ?? next.querySelector<HTMLElement>('[data-col="check"]'))?.focus();
-  };
+  const onListKeyDown = taskListKeyDown(listRef, (id) => (tasks ?? []).find((t) => t.id === id), rowHandlers.onDelete);
 
   /* ---------- Menus ---------- */
 
@@ -465,15 +273,6 @@ const TasksPage = () => {
     todayCount > 0 ? `${todayCount} due today` : '',
     overdueCount > 0 ? `${overdueCount} overdue` : '',
   ].filter(Boolean);
-
-  const rowHandlers: RowHandlers = {
-    onToggle: handleToggle,
-    onRename: handleRename,
-    onStartRename: setRenamingId,
-    onSetDue: handleSetDue,
-    onFileToggle: handleFileToggle,
-    onDelete: handleDelete,
-  };
 
   const spacesOf = (task: TaskWithTags) =>
     (membership.get(task.id) ?? []).map((id) => spaceById.get(id)).filter((s): s is JournalSpace => !!s);
@@ -677,255 +476,12 @@ const TasksPage = () => {
   );
 };
 
-/* ------------------------------------------------------------------ */
-/* Rows                                                                */
-/* ------------------------------------------------------------------ */
-
-interface RowHandlers {
-  onToggle: (task: TaskWithTags) => void;
-  onRename: (task: TaskWithTags, title: string) => void;
-  onStartRename: (taskId: string | null) => void;
-  onSetDue: (task: TaskWithTags, due: string | null) => void;
-  onFileToggle: (task: TaskWithTags, spaceId: string) => void;
-  onDelete: (task: TaskWithTags) => void;
-}
-
 const MenuCountLabel = ({ label, count }: { label: string; count: number }) => (
   <span className="tk-menu-label">
     <span className="tk-menu-name">{label}</span>
     <span className="tk-menu-count">{count}</span>
   </span>
 );
-
-const TaskRow = ({
-  task,
-  taskSpaces,
-  groupSpaceId,
-  allSpaces,
-  settling,
-  renaming,
-  now,
-  handlers,
-}: {
-  task: TaskWithTags;
-  taskSpaces: JournalSpace[];
-  /** The space whose group this row sits in (its chip is left out). */
-  groupSpaceId?: string;
-  allSpaces: JournalSpace[];
-  settling: boolean;
-  renaming: boolean;
-  now: Date;
-  handlers: RowHandlers;
-}) => {
-  const dueInputRef = useRef<HTMLInputElement>(null);
-  const pending = task.id.startsWith('temp-');
-  const key = itemKey('task', task.id);
-  const due = dueDayKey(task.due_date);
-  const overdue = isOverdue(task, now);
-  const shortcuts = dueShortcuts(now);
-  const chips = taskSpaces.filter((s) => s.id !== groupSpaceId);
-
-  const openPicker = () => {
-    const input = dueInputRef.current;
-    if (!input) return;
-    input.focus();
-    try {
-      input.showPicker?.();
-    } catch {
-      // Older browsers: the focused field takes typing instead
-    }
-  };
-
-  const menuEntries: MenuEntry[] = task.is_done
-    ? [
-        { key: 'rename', label: 'Rename…', icon: <Pencil aria-hidden="true" />, onSelect: () => handlers.onStartRename(task.id) },
-        { key: 'delete', label: 'Delete', icon: <Trash2 aria-hidden="true" />, danger: true, onSelect: () => handlers.onDelete(task) },
-      ]
-    : [
-        { key: 'h-due', heading: 'Due' },
-        { key: 'today', label: 'Today', role: 'radio', checked: due === shortcuts.today, onSelect: () => handlers.onSetDue(task, shortcuts.today) },
-        { key: 'tomorrow', label: 'Tomorrow', role: 'radio', checked: due === shortcuts.tomorrow, onSelect: () => handlers.onSetDue(task, shortcuts.tomorrow) },
-        {
-          key: 'next-week',
-          label: `Next week · ${dueLabel(shortcuts.nextWeek, now)}`,
-          role: 'radio',
-          checked: due === shortcuts.nextWeek,
-          onSelect: () => handlers.onSetDue(task, shortcuts.nextWeek),
-        },
-        { key: 'none', label: 'No due date', role: 'radio', checked: !due, onSelect: () => handlers.onSetDue(task, null) },
-        { key: 'pick', label: 'Pick a date…', icon: <CalendarDays aria-hidden="true" />, onSelect: () => setTimeout(openPicker, 0) },
-        ...(allSpaces.length
-          ? [
-              { key: 'd-spaces', divider: true as const },
-              { key: 'h-spaces', heading: 'Spaces' },
-              ...allSpaces.map((space) => ({
-                key: `space-${space.id}`,
-                label: space.name,
-                role: 'checkbox' as const,
-                checked: taskSpaces.some((s) => s.id === space.id),
-                icon: <span className="memex-space-dot" style={{ background: space.color }} aria-hidden="true" />,
-                onSelect: () => handlers.onFileToggle(task, space.id),
-              })),
-            ]
-          : []),
-        { key: 'd-actions', divider: true },
-        { key: 'rename', label: 'Rename…', icon: <Pencil aria-hidden="true" />, onSelect: () => handlers.onStartRename(task.id) },
-        { key: 'delete', label: 'Delete', icon: <Trash2 aria-hidden="true" />, danger: true, onSelect: () => handlers.onDelete(task) },
-      ];
-
-  return (
-    <li
-      className={`tk-row${task.is_done ? ' is-done' : ''}${settling ? ' is-settling' : ''}${pending ? ' is-new' : ''}${
-        overdue ? ' is-overdue' : ''
-      }`}
-      data-task-row=""
-      data-task-id={task.id}
-      data-item-key={key}
-      {...(renaming ? {} : dragAttrs(key, task.title))}
-    >
-      <span className="tk-check-hit">
-        <button
-          type="button"
-          role="checkbox"
-          className="memex-task-check"
-          aria-checked={task.is_done}
-          aria-label={`${task.is_done ? 'Reopen' : 'Done:'} “${task.title}”`}
-          disabled={pending}
-          data-col="check"
-          onClick={() => handlers.onToggle(task)}
-        >
-          <Check aria-hidden="true" />
-        </button>
-      </span>
-
-      {renaming ? (
-        <RenameField task={task} onDone={(title) => handlers.onRename(task, title)} onCancel={() => handlers.onStartRename(null)} />
-      ) : (
-        <button
-          type="button"
-          className="tk-title"
-          data-col="title"
-          title="Rename"
-          aria-label={`Rename “${task.title}”`}
-          disabled={pending}
-          onClick={() => handlers.onStartRename(task.id)}
-        >
-          {task.title}
-        </button>
-      )}
-
-      <span className="tk-meta">
-        {chips.map((space) => (
-          <span key={space.id} className="jr-chip tk-chip" style={{ '--hue': space.color } as CSSProperties}>
-            <i className="jr-dot" aria-hidden="true" />
-            <span className="jr-ellipsis">{space.name}</span>
-          </span>
-        ))}
-        {task.is_done ? (
-          <span className="tk-done-at" title={new Date(task.updated_at).toLocaleString()}>
-            Done {relativeTime(task.updated_at, now.getTime())}
-          </span>
-        ) : (
-          !pending && (
-            <label className={`tk-due${due ? ' has-due' : ''}${overdue ? ' is-overdue' : ''}${due === shortcuts.today ? ' is-today' : ''}`}>
-              {overdue ? <AlertCircle aria-hidden="true" /> : <CalendarDays aria-hidden="true" />}
-              <span className="tk-due-text">{due ? dueLabel(due, now) : 'Due'}</span>
-              {overdue && <span className="sr-only"> (overdue)</span>}
-              <input
-                ref={dueInputRef}
-                type="date"
-                className="tk-due-input"
-                value={due ?? ''}
-                aria-label={due ? `Due ${dueLabel(due, now)}. Change the due date for “${task.title}”` : `Set a due date for “${task.title}”`}
-                data-col="due"
-                onClick={(event) => {
-                  try {
-                    event.currentTarget.showPicker?.();
-                  } catch {
-                    // typing works instead
-                  }
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                    try {
-                      event.currentTarget.showPicker?.();
-                    } catch {
-                      // typing works instead
-                    }
-                  }
-                }}
-                onChange={(event) => {
-                  // Half-typed dates read as empty: keep the old date until it's whole
-                  if (event.target.value) handlers.onSetDue(task, event.target.value);
-                }}
-              />
-            </label>
-          )
-        )}
-        {!pending && (
-          <MenuButton
-            triggerClassName="memex-icon-button is-compact tk-row-menu"
-            triggerLabel={`More for “${task.title}”`}
-            title="More"
-            menuLabel={`“${task.title}”`}
-            menuClassName="tk-row-menu-list"
-            entries={menuEntries}
-            align="end"
-            fixed
-          >
-            <Ellipsis aria-hidden="true" />
-          </MenuButton>
-        )}
-      </span>
-    </li>
-  );
-};
-
-const RenameField = ({ task, onDone, onCancel }: { task: TaskWithTags; onDone: (title: string) => void; onCancel: () => void }) => {
-  const [value, setValue] = useState(task.title);
-  const ref = useRef<HTMLInputElement>(null);
-  const finished = useRef(false);
-
-  useEffect(() => {
-    ref.current?.focus();
-    ref.current?.select();
-  }, []);
-
-  const finish = (save: boolean) => {
-    if (finished.current) return;
-    finished.current = true;
-    if (save) onDone(value);
-    else onCancel();
-    // Back to the title button once it's rendered again
-    requestAnimationFrame(() =>
-      document.querySelector<HTMLElement>(`[data-task-id="${CSS.escape(task.id)}"] [data-col="title"]`)?.focus(),
-    );
-  };
-
-  return (
-    <input
-      ref={ref}
-      className="tk-title-input"
-      value={value}
-      maxLength={200}
-      aria-label={`Rename “${task.title}”`}
-      data-col="title"
-      onChange={(event) => setValue(event.target.value)}
-      onBlur={() => finish(true)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          finish(true);
-        } else if (event.key === 'Escape') {
-          event.preventDefault();
-          event.stopPropagation();
-          finish(false);
-        }
-      }}
-    />
-  );
-};
 
 /* ------------------------------------------------------------------ */
 /* Empty and loading states                                            */
