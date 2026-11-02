@@ -1,17 +1,18 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, useWindowDimensions } from 'react-native';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef } from 'react';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { parseComposer, type Part } from '@memex/core';
 import { FIXTURE_MODE } from '../../data/config';
 import { useJournal } from '../../data/useJournal';
 import { Composer } from '../../journal/Composer';
 import { JournalFeed } from '../../journal/JournalFeed';
+import { useComposerToasts } from '../../journal/useComposerToasts';
 import { useEntryActions } from '../../journal/useEntryActions';
 import { AccountButton } from '../../ui/AccountButton';
 import { Canvas } from '../../ui/Canvas';
 import { FeedEmpty, FeedError, FeedSkeleton } from '../../ui/FeedStates';
 import { ScreenHeader } from '../../ui/ScreenHeader';
-import { useToast } from '../../ui/Toast';
+import { TasksButton } from '../../tasks/TasksButton';
 
 const countFmt = new Intl.NumberFormat();
 
@@ -31,26 +32,12 @@ const countToday = (feed: Part[]) => {
 export default function JournalScreen() {
   const { journal, isLoading, error, refreshing, refresh } = useJournal();
   const actions = useEntryActions();
-  const toast = useToast();
-  const { height } = useWindowDimensions();
+  const placeToasts = useComposerToasts();
   const params = useLocalSearchParams<{ draft?: string; send?: string }>();
-  const composerTop = useRef(height);
   const today = journal ? countToday(journal.feed) : 0;
   const subtitle = journal
     ? `${countFmt.format(journal.entries.length)} entries${today ? ` · ${today} today` : ''}`
     : undefined;
-
-  // Toasts sit just above the composer, wherever the keyboard has put it.
-  const placeToasts = useCallback((y: number) => {
-    composerTop.current = y;
-    toast.setInset(Math.max(height - y + 8, 16));
-  }, [height, toast]);
-  useFocusEffect(
-    useCallback(() => {
-      placeToasts(composerTop.current);
-      return () => toast.setInset(96);
-    }, [placeToasts, toast]),
-  );
 
   // DEV-ONLY, demo data only: `?draft=…&send=1` sends the draft, so the
   // simulator (which can't be tapped from scripts) can prove the save path.
@@ -67,7 +54,16 @@ export default function JournalScreen() {
 
   return (
     <Canvas>
-      <ScreenHeader title="Journal" subtitle={subtitle} trailing={<AccountButton />} />
+      <ScreenHeader
+        title="Journal"
+        subtitle={subtitle}
+        trailing={
+          <View style={styles.trailing}>
+            {journal && <TasksButton tasks={journal.tasks} />}
+            <AccountButton />
+          </View>
+        }
+      />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.fill}>
         {isLoading ? (
           <FeedSkeleton />
@@ -86,4 +82,7 @@ export default function JournalScreen() {
   );
 }
 
-const styles = StyleSheet.create({ fill: { flex: 1 } });
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+  trailing: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+});

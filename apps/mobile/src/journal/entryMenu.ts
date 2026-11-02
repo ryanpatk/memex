@@ -15,7 +15,8 @@ export interface MenuItem {
   run: () => void;
 }
 
-const sheet = (title: string, items: MenuItem[]) => {
+/** An action sheet (iOS) or alert (elsewhere) of menu items; destructive ones in red. */
+export const showMenu = (title: string, items: MenuItem[]) => {
   if (Platform.OS === 'ios') {
     const options = [...items.map((i) => i.label), 'Cancel'];
     ActionSheetIOS.showActionSheetWithOptions(
@@ -38,7 +39,7 @@ const sheet = (title: string, items: MenuItem[]) => {
 const pickSpace = (entry: FileableEntry, spaces: JournalSpace[], actions: EntryActions) => {
   const open = spaces.filter((s) => !entry.spaces.some((x) => x.id === s.id));
   if (!open.length) return;
-  sheet(
+  showMenu(
     'File in…',
     open.map((space) => ({ name: space.id, label: space.name, run: () => void actions.file(entry, space) })),
   );
@@ -47,6 +48,7 @@ const pickSpace = (entry: FileableEntry, spaces: JournalSpace[], actions: EntryA
 export const entryMenuItems = (entry: Entry, spaces: JournalSpace[], actions: EntryActions): MenuItem[] => {
   const items: MenuItem[] = [];
   if (entry.kind === 'link') items.push({ name: 'open', label: 'Open', run: () => actions.openLink(entry.link.id) });
+  if (entry.kind === 'note') items.push({ name: 'open', label: 'Open', run: () => actions.openNote(entry.note.id) });
   if (entry.kind === 'task')
     items.push({ name: 'toggle', label: entry.task.is_done ? 'Mark not done' : 'Mark done', run: () => void actions.toggleTask(entry.task) });
   if (entry.kind !== 'jot' && spaces.some((s) => !entry.spaces.some((x) => x.id === s.id)))
@@ -56,4 +58,4 @@ export const entryMenuItems = (entry: Entry, spaces: JournalSpace[], actions: En
 };
 
 export const showEntryMenu = (entry: Entry, title: string, spaces: JournalSpace[], actions: EntryActions) =>
-  sheet(title, entryMenuItems(entry, spaces, actions));
+  showMenu(title, entryMenuItems(entry, spaces, actions));

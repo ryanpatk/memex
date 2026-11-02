@@ -278,11 +278,12 @@ const Gallery = ({ run }: { run: Run }) => {
 
 const NoteRow = ({ entry }: { entry: Extract<Entry, { kind: 'note' }> }) => {
   const { palette } = useTheme();
+  const { actions } = useFeed();
   const title = noteDisplayTitle(entry.note);
   const excerpt = markdownExcerpt(entry.note.body ?? '', 120);
   return (
     <View style={styles.block}>
-      <PaperRow entry={entry} label={`Note: ${title}`}>
+      <PaperRow entry={entry} onPress={() => actions.openNote(entry.note.id)} label={`Note: ${title}`}>
         <View style={[styles.fav, { backgroundColor: palette.tint }]}>
           <FileText size={16} color={palette.tintInk} strokeWidth={1.75} />
         </View>

@@ -21,6 +21,8 @@ interface Props extends Omit<PressableProps, 'style' | 'children'> {
   variant?: Variant;
   icon?: ReactNode;
   loading?: boolean;
+  /** Smaller, for headers and inline actions. */
+  compact?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -39,7 +41,7 @@ export const usePressSettle = () => {
   };
 };
 
-export const Button = ({ label, variant = 'secondary', icon, loading, disabled, style, onPress, ...rest }: Props) => {
+export const Button = ({ label, variant = 'secondary', icon, loading, compact, disabled, style, onPress, ...rest }: Props) => {
   const t = useTheme();
   const { palette } = t;
   const settle = usePressSettle();
@@ -66,6 +68,7 @@ export const Button = ({ label, variant = 'secondary', icon, loading, disabled, 
       <Animated.View
         style={[
           styles.button,
+          compact && styles.compact,
           {
             backgroundColor: fill,
             borderRadius: t.radius.m,
@@ -89,9 +92,9 @@ export const Button = ({ label, variant = 'secondary', icon, loading, disabled, 
             locations={primary ? [0, 0.46, 0.54, 1] : [0, 1]}
           />
         )}
-        <View style={styles.content}>
+        <View style={[styles.content, compact && styles.compactContent]}>
           {loading ? <ActivityIndicator size="small" color={primary ? palette.onAccent : palette.ink} /> : icon}
-          <Text size="m" weight="heavy" tone={primary ? 'onAccent' : 'ink'}>
+          <Text size={compact ? 's' : 'm'} weight="heavy" tone={primary ? 'onAccent' : 'ink'}>
             {label}
           </Text>
         </View>
@@ -102,5 +105,7 @@ export const Button = ({ label, variant = 'secondary', icon, loading, disabled, 
 
 const styles = StyleSheet.create({
   button: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 17 },
+  compact: { minHeight: 38, paddingHorizontal: 13 },
   content: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  compactContent: { gap: 6 },
 });

@@ -10,7 +10,7 @@ import {
   type TaskWithTags,
 } from '@memex/core';
 import { parseEntryId, type Composed } from '../data/actions';
-import { useActions, useDeleteQueue } from '../data/DataProvider';
+import { useActions, useDeleteQueue, useDismissals } from '../data/DataProvider';
 import { useToast } from '../ui/Toast';
 
 /*
@@ -24,24 +24,29 @@ const clip = (text: string, max = 40) => {
   return flat.length > max ? `${flat.slice(0, max)}…` : flat;
 };
 
-export const entryLabel = (entry: Entry) => {
+/** What an entry is called: a jot's text, a link's or note's title, a task's title. */
+export const entryTitle = (entry: Entry) => {
   switch (entry.kind) {
     case 'jot':
-      return clip(entry.jot.body);
+      return entry.jot.body;
     case 'link':
-      return clip(getLinkTitle(entry.link));
+      return getLinkTitle(entry.link);
     case 'note':
-      return clip(noteDisplayTitle(entry.note));
+      return noteDisplayTitle(entry.note);
     case 'task':
-      return clip(entry.task.title);
+      return entry.task.title;
   }
 };
+
+/** The title clipped for a toast or a menu's heading. */
+export const entryLabel = (entry: Entry) => clip(entryTitle(entry));
 
 const names = (spaces: { name: string }[]) => spaces.map((s) => `“${s.name}”`).join(', ');
 
 export const useEntryActions = () => {
   const actions = useActions();
   const deletes = useDeleteQueue();
+  const dismissals = useDismissals();
   const toast = useToast();
   const router = useRouter();
 
@@ -120,12 +125,26 @@ export const useEntryActions = () => {
 
       unfile,
 
+      /** Hide the filer's suggestion for this entry on this phone (it stays unfiled), with Undo. */
+      dismissSuggestion(entry: FileableEntry) {
+        void Haptics.selectionAsync();
+        dismissals.dismiss(entry.id);
+        toast.show(`Left “${entryLabel(entry)}” unfiled.`, {
+          action: { label: 'Undo', onPress: () => dismissals.restore(entry.id) },
+        });
+      },
+
       openLink(linkId: string) {
         if (linkId.startsWith('temp-')) return;
         router.push({ pathname: '/link/[id]', params: { id: linkId } });
       },
+
+      openNote(noteId: string) {
+        if (noteId.startsWith('temp-')) return;
+        router.push({ pathname: '/note/[id]', params: { id: noteId } });
+      },
     };
-  }, [actions, deletes, router, toast]);
+  }, [actions, deletes, dismissals, router, toast]);
 };
 
 export type EntryActions = ReturnType<typeof useEntryActions>;

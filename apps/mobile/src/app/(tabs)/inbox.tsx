@@ -1,101 +1,144 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { FlatList, RefreshControl, StyleSheet, View, type ListRenderItem } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Inbox as InboxIcon } from 'lucide-react-native';
-import { entryText, getLinkTitle, noteDisplayTitle, type FileableEntry } from '@memex/core';
-import { useJournal } from '../../data/useJournal';
-import { alpha, mix } from '../../theme/palette';
+import type { FileableEntry, Suggestion } from '@memex/core';
+import type { ProposalView } from '../../data/inbox';
+import { useActions } from '../../data/DataProvider';
+import { useInbox } from '../../data/useInbox';
+import { ProposalCard } from '../../inbox/ProposalCard';
+import { SuggestionCard } from '../../inbox/SuggestionCard';
+import { useEntryActions } from '../../journal/useEntryActions';
 import { useTheme } from '../../theme/theme';
 import { Canvas } from '../../ui/Canvas';
-import { Paper } from '../../ui/Paper';
+import { FeedError, FeedSkeleton } from '../../ui/FeedStates';
 import { Placeholder } from '../../ui/Placeholder';
 import { ScreenHeader } from '../../ui/ScreenHeader';
 import { Text } from '../../ui/Text';
+import { useToast } from '../../ui/Toast';
 
-const titleOf = (entry: FileableEntry) => {
-  switch (entry.kind) {
-    case 'link':
-      return getLinkTitle(entry.link);
-    case 'note':
-      return noteDisplayTitle(entry.note);
-    default:
-      return entryText(entry);
-  }
-};
+/*
+ * The Inbox (CONTEXT.md): what's waiting for you. Agents' proposals first
+ * (approve or reject; nothing changes until you approve), then filing
+ * suggestions for recent unfiled things (decision 13: File, or Not now,
+ * each with Undo). Unfiled is a finished state, so an empty Inbox is the
+ * normal one.
+ */
 
-const KIND = { link: 'Link', note: 'Note', task: 'Task' } as const;
+type Item =
+  | { kind: 'head'; id: string; title: string; lede: string }
+  | { kind: 'proposal'; id: string; view: ProposalView }
+  | { kind: 'suggestion'; id: string; entry: FileableEntry; suggestion: Suggestion };
 
-/** Inbox (decision 13): recent unfiled things with a likely space. Filing from the phone comes next. */
+const countFmt = new Intl.NumberFormat();
+
 export default function InboxScreen() {
   const t = useTheme();
-  const { journal } = useJournal();
-  const inbox = journal?.inbox ?? [];
+  const toast = useToast();
+  const actions = useActions();
+  const entryActions = useEntryActions();
+  const { journal, proposals, suggestions, count, isLoading, error, refreshing, refresh } = useInbox();
+  const [deciding, setDeciding] = useState<{ id: string; decision: 'apply' | 'reject' } | null>(null);
+
+  const decide = async (view: ProposalView, decision: 'apply' | 'reject') => {
+    setDeciding({ id: view.proposal.id, decision });
+    try {
+      await actions.decideProposal(view.proposal, view.target, decision);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      toast.show(decision === 'apply' ? `Approved ${view.proposal.client_name}’s change.` : `Rejected ${view.proposal.client_name}’s proposal.`);
+    } catch (e) {
+      console.warn('Deciding a proposal failed:', e);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      toast.show(e instanceof Error && /no longer exists|already decided/.test(e.message) ? e.message : 'Couldn’t do that. Try again.', { tone: 'error' });
+    } finally {
+      setDeciding(null);
+    }
+  };
+
+  const items: Item[] = [
+    ...(proposals.length
+      ? [
+          { kind: 'head' as const, id: 'head:agents', title: 'From agents', lede: 'Changes an agent asked to make. Nothing changes until you approve; rejected ones are kept as a record.' },
+          ...proposals.map((view) => ({ kind: 'proposal' as const, id: `proposal:${view.proposal.id}`, view })),
+        ]
+      : []),
+    ...(suggestions.length
+      ? [
+          { kind: 'head' as const, id: 'head:filing', title: 'Filing suggestions', lede: 'Recent saves with a likely space. File them, or leave them be: unfiled is fine.' },
+          ...suggestions.map(({ entry, suggestion }) => ({ kind: 'suggestion' as const, id: entry.id, entry, suggestion })),
+        ]
+      : []),
+  ];
+
+  const renderItem: ListRenderItem<Item> = ({ item }) => {
+    switch (item.kind) {
+      case 'head':
+        return (
+          <View style={styles.head}>
+            <Text size="xs" weight="heavy" tone="soft" accessibilityRole="header">
+              {item.title}
+            </Text>
+            <Text size="xs" tone="muted">
+              {item.lede}
+            </Text>
+          </View>
+        );
+      case 'proposal':
+        return (
+          <ProposalCard
+            view={item.view}
+            busy={deciding?.id === item.view.proposal.id ? deciding.decision : null}
+            onDecide={(decision) => void decide(item.view, decision)}
+          />
+        );
+      case 'suggestion': {
+        const { entry, suggestion } = item;
+        return (
+          <SuggestionCard
+            entry={entry}
+            suggestion={suggestion}
+            onFile={() => void entryActions.file(entry, suggestion.space)}
+            onDismiss={() => entryActions.dismissSuggestion(entry)}
+            onOpen={
+              entry.kind === 'link' ? () => entryActions.openLink(entry.link.id) : entry.kind === 'note' ? () => entryActions.openNote(entry.note.id) : undefined
+            }
+          />
+        );
+      }
+    }
+  };
 
   return (
     <Canvas>
-      <ScreenHeader title="Inbox" subtitle={journal ? (inbox.length ? `${inbox.length} waiting` : 'All caught up') : undefined} />
-      <ScrollView contentContainerStyle={styles.scroll}>
-        {journal && inbox.length === 0 ? (
-          <Placeholder
-            icon={<InboxIcon size={26} color={t.palette.onAccent} strokeWidth={2} />}
-            title="Nothing waiting"
-            body="Unfiled is a finished state. When memex has a likely space for something new, it waits here with its reason."
-          />
-        ) : (
-          inbox.map(({ entry, suggestion }) => (
-            <Paper key={entry.id} style={styles.card}>
-              <Text size="xxs" weight="heavy" tone="faint">
-                {KIND[entry.kind]}
-              </Text>
-              <Text size="s" weight="medium" numberOfLines={2}>
-                {titleOf(entry)}
-              </Text>
-              <View style={styles.suggestion}>
-                <View
-                  style={[
-                    styles.chip,
-                    {
-                      borderColor: alpha(suggestion.space.color, 0.6),
-                      backgroundColor: mix(suggestion.space.color, t.palette.paper, 0.08),
-                    },
-                  ]}
-                >
-                  <View style={[styles.dot, { backgroundColor: suggestion.space.color }]} />
-                  <Text size="xs" weight="medium" tone="soft" numberOfLines={1}>
-                    {suggestion.space.name}
-                  </Text>
-                </View>
-                <Text size="xs" tone="muted" numberOfLines={2} style={styles.reason}>
-                  {suggestion.reason}
-                </Text>
-              </View>
-            </Paper>
-          ))
-        )}
-        {inbox.length > 0 && (
-          <Text size="xs" tone="faint" style={styles.note}>
-            One-press filing from the phone comes next; file on the web for now.
-          </Text>
-        )}
-      </ScrollView>
+      <ScreenHeader title="Inbox" subtitle={journal ? (count ? `${countFmt.format(count)} waiting` : 'All caught up') : undefined} />
+      {isLoading ? (
+        <FeedSkeleton />
+      ) : error && !journal ? (
+        <FeedError error={error} onRetry={() => void refresh()} />
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          contentContainerStyle={[styles.list, !items.length && styles.emptyList]}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={t.palette.muted} />}
+          ListEmptyComponent={
+            <Placeholder
+              icon={<InboxIcon size={26} color={t.palette.onAccent} strokeWidth={2} />}
+              title="Nothing waiting"
+              body="Unfiled is a finished state. When memex has a likely space for something new, or an agent asks to change something, it waits here."
+            />
+          }
+          accessibilityLabel="Inbox"
+          testID="inbox-list"
+        />
+      )}
     </Canvas>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingTop: 8, paddingBottom: 33, paddingHorizontal: 17, gap: 10 },
-  card: { padding: 12, gap: 4 },
-  suggestion: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 9999,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    maxWidth: 160,
-  },
-  dot: { width: 7, height: 7, borderRadius: 4 },
-  reason: { flex: 1, minWidth: 0 },
-  note: { textAlign: 'center', paddingHorizontal: 17, marginTop: 4 },
+  list: { paddingTop: 4, paddingBottom: 33, paddingHorizontal: 17, gap: 10 },
+  emptyList: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 0 },
+  head: { gap: 2, paddingHorizontal: 4, paddingTop: 6 },
 });

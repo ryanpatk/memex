@@ -1,13 +1,15 @@
 import { Tabs } from 'expo-router/tabs';
 import * as Haptics from 'expo-haptics';
 import { BookOpen, Inbox, MessageSquareText, Shapes, type LucideIcon } from 'lucide-react-native';
-import { useJournal } from '../../data/useJournal';
+import { useInbox } from '../../data/useInbox';
 import { typeRole, useTheme } from '../../theme/theme';
 
 /*
  * The phone layout (decision 16A): a tab bar with Journal, Library, Spaces
  * and Inbox. The bar is paper (lit edge, soft depth); the active tab speaks
- * in the accent. The Inbox shows a count only while something is waiting.
+ * in the accent. The Inbox shows a count only while something is waiting
+ * (filing suggestions and agents' proposals). Tasks, notes and a space's
+ * board are pushed screens over the tabs.
  */
 
 const icon = (Icon: LucideIcon) =>
@@ -18,8 +20,8 @@ const icon = (Icon: LucideIcon) =>
 export default function TabsLayout() {
   const t = useTheme();
   const { palette } = t;
-  const { journal } = useJournal();
-  const waiting = journal?.inbox.length ?? 0;
+  // Filing suggestions plus agents' proposals, like the web's Inbox count.
+  const { count: waiting } = useInbox();
 
   return (
     <Tabs

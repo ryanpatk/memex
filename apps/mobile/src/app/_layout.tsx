@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClientProvider } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
 import { Nunito_900Black } from '@expo-google-fonts/nunito';
 import { SessionProvider, useSession } from '../auth/SessionProvider';
@@ -30,7 +31,7 @@ export default function RootLayout() {
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>
           <ToastProvider>
-            <DataProvider repository={repository} client={CLIENT_NAME} enrich={enrich}>
+            <DataProvider repository={repository} client={CLIENT_NAME} enrich={enrich} dismissalStorage={AsyncStorage}>
               <SessionProvider>
                 <Root fontsReady={fontsLoaded || Boolean(fontError)} />
               </SessionProvider>
@@ -61,6 +62,9 @@ const Root = ({ fontsReady }: { fontsReady: boolean }) => {
         <Stack.Protected guard={Boolean(session)}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="link/[id]" />
+          <Stack.Screen name="note/[id]" />
+          <Stack.Screen name="space/[id]" />
+          <Stack.Screen name="tasks" />
         </Stack.Protected>
         <Stack.Protected guard={!session}>
           <Stack.Screen name="sign-in" options={{ animation: 'fade' }} />

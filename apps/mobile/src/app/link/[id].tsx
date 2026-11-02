@@ -1,4 +1,4 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +25,7 @@ import { Canvas } from '../../ui/Canvas';
 import { Paper } from '../../ui/Paper';
 import { Placeholder } from '../../ui/Placeholder';
 import { Button, usePressSettle } from '../../ui/Pressable';
+import { RoundButton } from '../../ui/RoundButton';
 import { Text } from '../../ui/Text';
 import { useToast } from '../../ui/Toast';
 
@@ -279,18 +280,6 @@ const SpaceToggle = ({
   );
 };
 
-const RoundButton = ({ label, onPress, icon }: { label: string; onPress: () => void; icon: (color: string) => ReactNode }) => {
-  const t = useTheme();
-  const settle = usePressSettle();
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} onPressIn={settle.onPressIn} onPressOut={settle.onPressOut} hitSlop={6}>
-      <Animated.View style={[styles.round, { backgroundColor: t.palette.paper, boxShadow: t.objectShadow }, settle.style]}>
-        {icon(t.palette.ink)}
-      </Animated.View>
-    </Pressable>
-  );
-};
-
 const Gone = ({ onBack }: { onBack: () => void }) => {
   const { palette } = useTheme();
   return (
@@ -308,7 +297,6 @@ const Gone = ({ onBack }: { onBack: () => void }) => {
 
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12, paddingBottom: 8 },
-  round: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   scroll: { paddingHorizontal: 17, paddingTop: 4, gap: 17 },
   hero: { overflow: 'visible' },
   picture: { width: '100%', overflow: 'hidden', maxHeight: 440 },

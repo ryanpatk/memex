@@ -42,13 +42,14 @@ jest.mock('expo-web-browser', () => ({
 // Screens use the router; tests read what they asked for from these mocks.
 jest.mock('expo-router', () => {
   const React = require('react');
-  const router = { push: jest.fn(), back: jest.fn(), replace: jest.fn(), navigate: jest.fn(), canGoBack: jest.fn(() => true) };
+  const router = { push: jest.fn(), back: jest.fn(), replace: jest.fn(), navigate: jest.fn(), setParams: jest.fn(), canGoBack: jest.fn(() => true) };
   let params = {};
   return {
     __esModule: true,
     useRouter: () => router,
     useLocalSearchParams: () => params,
     useFocusEffect: (effect) => React.useEffect(effect, [effect]),
+    Stack: { Screen: () => null },
     __setParams: (next) => {
       params = next;
     },
@@ -60,3 +61,14 @@ jest.mock('expo-router', () => {
 jest.mock('lucide-react-native', () =>
   new Proxy({}, { get: (_target, name) => (name === '__esModule' ? true : () => null) }),
 );
+
+// The system date picker: a stand-in that reports a chosen day through the
+// same callback, so tests can “pick” one with fireEvent(picker, 'valueChange', date).
+jest.mock('@react-native-community/datetimepicker', () => {
+  const { View } = require('react-native');
+  const React = require('react');
+  return {
+    __esModule: true,
+    default: ({ onValueChange, testID }) => React.createElement(View, { testID, onValueChange: (date) => onValueChange?.({ type: 'set' }, date) }),
+  };
+});

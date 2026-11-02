@@ -9,7 +9,7 @@ import { alpha, mix } from '../theme/palette';
 import { typeRole, useTheme } from '../theme/theme';
 import { usePressSettle } from '../ui/Pressable';
 import { Text } from '../ui/Text';
-import { KIND_HINT, SEND_LABEL, appendMention, draftSuggestion, insertMention, pickerFor } from './composerModel';
+import { KIND_HINT, SEND_LABEL, appendMention, draftSuggestion, fileByDefault, insertMention, pickerFor } from './composerModel';
 
 /*
  * The Journal composer (decision 16A: above the tab bar). One field; what you
@@ -30,6 +30,8 @@ export interface ComposerProps {
   draft?: string;
   /** The dock's top edge in window coordinates, whenever it moves (keyboard, growing text). */
   onTop?: (y: number) => void;
+  /** A space's screen: what you send is filed there unless it names its own @spaces. */
+  space?: JournalSpace;
   now?: () => Date;
 }
 
@@ -38,7 +40,7 @@ const MIN_INPUT = 44;
 const MAX_INPUT = 132;
 const INPUT_PAD = 22;
 
-export const Composer = ({ spaces, filer, onSubmit, draft, onTop, now = systemNow }: ComposerProps) => {
+export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = systemNow }: ComposerProps) => {
   const t = useTheme();
   const { palette } = t;
   const [text, setText] = useState(draft ?? '');
@@ -63,10 +65,12 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, now = systemNo
     }
   }
 
-  const parsed = useMemo(() => parseComposer(text, spaces, asNote), [asNote, spaces, text]);
+  const parsed = useMemo(() => fileByDefault(parseComposer(text, spaces, asNote), space), [asNote, space, spaces, text]);
   const picker = useMemo(() => pickerFor(text, caret, spaces), [caret, spaces, text]);
   // Recomputed per keystroke, but the filer caches by draft text.
   const suggestion = useMemo(() => (picker ? undefined : draftSuggestion(parsed, filer, now())), [filer, now, parsed, picker]);
+  // On a space's screen its own chip would always show; the hint says it instead.
+  const named = space ? parsed.spaces.filter((s) => s.id !== space.id) : parsed.spaces;
   const kind = parsed.kind === 'empty' ? (asNote ? 'note' : 'jot') : parsed.kind;
   const empty = parsed.kind === 'empty';
 
@@ -88,8 +92,8 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, now = systemNo
     onSubmit(parsed).catch(() => setText((current) => current || saved));
   };
 
-  const filedTo = parsed.spaces;
-  const showHint = focused || !empty;
+  const filedTo = named;
+  const showHint = focused || !empty || Boolean(space);
 
   return (
     <View
@@ -194,11 +198,11 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, now = systemNo
           onSelectionChange={(e) => setCaret(e.nativeEvent.selection.start)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder={asNote ? 'Title on the first line…' : 'Jot, paste a link, “[] ” for a task…'}
+          placeholder={asNote ? 'Title on the first line…' : space ? `Jot in ${space.name}, paste a link…` : 'Jot, paste a link, “[] ” for a task…'}
           placeholderTextColor={palette.faint}
           selectionColor={palette.accent}
           autoCorrect
-          accessibilityLabel="Write in your Journal"
+          accessibilityLabel={space ? `Write in ${space.name}` : 'Write in your Journal'}
           accessibilityHint="Plain text saves a jot, a link saves the link, start with [] for a task, type @ to file in a space"
           style={[
             typeRole('m'),
@@ -265,9 +269,11 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, now = systemNo
             {empty
               ? asNote
                 ? 'First line is the title'
-                : '“[] ” task · a link saves it · @ files it'
-              : filedTo.length
-                ? `in ${filedTo.map((s) => s.name).join(', ')}`
+                : space
+                  ? `in ${space.name} · “[] ” task · @ files elsewhere`
+                  : '“[] ” task · a link saves it · @ files it'
+              : parsed.spaces.length
+                ? `in ${parsed.spaces.map((s) => s.name).join(', ')}`
                 : asNote
                   ? 'Return adds a line'
                   : 'Return sends'}
