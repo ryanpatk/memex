@@ -1,5 +1,5 @@
 {
-  "counts": { "links": 4, "notes": 2, "tasks": 2, "jots": 5, "spaces": 2, "tags": 3, "legacyProjects": 1 },
+  "counts": { "links": 4, "notes": 2, "tasks": 2, "jots": 5, "spaces": 2, "tags": 3, "legacyProjects": 1, "views": 1 },
   "spaces": [
     { "id": "5a000000-0000-4000-8000-000000000001", "name": "Home reno", "created_at": "2026-09-01T14:00:00+00:00", "updated_at": "2026-09-01T14:00:00+00:00" },
     { "id": "5a000000-0000-4000-8000-000000000002", "name": "Inspiration", "created_at": "2026-09-02T14:00:00+00:00", "updated_at": "2026-10-20T09:30:00+00:00" }
@@ -53,5 +53,8 @@
   "profile_tasks": [
     { "id": "8e000000-0000-4000-8000-000000000001", "profile_id": "5a000000-0000-4000-8000-000000000001", "task_id": "3a1f3c9e-0000-4000-8000-000000000001", "order_index": 0, "created_at": "2026-10-24T14:06:00+00:00" },
     { "id": "8e000000-0000-4000-8000-000000000002", "profile_id": "5a000000-0000-4000-8000-000000000001", "task_id": "3a2f3c9e-0000-4000-8000-000000000002", "order_index": 1, "created_at": "2026-10-25T13:01:00+00:00" }
+  ],
+  "views": [
+    { "id": "7e000000-0000-4000-8000-000000000001", "name": "Unfiled links, oldest first", "definition": { "filters": { "types": ["link"], "sources": [], "spaces": ["unfiled"], "tagIds": [], "untagged": false }, "sort": { "field": "saved", "direction": "asc" }, "layout": "table" }, "position": 0, "created_at": "2026-10-30T09:00:00+00:00", "updated_at": "2026-10-30T09:00:00+00:00" }
   ]
 }

@@ -16,6 +16,7 @@
     "spaces": 2,
     "tags": 3,
     "legacyProjects": 1,
+    "views": 1,
     "journalDays": 3
   },
   "databaseCounts": {
@@ -25,7 +26,8 @@
     "jots": 5,
     "spaces": 2,
     "tags": 3,
-    "legacyProjects": 1
+    "legacyProjects": 1,
+    "views": 1
   },
   "images": {
     "total": 5,
@@ -118,6 +120,11 @@
       "type": "task",
       "id": "3a2f3c9e-0000-4000-8000-000000000002",
       "sha256": "d5e025de9df65df9c4698ee9b34415f79ee5f5dcf3c38c19fce0ef3ec6177d06"
+    },
+    "views/unfiled-links-oldest-first.json": {
+      "type": "view",
+      "id": "7e000000-0000-4000-8000-000000000001",
+      "sha256": "6c481815aba26a1961f4a4f89a2fc195def160da6588a1129c9b619ef55bf9dd"
     }
   },
   "assets": [

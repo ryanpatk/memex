@@ -20,6 +20,7 @@ Last export: 2026-11-01T12:00:00.000Z. This folder is rewritten by `scripts/expo
 - `journal/YYYY/YYYY-MM-DD.md`: one daily note per day with jots and what was saved
 - `links/`, `notes/`, `tasks/`: one file per item
 - `spaces/`: one index note per space, plus its `.board.json` (membership and order)
+- `views/`: saved Library views (filters, sort, layout), one JSON file each
 - `settings/tags.json`, `legacy/projects.json`: structured data
 - `assets/<item key>/`: downloaded preview images and favicons
 - `.memex/manifest.json`: machine-readable list of every file, count and image download

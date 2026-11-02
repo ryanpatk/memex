@@ -18,6 +18,7 @@ memex-vault/
   tasks/<title-slug>-<key>.md         one file per task (body = the task's detail)
   spaces/<name-slug>.md               one index note per space
   spaces/<name-slug>.board.json       the space's membership: which items, order, pinned
+  views/<name-slug>.json              a saved Library view: filters, sort, layout
   settings/tags.json                  the tag vocabulary (id, name, slug, colour)
   legacy/projects.json                pre-spaces “projects” every link still points at
   assets/<key>/preview.<ext>          a link's downloaded preview image
@@ -152,6 +153,19 @@ Spaces are index notes, not folders, because an item can be in several spaces. M
 
 `order` is the item's position in that space, `pinned` (omitted when false) pins a link to the space's header, `added` is when it was filed there. The v2 board layout (ROADMAP §3.3) will extend this file.
 
+## Saved views
+
+`views/<name-slug>.json`, one per saved Library view (decision 15A, `docs/library-views.md`; table `saved_views`):
+
+```json
+{ "schema": 1, "type": "view", "id": "…", "name": "Unfiled links, oldest first", "position": 0,
+  "filters": { "types": ["link"], "sources": [], "spaces": ["unfiled"], "tagIds": [], "untagged": false },
+  "sort": { "field": "saved", "direction": "asc" }, "layout": "table",
+  "created": "…", "updated": "…" }
+```
+
+`filters.spaces` holds space ids plus `unfiled`; `tagIds` are tag ids. They are references: a space or tag that no longer exists is ignored by readers, never an error. `sort` and `layout` are omitted when the view doesn't set them. Readers are forgiving (`parseViewDefinition` in `@memex/core`): unknown fields are ignored and broken ones fall back to defaults. The built-in tabs (Everything, Unfiled, From X…) live in code, not in the vault.
+
 ## Tags, legacy projects
 
 - `settings/tags.json`: `{ schema, type: "tags", tags: [{ id, name, slug, color, created, updated }] }`.
@@ -164,7 +178,7 @@ Spaces are index notes, not folders, because an item can be in several spaces. M
 `.memex/manifest.json` is for machines; nothing in it is needed to read the vault, but it makes checks and incremental runs cheap:
 
 - `exportedAt`, `source` (`{ kind: "supabase", projectRef }`), `timezone`
-- `counts`: files per type as exported (`links`, `notes`, `tasks`, `jots`, `spaces`, `tags`, `legacyProjects`, `journalDays`)
+- `counts`: files per type as exported (`links`, `notes`, `tasks`, `jots`, `spaces`, `tags`, `legacyProjects`, `views`, `journalDays`)
 - `databaseCounts`: `count(*)` per table from the same read-only transaction as the export (the export aborts if they differ)
 - `images`: `{ total, ok, failed, skipped }`
 - `files`: `{ "<path>": { type, id, sha256 } }` for every file the exporter manages

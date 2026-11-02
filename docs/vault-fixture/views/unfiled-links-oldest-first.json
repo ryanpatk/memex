@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "type": "view",
+  "id": "7e000000-0000-4000-8000-000000000001",
+  "name": "Unfiled links, oldest first",
+  "position": 0,
+  "filters": {
+    "types": [
+      "link"
+    ],
+    "sources": [],
+    "spaces": [
+      "unfiled"
+    ],
+    "tagIds": [],
+    "untagged": false
+  },
+  "sort": {
+    "field": "saved",
+    "direction": "asc"
+  },
+  "layout": "table",
+  "created": "2026-10-30T09:00:00+00:00",
+  "updated": "2026-10-30T09:00:00+00:00"
+}

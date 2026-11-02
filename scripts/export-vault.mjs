@@ -49,7 +49,7 @@ const FALLBACK_SPACE_COLORS = [
   'oklch(0.79 0.17 68)', 'oklch(0.69 0.20 17)', 'oklch(0.72 0.16 298)', 'oklch(0.80 0.14 347)',
 ];
 
-const MANAGED_DIRS = ['links', 'notes', 'tasks', 'journal', 'spaces', 'settings', 'legacy', 'assets'];
+const MANAGED_DIRS = ['links', 'notes', 'tasks', 'journal', 'spaces', 'views', 'settings', 'legacy', 'assets'];
 
 // ───────────────────────────── arguments ─────────────────────────────
 
@@ -228,6 +228,7 @@ select json_build_object(
   'profile_links', (select coalesce(json_agg(to_jsonb(t) order by t.created_at, t.id), '[]') from public.profile_links t),
   'profile_notes', (select coalesce(json_agg(to_jsonb(t) order by t.created_at, t.id), '[]') from public.profile_notes t),
   'profile_tasks', (select coalesce(json_agg(to_jsonb(t) order by t.created_at, t.id), '[]') from public.profile_tasks t),
+  'views',         (select coalesce(json_agg(to_jsonb(t) - 'user_id' order by t.position, t.created_at, t.id), '[]') from public.saved_views t),
   'counts', json_build_object(
     'links', (select count(*) from public.links),
     'notes', (select count(*) from public.notes),
@@ -235,7 +236,8 @@ select json_build_object(
     'jots', (select count(*) from public.self_messages),
     'spaces', (select count(*) from public.profiles),
     'tags', (select count(*) from public.tags),
-    'legacyProjects', (select count(*) from public.projects)
+    'legacyProjects', (select count(*) from public.projects),
+    'views', (select count(*) from public.saved_views)
   )
 ) as data;
 commit;
@@ -640,6 +642,34 @@ function renderTags(model) {
   return `${JSON.stringify({ schema: SCHEMA, type: 'tags', tags }, null, 2)}\n`;
 }
 
+// Saved Library views (decision 15A): one JSON file each. Filters reference
+// spaces and tags by id, as stored; readers drop ids that no longer exist.
+function viewFiles(rows) {
+  const used = new Set();
+  return [...(rows ?? [])]
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || String(a.created_at).localeCompare(String(b.created_at)) || String(a.id).localeCompare(String(b.id)))
+    .map((row) => {
+      const base = slugify(row.name) || `view-${compact(row.id).slice(0, 8)}`;
+      let slug = base;
+      for (let n = 2; used.has(slug); n++) slug = `${base}-${n}`;
+      used.add(slug);
+      const definition = row.definition && typeof row.definition === 'object' ? row.definition : {};
+      const view = {
+        schema: SCHEMA,
+        type: 'view',
+        id: row.id,
+        name: row.name,
+        position: row.position ?? 0,
+        filters: definition.filters ?? {},
+        ...(definition.sort ? { sort: definition.sort } : {}),
+        ...(definition.layout ? { layout: definition.layout } : {}),
+        created: row.created_at,
+        updated: row.updated_at,
+      };
+      return { path: `views/${slug}.json`, id: row.id, content: `${JSON.stringify(view, null, 2)}\n` };
+    });
+}
+
 function renderProjects(model) {
   const projects = [...model.projects.values()].map((p) => ({
     id: p.id, name: p.name, description: p.description ?? null, starred: p.is_starred === true,
@@ -671,6 +701,7 @@ function renderReadme(model, counts, exportedAt) {
     '- `journal/YYYY/YYYY-MM-DD.md`: one daily note per day with jots and what was saved',
     '- `links/`, `notes/`, `tasks/`: one file per item',
     '- `spaces/`: one index note per space, plus its `.board.json` (membership and order)',
+    '- `views/`: saved Library views (filters, sort, layout), one JSON file each',
     '- `settings/tags.json`, `legacy/projects.json`: structured data',
     '- `assets/<item key>/`: downloaded preview images and favicons',
     '- `.memex/manifest.json`: machine-readable list of every file, count and image download',
@@ -920,6 +951,7 @@ async function main() {
     spaces: data.spaces.length,
     tags: data.tags.length,
     legacyProjects: data.projects.length,
+    views: (data.views ?? []).length,
     journalDays: model.days.length,
   };
   const dbCounts = data.counts ?? null;
@@ -965,6 +997,7 @@ async function main() {
       files.set(space.path, { content: renderSpace(space), type: 'space', id: space.id });
       files.set(space.boardPath, { content: renderBoard(space), type: 'space-board', id: space.id });
     }
+    for (const view of viewFiles(data.views)) files.set(view.path, { content: view.content, type: 'view', id: view.id });
     files.set('settings/tags.json', { content: renderTags(model), type: 'tags', id: null });
     files.set('legacy/projects.json', { content: renderProjects(model), type: 'legacy-projects', id: null });
     files.set('README.md', { content: renderReadme(model, counts, opts.nowIso), type: 'readme', id: null });
