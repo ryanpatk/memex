@@ -255,6 +255,11 @@ Three rules, all derived at runtime from the chosen canvas swatch in `src/utils/
 - **Filter menus** (Source, Space, Sort) are filter chips with a caret; a chip with a value is “on” (raised tile) and names it (“From X”, “Kyoto trip” with its dot). Menus use the shared `.memex-menu` with check (square) and radio (round) marks; checked = color-1 + gloss.
 - **Table** is paper: neutral-1 surface, hairline ring, `--shadow-s`, sticky header. Rows tint, never lift; selected rows take `--navigation-active-background`. Titles use the reading face; dates, hosts and counts the data face. Spaces are pills in their own hue (13% mix) with the dot. Selection checks and row actions appear on hover/focus (always on touch). Narrow tables shed columns by priority (Type, then Updated/Tags, then Source; spaces become dots).
 
+### Tasks and drag to a space (2026-11-01)
+
+- **Tasks** (`/tasks`, `styles/tasks.css`): the column sits on the same paper stack as the Journal; each group is a paper card (neutral-1, lit edge, hairline ring, `--shadow-s`) with a sticky header (space dot or a date icon; Overdue in `--error` with an icon). Rows are list rows: 44px, tint on hover, never lift; hairlines are drawn, not borders. The check is the shared task check (gloss when ticked) inside a 40px hit area. Due dates are data-face chips: Today takes the option-badge tint, Overdue the error tint plus an icon. The add field is the Journal composer's recessed field. Empty states use one raised disc; “All clear” makes it glossy because it's an “on” state.
+- **Drag to a space:** while dragging, sidebar spaces become dashed slots in their own hue (`--space-hue`); the one under the pointer takes the add tint and the “+” disc, as when selecting. Dragged items fade to 50%. The ghost is a small paper pill (title), or a stacked pill with a glossy count for several items.
+
 ### Feedback toast
 
 - **Position:** Absolute bottom-right of dashboard, above footer (`calc(var(--bookmark-footer-offset) + 12–24px)`).

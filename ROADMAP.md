@@ -203,8 +203,9 @@ Validate the product direction before rebuilding the plumbing.
 - [x] Feed derived from existing tables: jots (`self_messages`) interleaved with links/notes/tasks by `created_at`; auto-saves grouped (“3 pins saved on Pinterest”) using `links.source` ✓ 2026-10-25 (`src/utils/journalFeed.ts`, 11D entries in `components/journal/`)
 - [x] Journal becomes `/`; current stream becomes `/library`; `/home` redirects ✓ 2026-10-25 (query carried, so the extension's `/home?link=` deep links still land)
 - [x] Composer syntax: `@space`, URL → link, `[] ` → task, ⌘↵ → note ✓ 2026-10-25 (`@memex/core` `composer.ts`, `@` picker). `#tag` waits until tags come back (`SHOW_TAGS_UI` is off)
-- [ ] Filing affordances on entries: space chips ✓, one-press suggestions ✓, “File to…” ✓ (2026-10-25); drag to sidebar space still to do
-- [x] ~~Back-office rail~~ → decision 12B: Inbox in the sidebar and a header button, both only while suggestions wait; the tray opens beside the feed (`/?inbox=1`); Tasks in the sidebar (Library filtered to tasks for now) ✓ 2026-10-25
+- [x] Filing affordances on entries: space chips ✓, one-press suggestions ✓, “File to…” ✓ (2026-10-25); drag to a sidebar space ✓ 2026-11-01 (Journal entries, Library cards, list and Table rows, Tasks rows; multi-select drags the selection; every filing has Undo; `docs/tasks-view.md`)
+- [x] A real Tasks view ✓ 2026-11-01 (`/tasks`: open tasks across spaces by space or due date, Space filter, tick with Undo, Done list, due dates, inline add on the composer's syntax, ⌘K Go to; `docs/tasks-view.md`)
+- [x] ~~Back-office rail~~ → decision 12B: Inbox in the sidebar and a header button, both only while suggestions wait; the tray opens beside the feed (`/?inbox=1`); Tasks in the sidebar ✓ 2026-10-25 (its own view since 2026-11-01)
 - [ ] Space page becomes a board (pinned sites · tasks · notes · saves) with a scoped Journal column
 - [x] Library: Table view and saved views (Unfiled, From X, From YouTube) ✓ 2026-11-02 (decision 15A: tabs over the Library with counts, Save view, Source/Space/Sort, Table with sortable columns; spec `docs/library-views.md`; saved views in `saved_views`, exported to `views/*.json`)
 - [ ] Mobile web gets the same Journal-first layout (bridge until Phase 6) — *2026-11-01: not a v1 goal; v1 is desktop web and the phone gets the Expo app. Keep mobile web usable, no new layout work*
