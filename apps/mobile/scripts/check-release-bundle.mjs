@@ -20,7 +20,7 @@ try {
   const has = (text) => bundle.includes(Buffer.from(text));
 
   if (!has('Continue with GitHub')) throw new Error('bundle check is broken: the sign-in screen text is missing');
-  const leaked = ['Demo data is read-only', 'demo@memex.app', 'picsum.photos'].filter(has);
+  const leaked = ['demo@memex.app', 'picsum.photos', 'Sign-up is off in demo mode', 'OAuth is not available with demo data'].filter(has);
   if (leaked.length) throw new Error(`fixture code shipped in the release bundle: ${leaked.join(', ')}`);
   console.log(`release bundle OK (${(bundle.length / 1e6).toFixed(1)} MB, no fixture code)`);
 } finally {

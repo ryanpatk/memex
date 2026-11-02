@@ -36,7 +36,7 @@ describe('toJournal on the demo data', () => {
 });
 
 describe('createFixtureRepository', () => {
-  it('reads demo rows, rejects writes, and signs in and out', async () => {
+  it('reads demo rows, keeps writes in memory, and signs in and out', async () => {
     const repo = createFixtureRepository({ signedIn: false, now: NOW });
     expect(await repo.auth.getSession()).toBeNull();
     const seen: unknown[] = [];
@@ -45,6 +45,11 @@ describe('createFixtureRepository', () => {
     await repo.auth.signOut();
     expect(seen).toEqual(['demo-user', null]);
     expect((await repo.links.getAll()).length).toBeGreaterThan(0);
-    await expect(repo.jots.create({ body: 'x', profile_id: null })).rejects.toThrow('read-only');
+    const jot = await repo.jots.create({ body: '[test] jot', profile_id: 'kyoto' });
+    expect((await repo.jots.getAll()).at(-1)).toMatchObject({ id: jot.id, body: '[test] jot', profile_id: 'kyoto' });
+    await repo.jots.delete(jot.id);
+    expect((await repo.jots.getAll()).some((j) => j.id === jot.id)).toBe(false);
+    // A fresh repository starts from the demo data again: nothing persists.
+    expect((await createFixtureRepository({ now: NOW }).jots.getAll()).length).toBe(buildDemoData(NOW).jots.length);
   });
 });
