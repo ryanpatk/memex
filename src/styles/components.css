@@ -1269,3 +1269,42 @@
     animation: none;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Missing env (components/MissingEnv.tsx): no Supabase settings        */
+/* ------------------------------------------------------------------ */
+
+.memex-missing-env {
+  max-width: 520px;
+  margin: 12vh auto 0;
+  padding: var(--space-l);
+  border-radius: var(--radius-m);
+  background: var(--neutral-1);
+  box-shadow:
+    var(--surface-lit),
+    0 0 0 var(--border-s) var(--border-default-color),
+    var(--shadow-m);
+  color: var(--neutral-8);
+  font-family: var(--font-ui);
+  font-size: var(--size-s);
+  line-height: var(--line-s);
+  letter-spacing: var(--letter-spacing-s);
+}
+
+.memex-missing-env h1 {
+  margin: 0 0 var(--space-xs);
+  color: var(--neutral-10);
+  font-weight: var(--weight-ui-heavy);
+  font-size: var(--size-l);
+  line-height: var(--line-l);
+  letter-spacing: var(--letter-spacing-l);
+}
+
+.memex-missing-env p {
+  margin: var(--space-xs) 0 0;
+}
+
+.memex-missing-env code {
+  font-family: var(--font-code);
+  overflow-wrap: anywhere;
+}

@@ -9,6 +9,8 @@ import './styles/components.css';
 import './styles/stream.css';
 import './styles/library.css';
 import router from './router';
+import { repositoryConfigError } from './data/repository';
+import MissingEnv from './components/MissingEnv';
 import { RouterProvider } from 'react-router-dom';
 import { initCanvasColor } from './utils/canvasColor';
 import { initSound } from './utils/sound';
@@ -25,6 +27,6 @@ bind();
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    {repositoryConfigError ? <MissingEnv missing={repositoryConfigError.missing} /> : <RouterProvider router={router} />}
   </React.StrictMode>,
 );
