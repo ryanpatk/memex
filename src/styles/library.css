@@ -1,0 +1,832 @@
+/*
+ * Library views (decision 15A, docs/library-views.md): saved-view tabs, the
+ * Source / Space / Sort menus in the filter row, and the Table. Joyful
+ * Utility: tabs and rows are things you read down, so they stay still and
+ * tint; the menus' triggers are chips (objects) and swell like the others.
+ */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Saved-view tabs                                                     */
+/* ------------------------------------------------------------------ */
+
+.memex-view-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+  min-width: 0;
+  padding: var(--space-xxs) var(--space-s) 0;
+  /* One hairline under the row; the lit tab's bar sits on it */
+  box-shadow: inset 0 calc(-1 * var(--border-s)) 0 0 var(--bookmark-stack-frosted-border);
+}
+
+.memex-view-tabs-list {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.memex-view-tabs-list::-webkit-scrollbar {
+  display: none;
+}
+
+.memex-view-tabs-list[data-fade-end='true'] {
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+}
+
+.memex-view-tabs-list[data-fade-start='true'] {
+  mask-image: linear-gradient(to right, transparent, #000 40px);
+}
+
+.memex-view-tabs-list[data-fade-start='true'][data-fade-end='true'] {
+  mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+}
+
+.memex-view-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.memex-view-tab-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 40px;
+  padding: var(--space-xxs) var(--space-s) 3px;
+  border-radius: var(--radius-s) var(--radius-s) 0 0;
+  color: var(--neutral-7);
+  font-family: var(--font-ui);
+  font-weight: var(--weight-ui-medium);
+  font-size: var(--size-s);
+  line-height: var(--line-s);
+  letter-spacing: var(--letter-spacing-s);
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+  -webkit-user-drag: none;
+}
+
+/* The lit tab's bar: “on”, so it carries the gloss */
+.memex-view-tab-link::after {
+  content: '';
+  position: absolute;
+  right: var(--space-xs);
+  bottom: 0;
+  left: var(--space-xs);
+  height: 3px;
+  border-radius: var(--radius-full) var(--radius-full) 0 0;
+  background: var(--color-1) var(--control-gloss-image);
+  opacity: 0;
+  transform: scaleX(0.4);
+  transform-origin: center bottom;
+  transition:
+    opacity var(--transition-fast),
+    transform var(--transition-swell);
+}
+
+.memex-view-tab-link:hover {
+  background: var(--neutral-2);
+  color: var(--neutral-10);
+}
+
+.memex-view-tab-link:active {
+  transform: translateY(var(--motion-press-distance));
+}
+
+.memex-view-tab-link:focus-visible {
+  outline: var(--focus-ring-outline);
+  outline-offset: -2px;
+}
+
+.memex-view-tab.is-active .memex-view-tab-link {
+  color: var(--neutral-10);
+}
+
+.memex-view-tab.is-active .memex-view-tab-link::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+.memex-view-tab-count {
+  min-width: 1.5em;
+  padding: 0 var(--space-xxs);
+  border-radius: var(--radius-full);
+  color: var(--neutral-6);
+  font-family: var(--font-data);
+  font-weight: var(--weight-data-regular);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.memex-view-tab.is-active .memex-view-tab-count {
+  background: var(--option-badge-background);
+  color: var(--option-badge-foreground);
+}
+
+/* ··· on the open saved view */
+.memex-view-tab-menu.memex-icon-button {
+  margin: 0 var(--space-xxs) 3px calc(-1 * var(--space-xxs));
+}
+
+.memex-view-tab.is-editing {
+  padding: 2px 0 5px;
+}
+
+/* Save view: a dashed slot where the next tab will go */
+.memex-view-save {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-xxs);
+  min-height: 32px;
+  margin-bottom: 4px;
+  padding: 0 var(--space-s) 0 var(--space-xs);
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--neutral-7);
+  outline: var(--border-s) dashed var(--neutral-5);
+  outline-offset: calc(-1 * var(--border-s));
+  font-family: var(--font-ui);
+  font-weight: var(--weight-ui-medium);
+  font-size: var(--size-s);
+  line-height: var(--line-s);
+  letter-spacing: var(--letter-spacing-s);
+  white-space: nowrap;
+  cursor: pointer;
+  animation: memex-pop-in var(--motion-duration) var(--motion-easing);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    outline-color var(--transition-fast),
+    transform var(--transition-swell);
+}
+
+.memex-view-save svg {
+  width: 16px;
+  height: 16px;
+}
+
+.memex-view-save:hover {
+  background: var(--option-badge-background);
+  color: var(--option-badge-foreground);
+  outline-color: var(--color-1);
+}
+
+@media (hover: hover) {
+  .memex-view-save:not(.is-naming):hover {
+    transform: scale(var(--hover-swell));
+  }
+}
+
+.memex-view-save:not(.is-naming):active {
+  transform: translateY(var(--motion-press-distance)) scale(var(--press-settle));
+  transition-duration: 80ms;
+}
+
+.memex-view-save:focus-visible {
+  outline: var(--focus-ring-outline);
+  outline-offset: 2px;
+}
+
+.memex-view-save.is-naming {
+  padding: 0;
+  outline: 0;
+  background: transparent;
+  cursor: default;
+  animation: none;
+}
+
+.memex-view-name-form {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xxs);
+}
+
+.memex-view-name-input.input-field {
+  width: 15rem;
+  min-height: 32px;
+  padding-block: 0;
+}
+
+.memex-view-name-submit.btn-compact {
+  height: 32px;
+  min-height: 32px;
+  padding-block: 0;
+}
+
+@media (max-width: 899px) {
+  .memex-view-name-input.input-field {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Source / Space / Sort menus in the filter row                       */
+/* ------------------------------------------------------------------ */
+
+.memex-filter-divider {
+  flex: none;
+  width: var(--border-s);
+  height: 20px;
+  margin: 0 var(--space-xxs);
+  background: var(--neutral-4);
+}
+
+.memex-stream-filter-row .memex-filter-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xxs);
+  padding-inline: var(--space-s) var(--space-xs);
+}
+
+.memex-filter-menu .memex-space-dot {
+  margin-right: 2px;
+}
+
+.memex-filter-menu-caret,
+.memex-filter-menu-icon {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--neutral-6);
+  transition: transform var(--transition-fast);
+}
+
+.memex-filter-menu[aria-expanded='true'] .memex-filter-menu-caret {
+  transform: rotate(180deg);
+}
+
+.memex-filter-menu .bookmark-tag-chip-label {
+  max-width: 11rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memex-stream-filter-row .memex-sort-menu {
+  padding-inline: var(--space-xs) var(--space-s);
+  color: var(--neutral-8);
+}
+
+@media (max-width: 1100px) {
+  .memex-sort-menu-label {
+    display: none;
+  }
+
+  .memex-stream-filter-row .memex-sort-menu {
+    padding-inline: var(--space-xs);
+  }
+}
+
+/* Menu additions: start-aligned menus, dividers, check / radio marks */
+.memex-menu--start {
+  right: auto;
+  left: 0;
+  transform-origin: top left;
+}
+
+.memex-menu-divider {
+  height: var(--border-s);
+  margin: 2px var(--space-xs);
+  border: 0;
+  background: var(--neutral-3);
+}
+
+.memex-menu-heading {
+  margin: 0;
+  padding: var(--space-xxs) var(--space-xs) 0;
+  color: var(--neutral-6);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+}
+
+.memex-menu > button:disabled {
+  color: var(--neutral-6);
+  cursor: default;
+}
+
+.memex-menu-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memex-menu-check {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-xs);
+  background: var(--neutral-1);
+  box-shadow: inset 0 0 0 var(--border-s) var(--neutral-5);
+  color: var(--cte-accent-text);
+  transition:
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+[role='menuitemradio'] > .memex-menu-check {
+  border-radius: var(--radius-full);
+}
+
+.memex-menu-check.is-on {
+  background: var(--color-1) var(--control-gloss-image);
+  box-shadow: none;
+}
+
+.memex-menu > button .memex-menu-check svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 3;
+}
+
+.memex-filter-menu-list {
+  max-height: min(360px, 60vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ------------------------------------------------------------------ */
+/* Table                                                               */
+/* ------------------------------------------------------------------ */
+
+.memex-table-wrap {
+  container-type: inline-size;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  /* Paper: lit edge, hairline ring, soft hue-tinted shadow */
+  border-radius: var(--radius-m);
+  background: var(--neutral-1);
+  box-shadow:
+    0 0 0 var(--border-s) var(--border-default-color),
+    var(--shadow-s);
+  /* clip, not hidden: the sticky header still sticks to the scroller */
+  overflow: clip;
+}
+
+.memex-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  color: var(--neutral-10);
+}
+
+.memex-table th {
+  position: sticky;
+  top: calc(-1 * var(--space-s));
+  z-index: 2;
+  height: 40px;
+  padding: 0 var(--space-xxs);
+  background: var(--neutral-1);
+  box-shadow: inset 0 calc(-1 * var(--border-s)) 0 0 var(--neutral-4);
+  color: var(--neutral-7);
+  font-family: var(--font-ui);
+  font-weight: var(--weight-ui-medium);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.memex-table-sort {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xxs);
+  width: 100%;
+  height: 32px;
+  padding: 0 var(--space-xs);
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.memex-table-sort.is-static {
+  cursor: default;
+}
+
+.memex-table-sort svg {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  stroke-width: 2.5;
+  transition: opacity var(--transition-fast);
+}
+
+.memex-table-sort svg.is-idle {
+  opacity: 0;
+}
+
+button.memex-table-sort:hover {
+  background: var(--neutral-2);
+  color: var(--neutral-10);
+}
+
+button.memex-table-sort:hover svg.is-idle {
+  opacity: 0.45;
+}
+
+button.memex-table-sort:focus-visible {
+  outline: var(--focus-ring-outline);
+  outline-offset: -2px;
+}
+
+.memex-table th.is-sorted {
+  color: var(--neutral-10);
+}
+
+.memex-table th.is-sorted svg {
+  color: var(--color-1-ink);
+}
+
+/* Column widths (the title takes the rest) */
+.memex-table-col-check {
+  width: 44px;
+}
+.memex-table-col-type {
+  width: 84px;
+}
+.memex-table-col-source {
+  width: 112px;
+}
+.memex-table-col-spaces {
+  width: 184px;
+}
+.memex-table-col-tags {
+  width: 150px;
+}
+.memex-table-col-saved,
+.memex-table-col-updated {
+  width: 104px;
+}
+.memex-table-col-actions {
+  width: 76px;
+}
+
+.memex-table td {
+  height: 52px;
+  padding: 0 var(--space-xs);
+  overflow: hidden;
+  box-shadow: inset 0 calc(-1 * var(--border-s)) 0 0 var(--neutral-3);
+  color: var(--neutral-7);
+  font-family: var(--font-data);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.memex-table td.memex-table-col-check,
+.memex-table th.memex-table-col-check {
+  padding: 0 0 0 var(--space-xs);
+  text-align: center;
+}
+
+.memex-table tbody tr:last-child td {
+  box-shadow: none;
+}
+
+/* Rows are paper you read down: they tint, they don't move */
+.memex-table-row {
+  cursor: default;
+  transition: background-color var(--transition-fast);
+}
+
+.memex-table-row.is-openable {
+  cursor: pointer;
+}
+
+.memex-table-row:hover {
+  background: var(--neutral-2);
+}
+
+.memex-table-row:focus-visible {
+  outline: var(--focus-ring-outline);
+  outline-offset: -2px;
+}
+
+.memex-table-row.is-selected,
+.memex-table-row.is-selected:hover {
+  background: var(--navigation-active-background);
+}
+
+.memex-table-row.is-expanded {
+  background: var(--neutral-2);
+}
+
+.memex-table-row.is-new {
+  animation: memex-pop-in var(--motion-duration) var(--motion-easing);
+}
+
+.memex-table-expanded > td {
+  height: auto;
+  padding: 0 var(--space-xs) var(--space-xs);
+  overflow: visible;
+  background: var(--neutral-2);
+  white-space: normal;
+  font-family: var(--font-ui);
+}
+
+/* Title: picture or glyph, then the title in the reading face */
+.memex-table-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+  min-width: 0;
+}
+
+.memex-table-title-text {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--neutral-10);
+  font-family: var(--font-editorial);
+  font-weight: var(--weight-editorial-medium);
+  font-size: var(--size-s);
+  line-height: var(--line-s);
+  letter-spacing: var(--letter-spacing-s);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memex-table-row.is-done .memex-table-title-text {
+  color: var(--neutral-6);
+  text-decoration: line-through;
+  text-decoration-color: var(--neutral-5);
+}
+
+.memex-table-leading {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border-radius: var(--radius-s);
+  background: var(--neutral-3);
+  color: var(--neutral-7);
+}
+
+.memex-table-leading svg {
+  width: 16px;
+  height: 16px;
+}
+
+.memex-table-leading img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.memex-table-leading img.is-favicon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.memex-table-leading.is-picture {
+  position: relative;
+}
+
+/* A hairline ring drawn over the picture so light images keep an edge */
+.memex-table-leading.is-picture::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 var(--border-s) var(--neutral-4-transparent);
+  pointer-events: none;
+}
+
+.memex-table-leading.is-task {
+  overflow: visible;
+  background: transparent;
+}
+
+.memex-table-type {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xxs);
+  font-family: var(--font-ui);
+}
+
+.memex-table-type svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  color: var(--neutral-6);
+}
+
+.memex-table-source.is-platform {
+  color: var(--neutral-9);
+  font-family: var(--font-ui);
+  font-weight: var(--weight-ui-medium);
+}
+
+/* Spaces: each in its own hue, like the sidebar rows */
+.memex-table-spaces {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xxs);
+  min-width: 0;
+}
+
+.memex-table-space {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 2px var(--space-xs) 2px 6px;
+  border-radius: var(--radius-full);
+  background: color-mix(in oklab, var(--space-hue, var(--neutral-6)) 13%, transparent);
+  color: var(--neutral-10);
+  font-family: var(--font-ui);
+  font-weight: var(--weight-ui-medium);
+}
+
+.memex-table-space .memex-space-dot {
+  width: 8px;
+  height: 8px;
+}
+
+.memex-table-space-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memex-table-more {
+  flex: none;
+  color: var(--neutral-7);
+}
+
+/* Selection checks: on hover, focus, while selecting, or when on */
+.memex-table-check {
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.memex-table-check:disabled {
+  cursor: default;
+}
+
+.memex-table-check:focus-visible {
+  opacity: 1;
+  outline: var(--focus-ring-outline);
+  outline-offset: 2px;
+}
+
+.memex-table-row:is(:hover, :focus-visible, :focus-within) .memex-table-check,
+.memex-table.is-selecting .memex-table-check,
+.memex-table-check.is-on,
+.memex-table-check.is-mixed,
+.memex-table thead:hover .memex-table-check {
+  opacity: 1;
+}
+
+.memex-table-check.is-mixed {
+  background: var(--color-1) var(--control-gloss-image);
+  box-shadow: none;
+}
+
+.memex-table-check-dash {
+  width: 10px;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+.memex-table-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.memex-table-row:is(:hover, :focus-visible, :focus-within) .memex-table-actions,
+.memex-table-row.is-expanded .memex-table-actions {
+  opacity: 1;
+}
+
+.memex-table.is-selecting .memex-table-actions {
+  visibility: hidden;
+}
+
+@media (hover: none) {
+  .memex-table-actions,
+  .memex-table-check {
+    opacity: 1;
+  }
+}
+
+/* Narrow tables shed columns, least needed first */
+@container (max-width: 1000px) {
+  .memex-table [data-priority='3'] {
+    display: none;
+  }
+}
+
+@container (max-width: 760px) {
+  .memex-table [data-priority='2'] {
+    display: none;
+  }
+}
+
+@container (max-width: 560px) {
+  .memex-table [data-priority='1'] {
+    display: none;
+  }
+
+  /* Spaces shrink to their dots; the name stays for screen readers and in the tooltip */
+  .memex-table-col-spaces {
+    width: 64px;
+  }
+
+  .memex-table-space {
+    padding: 4px;
+  }
+
+  .memex-table-space-name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .memex-table-col-saved {
+    width: 88px;
+  }
+
+  .memex-table-col-actions {
+    width: 40px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memex-view-tab-link::after,
+  .memex-view-save,
+  .memex-table-row.is-new {
+    animation: none;
+    transition: none;
+  }
+
+  .memex-view-tab-link:active {
+    transform: none;
+  }
+}

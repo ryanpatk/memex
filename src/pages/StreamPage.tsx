@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import LibraryTable, { type TableSpace } from '../components/library/LibraryTable';
+import LibraryViewTabs, { type ViewTab } from '../components/library/LibraryViewTabs';
+import MenuButton, { type MenuEntry } from '../components/library/MenuButton';
 import AppHeader from '../components/AppHeader';
 import LinkGridCard from '../components/LinkGridCard';
 import CommandBar, {
@@ -40,6 +43,38 @@ import {
   StreamItem,
   buildStreamItems,
   byUpdatedDesc,
+  BUILT_IN_VIEWS,
+  SORT_OPTIONS,
+  SOURCE_KEYS,
+  UNFILED,
+  countMatching,
+  findActiveView,
+  formatLibraryFilters,
+  formatSort,
+  groupDateFor,
+  isHideableWhenEmpty,
+  matchesLibraryFilters,
+  nextSort,
+  nextViewPosition,
+  parseLibraryFilters,
+  parseSort,
+  sameSort,
+  sanitizeFilters,
+  savedViewsToTabs,
+  serializeViewDefinition,
+  sortItems,
+  sortLabel,
+  sourceKeyLabel,
+  spaceIdsByItem,
+  suggestViewName,
+  tableColumns,
+  uniqueViewName,
+  viewDiffers,
+  type LibraryFilters,
+  type LibraryLayout,
+  type LibrarySort,
+  type LibraryView,
+  type SortField,
   isPendingItem,
   itemKey,
   itemMatchesSearch,
@@ -52,14 +87,16 @@ import {
   matchesTagFilter,
   matchesTypeFilter,
   orderTagsForRow,
-  parseList,
-  parseTypeFilter,
   pinnedLinks,
 } from '@memex/core';
 import {
   LIBRARY_PATH,
   LINK_PARAM,
   NOTE_PARAM,
+  SHOW_TAGS_UI,
+  SORT_PARAM,
+  SOURCE_PARAM,
+  SPACE_PARAM,
   VIEW_PARAM,
   TAGS_PARAM,
   TYPE_PARAM,
@@ -83,6 +120,7 @@ import { useProfiles } from '../hooks/useProfiles';
 import { useTags } from '../hooks/useTags';
 import { useAllTasks, useCreateTask, useDeleteTask, useUpdateTask } from '../hooks/useTasks';
 import { useDeleteSelfMessage, useSelfMessages } from '../hooks/useSelfMessages';
+import { useCreateSavedView, useDeleteSavedView, useSavedViews, useUpdateSavedView } from '../hooks/useSavedViews';
 import { useSetTaskTags } from '../hooks/useTaskTags';
 import { urlScraperApi } from '../hooks/useUrlScraper';
 import { useAppStore } from '../store';
@@ -91,8 +129,10 @@ import { cue } from '../utils/sound';
 import { useSpaceColors } from '../hooks/useSpaceColors';
 import type { RescrapeResult } from '../components/stream/LinkExpandedCard';
 import {
+  ArrowUpDown,
   BookOpen,
   Check,
+  ChevronDown,
   ChevronRight,
   ExternalLink,
   LayoutGrid,
@@ -102,6 +142,7 @@ import {
   Rows3,
   Square,
   StickyNote,
+  Table2,
   X,
 } from 'lucide-react';
 
@@ -121,15 +162,36 @@ const VIEW_STORAGE_KEY = 'memex.stream-view';
 const UNDO_WINDOW_MS = 6000;
 const PALETTE_RESULTS_PER_TYPE = 4;
 
-type StreamView = 'grid' | 'list';
+type StreamView = LibraryLayout;
+
+const isStreamView = (value: string | null): value is StreamView =>
+  value === 'grid' || value === 'list' || value === 'table';
 
 const readStoredView = (): StreamView => {
   try {
-    return window.localStorage.getItem(VIEW_STORAGE_KEY) === 'list' ? 'list' : 'grid';
+    const stored = window.localStorage.getItem(VIEW_STORAGE_KEY);
+    return isStreamView(stored) ? stored : 'grid';
   } catch {
     return 'grid';
   }
 };
+
+const storeView = (next: StreamView) => {
+  try {
+    window.localStorage.setItem(VIEW_STORAGE_KEY, next);
+  } catch {
+    /* storage unavailable — URL still carries it */
+  }
+};
+
+/** The URL params a Library filter set writes (the app's names for core's FilterParams). */
+const FILTER_PARAM_NAMES = {
+  type: TYPE_PARAM,
+  source: SOURCE_PARAM,
+  space: SPACE_PARAM,
+  tags: TAGS_PARAM,
+  untagged: UNTAGGED_PARAM,
+} as const;
 
 /**
  * The Library: a mixed stream of notes, links, and tasks — everything at
@@ -199,21 +261,31 @@ const StreamPage = () => {
 
   /* ---------- URL state: type filter, tag filter, open note ---------- */
 
-  const selectedTypes = useMemo(
-    () => parseTypeFilter(searchParams.get(TYPE_PARAM)),
-    [searchParams],
+  // Every Library filter (docs/library-views.md). The Space filter belongs to
+  // the Library; a space page is already scoped by its route.
+  const urlFilters = useMemo<LibraryFilters>(
+    () =>
+      parseLibraryFilters({
+        type: searchParams.get(TYPE_PARAM),
+        source: searchParams.get(SOURCE_PARAM),
+        space: spaceId ? null : searchParams.get(SPACE_PARAM),
+        tags: searchParams.get(TAGS_PARAM),
+        untagged: searchParams.get(UNTAGGED_PARAM),
+      }),
+    [searchParams, spaceId],
   );
-  const selectedTagIds = useMemo(
-    () => parseList(searchParams.get(TAGS_PARAM)),
-    [searchParams],
-  );
-  const includeUntagged = searchParams.get(UNTAGGED_PARAM) === '1';
+  const selectedTypes = urlFilters.types;
+  const selectedTagIds = urlFilters.tagIds;
+  const includeUntagged = urlFilters.untagged;
+  const selectedSources = urlFilters.sources;
+  const selectedSpaceFilter = urlFilters.spaces;
+  const sortParam = searchParams.get(SORT_PARAM);
+  const sort = useMemo(() => parseSort(sortParam), [sortParam]);
   const openNoteId = searchParams.get(NOTE_PARAM);
   const expandedLinkId = searchParams.get(LINK_PARAM);
   const todayKey = toDayKey(new Date());
   const viewParam = searchParams.get(VIEW_PARAM);
-  const view: StreamView =
-    viewParam === 'list' || viewParam === 'grid' ? viewParam : readStoredView();
+  const view: StreamView = isStreamView(viewParam) ? viewParam : readStoredView();
 
   const updateParams = useCallback(
     (mutate: (params: URLSearchParams) => void, replace = false) => {
@@ -283,11 +355,7 @@ const StreamPage = () => {
 
   const setView = useCallback(
     (next: StreamView) => {
-      try {
-        window.localStorage.setItem(VIEW_STORAGE_KEY, next);
-      } catch {
-        /* storage unavailable — URL still carries it */
-      }
+      storeView(next);
       updateParams((params) => {
         if (next === 'grid') params.delete(VIEW_PARAM);
         else params.set(VIEW_PARAM, next);
@@ -295,6 +363,28 @@ const StreamPage = () => {
     },
     [updateParams],
   );
+
+  const toggleListValue = useCallback(
+    (key: string, values: readonly string[], value: string) =>
+      updateParams((params) =>
+        setListParam(params, key, values.includes(value) ? values.filter((v) => v !== value) : [...values, value]),
+      ),
+    [setListParam, updateParams],
+  );
+
+  const clearParam = useCallback((key: string) => updateParams((params) => params.delete(key)), [updateParams]);
+
+  const setSort = useCallback(
+    (next: LibrarySort) =>
+      updateParams((params) => {
+        const value = formatSort(next);
+        if (value) params.set(SORT_PARAM, value);
+        else params.delete(SORT_PARAM);
+      }, true),
+    [updateParams],
+  );
+
+  const sortBy = useCallback((field: SortField) => setSort(nextSort(sort, field)), [setSort, sort]);
 
   /* ---------- Space resolution ---------- */
 
@@ -414,6 +504,33 @@ const StreamPage = () => {
     [linkMembership, noteMembership, spaceId, taskMembership],
   );
 
+  /** Space ids per item key, for the Space filter, the Table and sorting by space. */
+  const spacesByItem = useMemo(
+    () => spaceIdsByItem({ links: linkMembership, notes: noteMembership, tasks: taskMembership }),
+    [linkMembership, noteMembership, taskMembership],
+  );
+
+  const spaceById = useMemo(() => new Map((profiles ?? []).map((p) => [p.id, p])), [profiles]);
+
+  // Ids from a deleted space or tag (in an old link or saved view) are ignored
+  // once spaces and tags have loaded
+  const activeFilters = useMemo(
+    () =>
+      profiles && tags
+        ? sanitizeFilters(urlFilters, {
+            spaceIds: new Set(profiles.map((p) => p.id)),
+            tagIds: new Set(tags.map((t) => t.id)),
+          })
+        : urlFilters,
+    [profiles, tags, urlFilters],
+  );
+
+  // A capture while the Space filter holds exactly one space is filed there
+  // (the space pages' rule, DESIGN.md: active filters apply to captures)
+  const captureSpaceId =
+    spaceId ??
+    (activeFilters.spaces.length === 1 && activeFilters.spaces[0] !== UNFILED ? activeFilters.spaces[0] : null);
+
   const isPendingMatch = useCallback(
     (item: StreamItem) => {
       if (!pendingAdd || item.type !== pendingAdd.kind) return false;
@@ -455,14 +572,43 @@ const StreamPage = () => {
     [searchQuery],
   );
 
+  const spacesOf = useCallback(
+    (key: string) => spacesByItem.get(key) ?? [],
+    [spacesByItem],
+  );
+
+  /** Source + Space filters (the type and tag rows keep their own counts). */
+  const matchesPlace = useCallback(
+    (item: StreamItem) => {
+      if (selectedSources.length === 0 && activeFilters.spaces.length === 0) return true;
+      const pending = isPendingMatch(item);
+      return matchesLibraryFilters(
+        item,
+        { types: [], tagIds: [], untagged: false, sources: selectedSources, spaces: activeFilters.spaces },
+        {
+          // An optimistic capture counts as filed where it is being filed
+          spacesOf: (key) => (pending ? (pendingAdd?.spaceId ? [pendingAdd.spaceId] : []) : spacesOf(key)),
+        },
+      );
+    },
+    [activeFilters.spaces, isPendingMatch, pendingAdd, selectedSources, spacesOf],
+  );
+
+  const spaceNamesOf = useCallback(
+    (key: string) => spacesOf(key).map((id) => spaceById.get(id)?.name ?? ''),
+    [spaceById, spacesOf],
+  );
+
   const scopedItems = useMemo(() => allItems.filter(inScope), [allItems, inScope]);
 
   const filteredItems = useMemo(
     () =>
-      scopedItems
-        .filter((item) => matchesType(item) && matchesTags(item) && matchesSearch(item))
-        .sort(byUpdatedDesc),
-    [matchesSearch, matchesTags, matchesType, scopedItems],
+      sortItems(
+        scopedItems.filter((item) => matchesType(item) && matchesPlace(item) && matchesTags(item) && matchesSearch(item)),
+        sort,
+        { spaceNamesOf },
+      ),
+    [matchesPlace, matchesSearch, matchesTags, matchesType, scopedItems, sort, spaceNamesOf],
   );
 
   const openItems = useMemo(
@@ -478,16 +624,16 @@ const StreamPage = () => {
   // Type chip counts respect tag + search filters; tag chip counts respect
   // type + search filters — each row describes what the other would show.
   const typeCounts = useMemo(
-    () => countByType(scopedItems.filter((item) => matchesTags(item) && matchesSearch(item))),
-    [matchesSearch, matchesTags, scopedItems],
+    () => countByType(scopedItems.filter((item) => matchesPlace(item) && matchesTags(item) && matchesSearch(item))),
+    [matchesPlace, matchesSearch, matchesTags, scopedItems],
   );
 
   // Unfiltered per-type totals for the current scope drive the chip order
   const typeTotals = useMemo(() => countByType(scopedItems), [scopedItems]);
 
   const itemsForTagRow = useMemo(
-    () => scopedItems.filter((item) => matchesType(item) && matchesSearch(item)),
-    [matchesSearch, matchesType, scopedItems],
+    () => scopedItems.filter((item) => matchesType(item) && matchesPlace(item) && matchesSearch(item)),
+    [matchesPlace, matchesSearch, matchesType, scopedItems],
   );
 
   const tagCounts = useMemo(() => countTags(itemsForTagRow), [itemsForTagRow]);
@@ -648,7 +794,7 @@ const StreamPage = () => {
       kind: 'link',
       rawInput,
       match: url,
-      spaceId: spaceId ?? null,
+      spaceId: captureSpaceId,
       tagIds: captureTagIds,
     };
     setPendingAdd(context);
@@ -665,7 +811,7 @@ const StreamPage = () => {
         },
       },
     );
-  }, [afterCreate, captureTagIds, createLink, inputIsUrl, pendingAdd, rawInput, spaceId]);
+  }, [afterCreate, captureSpaceId, captureTagIds, createLink, inputIsUrl, pendingAdd, rawInput]);
 
   const handleAddNote = useCallback(() => {
     if (!rawInput || pendingAdd !== null) return;
@@ -673,7 +819,7 @@ const StreamPage = () => {
       kind: 'note',
       rawInput,
       match: rawInput,
-      spaceId: spaceId ?? null,
+      spaceId: captureSpaceId,
       tagIds: captureTagIds,
     };
     setPendingAdd(context);
@@ -693,7 +839,7 @@ const StreamPage = () => {
         },
       },
     );
-  }, [afterCreate, captureTagIds, createNote, openNote, pendingAdd, rawInput, spaceId]);
+  }, [afterCreate, captureSpaceId, captureTagIds, createNote, openNote, pendingAdd, rawInput]);
 
   const handleAddTask = useCallback(() => {
     if (!rawInput || pendingAdd !== null) return;
@@ -701,7 +847,7 @@ const StreamPage = () => {
       kind: 'task',
       rawInput,
       match: rawInput,
-      spaceId: spaceId ?? null,
+      spaceId: captureSpaceId,
       tagIds: captureTagIds,
     };
     setPendingAdd(context);
@@ -718,7 +864,7 @@ const StreamPage = () => {
         },
       },
     );
-  }, [afterCreate, captureTagIds, createTask, pendingAdd, rawInput, spaceId]);
+  }, [afterCreate, captureSpaceId, captureTagIds, createTask, pendingAdd, rawInput]);
 
   const linkAlreadyInStream = useMemo(() => {
     if (!inputIsUrl) return false;
@@ -1341,11 +1487,313 @@ const StreamPage = () => {
     if (openNoteId && allNotes && !openNoteItem) closeNote();
   }, [allNotes, closeNote, openNoteId, openNoteItem]);
 
+  /* ---------- Saved views (15A tabs, Library only) ---------- */
+
+  const isLibrary = !spaceId;
+  const { data: savedViewRows } = useSavedViews();
+  const createSavedView = useCreateSavedView();
+  const updateSavedView = useUpdateSavedView();
+  const deleteSavedView = useDeleteSavedView();
+  const [hiddenViewIds, setHiddenViewIds] = useState<Set<string>>(() => new Set());
+  const pendingViewDeletes = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; commit: () => void }>());
+
+  useEffect(() => {
+    const pending = pendingViewDeletes.current;
+    return () => {
+      pending.forEach(({ timer, commit }) => {
+        clearTimeout(timer);
+        commit();
+      });
+      pending.clear();
+    };
+  }, []);
+
+  const libraryViews = useMemo<LibraryView[]>(
+    () => [
+      ...BUILT_IN_VIEWS,
+      ...savedViewsToTabs((savedViewRows ?? []).filter((row) => !hiddenViewIds.has(row.id))),
+    ],
+    [hiddenViewIds, savedViewRows],
+  );
+
+  const activeView = useMemo(() => findActiveView(activeFilters, libraryViews), [activeFilters, libraryViews]);
+
+  /** A view's link: its filters, plus its sort and layout when it carries them. */
+  const viewHref = useCallback(
+    (target: LibraryView) => {
+      const params = new URLSearchParams();
+      const values = formatLibraryFilters(target.definition.filters);
+      (Object.keys(FILTER_PARAM_NAMES) as (keyof typeof FILTER_PARAM_NAMES)[]).forEach((key) => {
+        const value = values[key];
+        if (value) params.set(FILTER_PARAM_NAMES[key], value);
+      });
+      const nextSortValue = formatSort(target.definition.sort ?? sort);
+      if (nextSortValue) params.set(SORT_PARAM, nextSortValue);
+      const layout = target.definition.layout ?? (viewParam && isStreamView(viewParam) ? viewParam : null);
+      if (layout) params.set(VIEW_PARAM, layout);
+      const query = params.toString();
+      return `${LIBRARY_PATH}${query ? `?${query}` : ''}`;
+    },
+    [sort, viewParam],
+  );
+
+  const viewTabs = useMemo<ViewTab[]>(() => {
+    if (!isLibrary) return [];
+    const context = { spacesOf };
+    const known = {
+      spaceIds: new Set((profiles ?? []).map((p) => p.id)),
+      tagIds: new Set((tags ?? []).map((t) => t.id)),
+    };
+    return libraryViews
+      .map((candidate) => ({
+        view: candidate,
+        count: countMatching(scopedItems, sanitizeFilters(candidate.definition.filters, known), context),
+        href: viewHref(candidate),
+      }))
+      .filter((tab) => !isHideableWhenEmpty(tab.view) || tab.count > 0 || tab.view.id === activeView?.id);
+  }, [activeView, isLibrary, libraryViews, profiles, scopedItems, spacesOf, tags, viewHref]);
+
+  // Selection survives switching views, like any other filter change
+  const handleOpenView = useCallback((target: LibraryView) => {
+    if (target.definition.layout) storeView(target.definition.layout);
+  }, []);
+
+  const suggestedViewName = useMemo(
+    () =>
+      uniqueViewName(
+        suggestViewName(activeFilters, {
+          space: (id) => spaceById.get(id)?.name,
+          tag: (id) => (tags ?? []).find((t) => t.id === id)?.name,
+        }),
+        libraryViews.map((v) => v.name),
+      ),
+    [activeFilters, libraryViews, spaceById, tags],
+  );
+
+  const handleSaveView = useCallback(
+    async (name: string) => {
+      try {
+        await createSavedView.mutateAsync({
+          name,
+          definition: serializeViewDefinition({ filters: activeFilters, sort, layout: view }),
+          position: nextViewPosition(savedViewRows ?? []),
+        });
+        cue('confirm');
+        flash(`Saved view “${name}”.`);
+      } catch (error) {
+        console.error('Failed to save view:', error);
+        cue('error');
+        flash('Couldn’t save that view.');
+        throw error;
+      }
+    },
+    [activeFilters, createSavedView, flash, savedViewRows, sort, view],
+  );
+
+  const handleRenameView = useCallback(
+    (target: LibraryView, name: string) => {
+      updateSavedView.mutate(
+        { id: target.id, updates: { name } },
+        {
+          onError: () => {
+            cue('error');
+            flash('Couldn’t rename that view.');
+          },
+        },
+      );
+    },
+    [flash, updateSavedView],
+  );
+
+  const canUpdateView = Boolean(activeView && !activeView.builtIn && viewDiffers(activeView, { sort, layout: view }));
+
+  const handleUpdateView = useCallback(
+    (target: LibraryView) => {
+      cue('confirm');
+      updateSavedView.mutate(
+        {
+          id: target.id,
+          updates: { definition: serializeViewDefinition({ filters: target.definition.filters, sort, layout: view }) },
+        },
+        {
+          onSuccess: () => flash(`Saved this layout and sort to “${target.name}”.`),
+          onError: () => {
+            cue('error');
+            flash('Couldn’t update that view.');
+          },
+        },
+      );
+    },
+    [flash, sort, updateSavedView, view],
+  );
+
+  // Gone at once; the row is deleted after the Undo window
+  const handleDeleteView = useCallback(
+    (target: LibraryView) => {
+      cue('dismiss');
+      const unhide = () =>
+        setHiddenViewIds((prev) => {
+          const next = new Set(prev);
+          next.delete(target.id);
+          return next;
+        });
+      setHiddenViewIds((prev) => new Set(prev).add(target.id));
+      const commit = () => deleteSavedView.mutate(target.id, { onSettled: unhide });
+      const timer = setTimeout(() => {
+        pendingViewDeletes.current.delete(target.id);
+        commit();
+      }, UNDO_WINDOW_MS);
+      pendingViewDeletes.current.set(target.id, { timer, commit });
+      flash(`Deleted view “${target.name}”.`, {
+        label: 'Undo',
+        onClick: () => {
+          const entry = pendingViewDeletes.current.get(target.id);
+          if (!entry) return;
+          clearTimeout(entry.timer);
+          pendingViewDeletes.current.delete(target.id);
+          unhide();
+          cue('confirm');
+          dismissToast();
+        },
+      });
+    },
+    [deleteSavedView, dismissToast, flash],
+  );
+
+  /* ---------- Source, Space and Sort menus ---------- */
+
+  const sourceEntries = useMemo<MenuEntry[]>(
+    () => [
+      ...SOURCE_KEYS.map((key) => ({
+        key,
+        label: sourceKeyLabel(key),
+        role: 'checkbox' as const,
+        checked: selectedSources.includes(key),
+        onSelect: () => toggleListValue(SOURCE_PARAM, selectedSources, key),
+      })),
+      ...(selectedSources.length
+        ? [
+            { key: 'divider', divider: true as const },
+            { key: 'clear', label: 'Any source', onSelect: () => clearParam(SOURCE_PARAM) },
+          ]
+        : []),
+    ],
+    [clearParam, selectedSources, toggleListValue],
+  );
+
+  const spaceEntries = useMemo<MenuEntry[]>(
+    () => [
+      {
+        key: UNFILED,
+        label: 'Unfiled',
+        role: 'checkbox' as const,
+        checked: selectedSpaceFilter.includes(UNFILED),
+        onSelect: () => toggleListValue(SPACE_PARAM, selectedSpaceFilter, UNFILED),
+      },
+      ...((profiles ?? []).length ? [{ key: 'divider-spaces', divider: true as const }] : []),
+      ...(profiles ?? []).map((p) => ({
+        key: p.id,
+        label: p.name,
+        role: 'checkbox' as const,
+        checked: selectedSpaceFilter.includes(p.id),
+        icon: <span className="memex-space-dot" style={{ background: spaceColors.get(p.id) }} aria-hidden="true" />,
+        onSelect: () => toggleListValue(SPACE_PARAM, selectedSpaceFilter, p.id),
+      })),
+      ...(selectedSpaceFilter.length
+        ? [
+            { key: 'divider-clear', divider: true as const },
+            { key: 'clear', label: 'Any space', onSelect: () => clearParam(SPACE_PARAM) },
+          ]
+        : []),
+    ],
+    [clearParam, profiles, selectedSpaceFilter, spaceColors, toggleListValue],
+  );
+
+  const sortEntries = useMemo<MenuEntry[]>(
+    () =>
+      SORT_OPTIONS.map((option) => ({
+        key: `${option.field}:${option.direction}`,
+        label: sortLabel(option),
+        role: 'radio' as const,
+        checked: sameSort(option, sort),
+        onSelect: () => setSort(option),
+      })),
+    [setSort, sort],
+  );
+
+  const sourceSummary =
+    selectedSources.length === 0
+      ? 'Source'
+      : selectedSources.length === 1
+        ? `From ${sourceKeyLabel(selectedSources[0])}`
+        : `Source · ${selectedSources.length}`;
+  const activeSpaceFilter = activeFilters.spaces;
+  const spaceSummary =
+    activeSpaceFilter.length === 0
+      ? 'Space'
+      : activeSpaceFilter.length === 1
+        ? activeSpaceFilter[0] === UNFILED
+          ? 'Unfiled'
+          : (spaceById.get(activeSpaceFilter[0])?.name ?? 'Space')
+        : `Space · ${activeSpaceFilter.length}`;
+  // The sort on screen when it isn't one of the menu's (a column header's)
+  const sortSummary = sortLabel(sort);
+
+  const filterMenus = (
+    <>
+      <span className="memex-filter-divider" aria-hidden="true" />
+      <MenuButton
+        triggerClassName={`bookmark-tag-chip memex-filter-menu${selectedSources.length ? ' is-active' : ''}`}
+        triggerLabel={selectedSources.length ? `Source: ${selectedSources.map(sourceKeyLabel).join(', ')}` : 'Filter by source'}
+        menuLabel="Source"
+        entries={sourceEntries}
+      >
+        <span className="bookmark-tag-chip-label">{sourceSummary}</span>
+        <ChevronDown aria-hidden="true" className="memex-filter-menu-caret" />
+      </MenuButton>
+      {isLibrary && (
+        <MenuButton
+          triggerClassName={`bookmark-tag-chip memex-filter-menu${activeSpaceFilter.length ? ' is-active' : ''}`}
+          triggerLabel={activeSpaceFilter.length ? `Space: ${spaceSummary}` : 'Filter by space'}
+          menuLabel="Space"
+          entries={spaceEntries}
+          menuClassName="memex-filter-menu-list"
+        >
+          {activeSpaceFilter.length === 1 && activeSpaceFilter[0] !== UNFILED && (
+            <span
+              className="memex-space-dot"
+              style={{ background: spaceColors.get(activeSpaceFilter[0]) }}
+              aria-hidden="true"
+            />
+          )}
+          <span className="bookmark-tag-chip-label">{spaceSummary}</span>
+          <ChevronDown aria-hidden="true" className="memex-filter-menu-caret" />
+        </MenuButton>
+      )}
+    </>
+  );
+
+  const sortMenu = (
+    <MenuButton
+      triggerClassName="bookmark-tag-chip memex-filter-menu memex-sort-menu"
+      triggerLabel={`Sort: ${sortSummary}`}
+      title="Sort"
+      menuLabel="Sort"
+      entries={sortEntries}
+      align="end"
+    >
+      <ArrowUpDown aria-hidden="true" className="memex-filter-menu-icon" />
+      <span className="bookmark-tag-chip-label memex-sort-menu-label">{sortSummary}</span>
+    </MenuButton>
+  );
+
   /* ---------- Copy ---------- */
 
   const hasActiveFilters =
     rawInput.length > 0 ||
     selectedTypes.length > 0 ||
+    selectedSources.length > 0 ||
+    activeSpaceFilter.length > 0 ||
     selectedTagIds.length > 0 ||
     includeUntagged;
 
@@ -1585,7 +2033,66 @@ const StreamPage = () => {
     );
   };
 
-  const listGroups = useMemo(() => groupByTime(openItems, (item) => item.updatedAt), [openItems]);
+  // Date sorts keep the Today / This week… groups (oldest first flips them);
+  // any other sort is one list under its own name
+  const listGroups = useMemo(() => {
+    const groupDate = groupDateFor(sort);
+    if (!groupDate) return openItems.length ? [{ label: sortLabel(sort), items: openItems }] : [];
+    const groups = groupByTime(openItems, groupDate);
+    return sort.direction === 'asc' ? groups.reverse() : groups;
+  }, [openItems, sort]);
+
+  /* ---------- Table ---------- */
+
+  const columns = useMemo(() => tableColumns({ showTags: SHOW_TAGS_UI }), []);
+  const selectedKeySet = useMemo(() => new Set(selectedItemKeys), [selectedItemKeys]);
+
+  // Inside a space, its own chip would sit on every row: show the others
+  const tableSpacesOf = useCallback(
+    (key: string): TableSpace[] =>
+      spacesOf(key)
+        .filter((id) => id !== spaceId)
+        .map((id) => spaceById.get(id))
+        .filter((p): p is NonNullable<typeof p> => Boolean(p))
+        .map((p) => ({ id: p.id, name: p.name, color: spaceColors.get(p.id) })),
+    [spaceById, spaceColors, spaceId, spacesOf],
+  );
+
+  const handleTableToggleSelect = useCallback(
+    (item: StreamItem) => {
+      if (isPendingItem(item)) return;
+      if (!useAppStore.getState().selectionMode) {
+        setExpandedLinkId(null);
+        setSelectionMode(true);
+      }
+      selectionAnchorRef.current = item.key;
+      toggleItemSelection(item.key);
+    },
+    [setExpandedLinkId, setSelectionMode, toggleItemSelection],
+  );
+
+  const handleTableSelectAll = useCallback(
+    (keys: string[]) => {
+      setExpandedLinkId(null);
+      setSelectionMode(true);
+      setItemSelection(Array.from(new Set([...useAppStore.getState().selectedItemKeys, ...keys])));
+    },
+    [setExpandedLinkId, setItemSelection, setSelectionMode],
+  );
+
+  const handleTableClearSelection = useCallback(() => {
+    const visible = new Set(filteredItems.map((item) => item.key));
+    setItemSelection(useAppStore.getState().selectedItemKeys.filter((key) => !visible.has(key)));
+  }, [filteredItems, setItemSelection]);
+
+  const handleTableDelete = useCallback(
+    (item: StreamItem) => {
+      if (item.type === 'link') handleDeleteLink(item.link);
+      else if (item.type === 'note') handleDeleteNote(item.id);
+      else handleDeleteTask(item.id);
+    },
+    [handleDeleteLink, handleDeleteNote, handleDeleteTask],
+  );
 
   const viewToggle = (
     <div className="memex-view-toggle" role="group" aria-label="Layout">
@@ -1608,6 +2115,16 @@ const StreamPage = () => {
         title="List"
       >
         <Rows3 aria-hidden="true" />
+      </button>
+      <button
+        type="button"
+        className={view === 'table' ? 'is-active' : ''}
+        aria-pressed={view === 'table'}
+        onClick={() => setView('table')}
+        aria-label="Table view"
+        title="Table"
+      >
+        <Table2 aria-hidden="true" />
       </button>
     </div>
   );
@@ -1704,6 +2221,21 @@ const StreamPage = () => {
                     />
                   </div>
 
+                  {isLibrary && (
+                    <LibraryViewTabs
+                      tabs={viewTabs}
+                      activeId={activeView?.id ?? null}
+                      onOpen={handleOpenView}
+                      canSave={!activeView}
+                      suggestedName={suggestedViewName}
+                      onSave={handleSaveView}
+                      canUpdate={canUpdateView}
+                      onUpdate={handleUpdateView}
+                      onRename={handleRenameView}
+                      onDelete={handleDeleteView}
+                    />
+                  )}
+
                   <StreamFilterBar
                     selectedTypes={selectedTypes}
                     typeCounts={typeCounts}
@@ -1717,8 +2249,10 @@ const StreamPage = () => {
                     untaggedCount={untaggedCount}
                     onToggleUntagged={toggleUntagged}
                     bulkAssignMode={bulkAssignActive}
+                    afterTypes={filterMenus}
                     trailing={
                       <>
+                        {sortMenu}
                         <button
                           type="button"
                           className={`bookmark-tag-chip memex-stream-select${
@@ -1741,6 +2275,28 @@ const StreamPage = () => {
                     <div key={view} className={`memex-grid-view memex-stream-body is-${view}`}>
                       {nothingToShow ? (
                         <EmptyState title={emptyTitle} subtitle={emptySubtitle} />
+                      ) : view === 'table' ? (
+                        <LibraryTable
+                          items={filteredItems}
+                          columns={columns}
+                          sort={sort}
+                          onSort={sortBy}
+                          spacesOf={tableSpacesOf}
+                          selectionMode={selectionMode}
+                          selectedKeys={selectedKeySet}
+                          onToggleSelect={handleTableToggleSelect}
+                          onSelectAll={handleTableSelectAll}
+                          onClearSelection={handleTableClearSelection}
+                          expandedLinkId={expandedLinkId}
+                          renderExpanded={(link) => renderExpanded(link, 'row')}
+                          onOpenLinkDetails={handleOpenLinkDetails}
+                          onOpenUrl={handleOpenLink}
+                          onOpenNote={handleOpenNote}
+                          onToggleTaskDone={handleToggleTaskDone}
+                          onDelete={handleTableDelete}
+                          brokenPreviews={brokenPreviews}
+                          onPreviewError={markPreviewBroken}
+                        />
                       ) : view === 'grid' ? (
                         <>
                           {showTasks && (openTasks.length > 0 || doneTaskList.length > 0) && (

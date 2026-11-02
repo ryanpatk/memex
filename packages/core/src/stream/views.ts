@@ -284,9 +284,13 @@ export const suggestViewName = (
 
   let subject = types.length ? joinAnd(types) : '';
   if (unfiled && !spaceNames.length) subject = subject ? `Unfiled ${subject.toLowerCase()}` : 'Unfiled';
+  const places = unfiled ? [...spaceNames, 'Unfiled'] : spaceNames;
+  // Spaces alone read as their names (“Kyoto trip”), not “In Kyoto trip”
+  const spacesAsSubject = !subject && !sources.length && spaceNames.length > 0;
+  if (spacesAsSubject) subject = joinAnd(places);
   const parts: string[] = [];
   if (sources.length) parts.push(`from ${joinAnd(sources)}`);
-  if (spaceNames.length) parts.push(`in ${joinAnd(unfiled ? [...spaceNames, 'Unfiled'] : spaceNames)}`);
+  if (spaceNames.length && !spacesAsSubject) parts.push(`in ${joinAnd(places)}`);
   if (tagNames.length) parts.push(`tagged ${joinAnd(tagNames)}`);
   if (filters.untagged) parts.push(tagNames.length ? 'or untagged' : 'untagged');
 

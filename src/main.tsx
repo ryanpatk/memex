@@ -7,6 +7,7 @@ import '@fontsource/nunito/latin-900.css';
 import './index.css';
 import './styles/components.css';
 import './styles/stream.css';
+import './styles/library.css';
 import router from './router';
 import { RouterProvider } from 'react-router-dom';
 import { initCanvasColor } from './utils/canvasColor';

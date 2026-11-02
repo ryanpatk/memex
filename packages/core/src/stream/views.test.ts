@@ -254,7 +254,9 @@ describe('view names', () => {
     expect(suggestViewName(filters({ spaces: ['unfiled'] }))).toBe('Unfiled');
     expect(suggestViewName(filters({ types: ['note'], spaces: ['unfiled'] }))).toBe('Unfiled notes');
     expect(suggestViewName(filters({ types: ['task'], spaces: ['s1'] }), names)).toBe('Tasks in Home reno');
-    expect(suggestViewName(filters({ spaces: ['s1', 's2'] }), names)).toBe('In Home reno & Job search');
+    expect(suggestViewName(filters({ spaces: ['s1', 's2'] }), names)).toBe('Home reno & Job search');
+    expect(suggestViewName(filters({ spaces: ['s1', 'unfiled'] }), names)).toBe('Home reno & Unfiled');
+    expect(suggestViewName(filters({ sources: ['pinterest'], spaces: ['s1'] }), names)).toBe('From Pinterest in Home reno');
     expect(suggestViewName(filters({ types: ['note', 'link'] }))).toBe('Notes & Links');
     expect(suggestViewName(filters({ tagIds: ['t1'] }), names)).toBe('Tagged design');
     expect(suggestViewName(filters({ untagged: true }))).toBe('Untagged');
