@@ -50,6 +50,7 @@ export const createNotesRepository = (client: MemexSupabaseClient): NotesReposit
         .from('notes')
         .insert({
           ...(noteData.id ? { id: noteData.id } : {}),
+          ...(noteData.created_at ? { created_at: noteData.created_at } : {}),
           title: noteData.title,
           body: noteData.body ?? '',
           order_index: noteData.order_index ?? 0,

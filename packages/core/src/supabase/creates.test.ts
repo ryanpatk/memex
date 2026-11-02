@@ -78,6 +78,22 @@ describe('Supabase creates with a client id', () => {
     expect(tasks.inserted[0]).toMatchObject({ id: ID, user_id: 'u1' })
   })
 
+  it('keeps the time a save was written, when given', async () => {
+    const at = '2026-11-01T08:15:00.000Z'
+    const jots = stubClient({ insert: { data: { id: ID }, error: null } })
+    await createJotsRepository(jots.client).create({ id: ID, profile_id: null, body: 'On the train', created_at: at })
+    expect(jots.inserted[0]).toMatchObject({ created_at: at })
+    const notes = stubClient({ insert: { data: { id: ID }, error: null } })
+    await createNotesRepository(notes.client).create({ title: 'N', created_at: at })
+    expect(notes.inserted[0]).toMatchObject({ created_at: at })
+    const tasks = stubClient({ insert: { data: { id: ID }, error: null } })
+    await createTasksRepository(tasks.client).create({ title: 'T', created_at: at })
+    expect(tasks.inserted[0]).toMatchObject({ created_at: at })
+    const plain = stubClient({ insert: { data: { id: ID }, error: null } })
+    await createJotsRepository(plain.client).create({ profile_id: null, body: 'now' })
+    expect(plain.inserted[0]).not.toHaveProperty('created_at')
+  })
+
   it('offline, the auth error comes through instead of “not authenticated”', async () => {
     const offline = { name: 'AuthRetryableFetchError', message: 'Network request failed', status: 0 }
     const { client } = stubClient({ insert: { data: null, error: null }, user: null, authError: offline })

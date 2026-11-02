@@ -37,6 +37,7 @@ export const createJotsRepository = (client: MemexSupabaseClient): JotsRepositor
         .from('self_messages')
         .insert({
           ...(input.id ? { id: input.id } : {}),
+          ...(input.created_at ? { created_at: input.created_at } : {}),
           user_id: user.id,
           profile_id: input.profile_id,
           body: input.body,

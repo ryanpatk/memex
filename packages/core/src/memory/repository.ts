@@ -210,7 +210,7 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
           title: data.title,
           body: data.body ?? '',
           order_index: 0,
-          created_at: now(),
+          created_at: data.created_at ?? now(),
           updated_at: now(),
         };
         db.notes.push(note);
@@ -242,7 +242,7 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
           due_date: data.due_date,
           is_done: false,
           order_index: Math.min(0, ...db.tasks.map((t) => t.order_index)) - 1,
-          created_at: now(),
+          created_at: data.created_at ?? now(),
           updated_at: now(),
         };
         db.tasks.push(task);
@@ -314,7 +314,7 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
           user_id: userId,
           profile_id: data.profile_id,
           body: data.body,
-          created_at: now(),
+          created_at: data.created_at ?? now(),
           updated_at: now(),
         };
         db.jots.push(jot);
