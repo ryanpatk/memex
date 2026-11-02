@@ -1,5 +1,6 @@
 # Typecheck, lint, unit tests and production build on every push and PR,
-# plus memex-api's typecheck and the extension's typecheck + build.
+# plus memex-api's typecheck and the extension's typecheck + build (job:
+# check), and the Expo app in apps/mobile (job: mobile).
 # Runs alongside secret-scan.yml (gitleaks). Local equivalent:
 #   npm run typecheck && npm run lint && npm test && npm run build
 #   (cd api && npx tsc --noEmit) && (cd extension && npm run typecheck && npm run build)
@@ -58,3 +59,37 @@ jobs:
       - name: Extension typecheck + build
         working-directory: extension
         run: npm ci && npm run typecheck && npm run build
+
+  mobile:
+    # The Expo app (apps/mobile) is its own npm project with its own lockfile,
+    # so this job runs beside the web job without touching its install.
+    # Local equivalent: cd apps/mobile && npm run check && npm run check:release
+    name: Mobile (typecheck, lint, test, release bundle)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Release bundle (Metro; fixture code must be stripped)
+        run: npm run check:release
