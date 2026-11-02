@@ -27,6 +27,7 @@ import type {
   UpdateLinkData,
   UpdateNoteData,
   UpdateProfileData,
+  UpdateSelfMessageData,
   UpdateProjectData,
   UpdateSavedViewData,
   UpdateTagData,
@@ -166,6 +167,12 @@ export interface JotsRepository {
   /** Every jot, oldest first. Scope (Home or a space) is applied by the caller. */
   getAll(): Promise<SelfMessage[]>;
   create(data: CreateSelfMessageData): Promise<SelfMessage>;
+  /**
+   * Edit a jot's text or move it: `profile_id` set to a space files it there,
+   * null takes it out to the Journal. Fields left out stay as they are.
+   * Resolves to the updated row.
+   */
+  update(id: string, updates: UpdateSelfMessageData): Promise<SelfMessage>;
   delete(id: string): Promise<void>;
 }
 

@@ -239,6 +239,12 @@ export interface CreateSelfMessageData {
   profile_id: string | null
 }
 
+/** What can change on a jot: its text (edit in place) and where it lives (null = the Journal, unfiled). */
+export interface UpdateSelfMessageData {
+  body?: string
+  profile_id?: string | null
+}
+
 export interface ProfileLink {
   id: string
   profile_id: string

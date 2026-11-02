@@ -21,6 +21,7 @@ export * from './sources';
 export * from './journal/feed';
 export * from './journal/filer';
 export * from './journal/space';
+export * from './journal/jots';
 export * from './tasks/tasks';
 export * from './tokens/canvasColors';
 export * from './tokens/color';

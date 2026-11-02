@@ -39,6 +39,20 @@ describe('memory repository', () => {
     expect((await repo.tasks.getAll()).find((t) => t.id === dated.id)?.due_date).toBeUndefined();
   });
 
+  it('edits a jot and moves it between spaces', async () => {
+    const repo = createMemoryRepository(createDemoData());
+    const [space] = await repo.spaces.getAll();
+    const created = await repo.jots.create({ body: '[test] jot', profile_id: null });
+    const edited = await repo.jots.update(created.id, { body: '[test] jot, edited' });
+    expect(edited).toMatchObject({ body: '[test] jot, edited', profile_id: null });
+    const moved = await repo.jots.update(created.id, { profile_id: space.id });
+    expect(moved).toMatchObject({ body: '[test] jot, edited', profile_id: space.id });
+    const out = await repo.jots.update(created.id, { profile_id: null });
+    expect(out.profile_id).toBeNull();
+    expect((await repo.jots.getAll()).find((j) => j.id === created.id)).toMatchObject({ body: '[test] jot, edited', profile_id: null });
+    await expect(repo.jots.update('missing', { body: 'x' })).rejects.toThrow();
+  });
+
   it('returns copies, never the store itself', async () => {
     const repo = createMemoryRepository(createDemoData());
     const [first] = await repo.links.getAll();

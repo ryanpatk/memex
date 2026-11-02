@@ -314,6 +314,14 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
         db.jots.push(jot);
         return wait(jot);
       },
+      update: (id, updates) => {
+        const jot = db.jots.find((row) => row.id === id);
+        if (!jot) return Promise.reject(new Error(`No jot ${id}`));
+        if (updates.body !== undefined) jot.body = updates.body;
+        if (updates.profile_id !== undefined) jot.profile_id = updates.profile_id;
+        jot.updated_at = now();
+        return wait(jot);
+      },
       delete: (id) => {
         remove(db.jots, id);
         return wait(undefined);

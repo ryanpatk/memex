@@ -2,7 +2,7 @@
 // moved here unchanged from src/hooks/*.ts on 2026-11-01.
 import { getErrorMessage } from '../errors'
 import type { JotsRepository } from '../repository'
-import type { CreateSelfMessageData, SelfMessage } from '../types'
+import type { CreateSelfMessageData, SelfMessage, UpdateSelfMessageData } from '../types'
 import type { MemexSupabaseClient } from './client'
 
 
@@ -49,6 +49,22 @@ export const createJotsRepository = (client: MemexSupabaseClient): JotsRepositor
       return data
     },
 
+    update: async (id: string, updates: UpdateSelfMessageData): Promise<SelfMessage> => {
+      // Only the two fields a jot lets you change; undefined ones are left alone
+      const patch: UpdateSelfMessageData = {}
+      if (updates.body !== undefined) patch.body = updates.body
+      if (updates.profile_id !== undefined) patch.profile_id = updates.profile_id
+      const { data, error } = await client
+        .from('self_messages')
+        .update(patch)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    },
+
     delete: async (id: string): Promise<void> => {
       const { error } = await client.from('self_messages').delete().eq('id', id)
       if (error) throw error
@@ -58,6 +74,7 @@ export const createJotsRepository = (client: MemexSupabaseClient): JotsRepositor
   return {
     getAll: selfMessagesApi.getAll,
     create: selfMessagesApi.create,
+    update: selfMessagesApi.update,
     delete: selfMessagesApi.delete,
   }
 }

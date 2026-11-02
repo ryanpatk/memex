@@ -17,6 +17,7 @@ The logic every memex client shares: the web app today, the Expo app (Phase 6) a
 | `composer.ts` | `parseComposer` (jot / link / `[] ` task / ⌘↵ note, `@Space` filing), `extractMentions`, `mentionQuery` |
 | `journal/feed.ts` | `buildEntries`, `toParts` (day separators, runs of platform saves), `dayLabel`, `entriesInSpace`, `entryText`, `isVisualLink`, `toJournalSpaces`; types `Entry`, `Part`, `Run`, `DaySep`, `JournalSpace` |
 | `journal/filer.ts` | `createFiler` (the filing suggester, decision 13), `inboxOf`; types `Filer`, `Suggestion` |
+| `journal/jots.ts` | Jots in the desktop Journal (17B): `groupJots` / `continuesThought` (quick jots stack into one thought: within `JOT_GROUP_MS`, same place, same author), `jotEdit` (edit-in-place rules), `searchJots` / `jotSnippet` (⌘K), `planJotMoves` / `undoMoves` (move a jot between spaces or out of one); types `FeedRow`, `JotEdit`, `JotMove` |
 | `tasks/tasks.ts` | The Tasks view (`docs/tasks-view.md`): `taskSpaceMap`, `filterTasksBySpace` (incl. `UNFILED_TASKS`), `countOpenTasksBySpace`, `splitTasks`, `compareOpenTasks` / `compareDoneTasks`, `groupTasks` (by space or due date), `dueBucket`, `dueDayKey`, `daysUntilDue`, `isOverdue`, `dueLabel`, `dueShortcuts`, `parseTaskGrouping`, `parseTaskInput` (the add field, on the composer's `@Space` syntax); types `TaskGroup`, `TaskGrouping`, `DueBucket` |
 | `stream/items.ts` | `StreamItem`, `buildStreamItems`, `linkToItem` / `noteToItem` / `taskToItem`, `mergeTags`, `itemKey` / `parseItemKey`, `itemMatchesSearch`, `byUpdatedDesc`, `isPendingItem` |
 | `stream/filters.ts` | The Library's filters: `parseList`, `parseTypeFilter`, `matchesTypeFilter`, `matchesTagFilter`, `countByType`, `countTags`, `countUntagged`, `orderTagsForRow`, `itemKeysInSpace`, `pinnedLinks`, `isDoneTask` |
@@ -85,7 +86,7 @@ interface Repository {
   tasks: TasksRepository;            // getAll, create, update, delete, setTags
   tags: TagsRepository;              // getAll, getById, create, update, delete, getUsageCount
   spaces: SpacesRepository;          // getAll, getById, create, update, delete   (table: profiles)
-  jots: JotsRepository;              // getAll, create, delete                    (table: self_messages)
+  jots: JotsRepository;              // getAll, create, update, delete            (table: self_messages)
   spaceLinks: SpaceLinksRepository;  // listMembership, getBySpace, addLinks, removeLink, setSuperFavorite
   spaceNotes: SpaceNotesRepository;  // listMembership, addNotes, removeNote
   spaceTasks: SpaceTasksRepository;  // listMembership, addTasks, removeTask
