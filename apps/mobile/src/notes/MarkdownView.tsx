@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, Text as RNText, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { Check } from 'lucide-react-native';
 import { alpha } from '../theme/palette';
-import { useTheme } from '../theme/theme';
+import { FONTS, useTheme } from '../theme/theme';
 import { Text } from '../ui/Text';
 import { parseMarkdown, safeHref, type Block, type Span } from './markdown';
 
@@ -15,6 +15,7 @@ import { parseMarkdown, safeHref, type Block, type Span } from './markdown';
 
 const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
+/** Inline runs inside a block's Text: plain RN Text, so size, line height and colour come from the block. */
 const Spans = ({ spans }: { spans: Span[] }) => {
   const { palette } = useTheme();
   return (
@@ -22,19 +23,19 @@ const Spans = ({ spans }: { spans: Span[] }) => {
       {spans.map((span, i) => {
         const href = safeHref(span.href);
         return (
-          <Text
+          <RNText
             key={i}
-            weight={span.bold ? 'heavy' : undefined}
             accessibilityRole={href ? 'link' : undefined}
             onPress={href ? () => void WebBrowser.openBrowserAsync(href, { controlsColor: palette.accentText }) : undefined}
             style={[
+              span.bold && { fontFamily: FONTS.heavy },
               span.italic && styles.italic,
               span.code && { fontFamily: MONO, fontSize: 14, backgroundColor: palette.well },
               span.href && { color: palette.accentText, textDecorationLine: 'underline', textDecorationColor: alpha(palette.accentText, 0.4) },
             ]}
           >
             {span.text}
-          </Text>
+          </RNText>
         );
       })}
     </>

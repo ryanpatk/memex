@@ -141,7 +141,28 @@ export const buildDemoData = (now = new Date()): DemoData => {
   });
   const notes = [
     note('n1', t(3, 13, 5), 'Kyoto — first draft itinerary', '## Day 1\nArashiyama at dawn, bamboo before the crowds. Tenryū-ji garden.\n\n## Day 2\nPhilosopher’s Path, Ginkaku-ji, tea in Okazaki.'),
-    note('n2', t(0, 9, 30), 'Portfolio — memex case study', 'Problem: scattered capture. Approach: one Journal, files you own. Show the loop: capture → display → analysis.'),
+    note(
+      'n2',
+      t(0, 9, 30),
+      'Portfolio — memex case study',
+      [
+        'Problem: **scattered capture**. Approach: one Journal, *files you own*.',
+        '',
+        '## The loop',
+        '1. Capture: jots, links, saves from X and Pinterest',
+        '2. Display: the Journal, the Library, space boards',
+        '3. Analysis: agents read it over MCP',
+        '',
+        '## Screens to show',
+        '- [x] Journal and the composer',
+        '- [x] Library masonry',
+        '- [ ] Spaces, Inbox and Tasks on the phone',
+        '',
+        '> Unfiled is a finished state.',
+        '',
+        'References: [Calm Technology](https://calmtech.com/) and `files over apps`.',
+      ].join('\n'),
+    ),
   ];
 
   /** A due date `days` from today, as the YYYY-MM-DD day tasks store. */
