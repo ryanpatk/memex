@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import LibraryTable, { type TableSpace } from '../components/library/LibraryTable';
 import LibraryViewTabs, { type ViewTab } from '../components/library/LibraryViewTabs';
 import MenuButton, { type MenuEntry } from '../components/library/MenuButton';
@@ -18,7 +18,6 @@ import SelectionBar from '../components/stream/SelectionBar';
 import JournalPanel from '../components/stream/JournalPanel';
 import NoteEditor from '../components/NoteEditor';
 import NoteGridCard from '../components/NoteGridCard';
-import SpaceDetailsModal from '../components/SpaceDetailsModal';
 import StreamFilterBar from '../components/StreamFilterBar';
 import { EmptyState, FeedbackToast, FrostedStack } from '../components/ui';
 import {
@@ -83,7 +82,6 @@ import {
   countTags,
   countUntagged,
   isDoneTask,
-  itemKeysInSpace,
   matchesTagFilter,
   matchesTypeFilter,
   orderTagsForRow,
@@ -109,11 +107,7 @@ import { useAllLinks, useCreateLink, useDeleteLink, useUpdateLink } from '../hoo
 import { useSetLinkTags } from '../hooks/useLinkTags';
 import { useAllNotes, useCreateNote, useDeleteNote, useUpdateNote } from '../hooks/useNotes';
 import { useSetNoteTags } from '../hooks/useNoteTags';
-import {
-  useAddLinksToProfile,
-  useProfileLinkMembership,
-  useSetProfileLinkSuperFavorite,
-} from '../hooks/useProfileLinks';
+import { useAddLinksToProfile, useProfileLinkMembership } from '../hooks/useProfileLinks';
 import { useAddNotesToProfile, useProfileNoteMembership } from '../hooks/useProfileNotes';
 import { useAddTasksToProfile, useProfileTaskMembership } from '../hooks/useProfileTasks';
 import { useProfiles } from '../hooks/useProfiles';
@@ -137,7 +131,6 @@ import {
   ExternalLink,
   LayoutGrid,
   Link as LinkIcon,
-  Pencil,
   Plus,
   Rows3,
   Square,
@@ -195,14 +188,12 @@ const FILTER_PARAM_NAMES = {
 
 /**
  * The Library: a mixed stream of notes, links, and tasks — everything at
- * /library, or one space's contents at /spaces/:spaceId — with
- * element-type and tag chips above the grid, omnibar capture, and the
- * context's super favorites in the header.
+ * /library (a space's own page is SpacePage) — with element-type and tag
+ * chips above the grid, omnibar capture, and the super favorites in the
+ * header.
  */
 const StreamPage = () => {
-  const { spaceId } = useParams<{ spaceId?: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { session } = useSession();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -210,7 +201,6 @@ const StreamPage = () => {
   const [brokenPreviews, setBrokenPreviews] = useState<Set<string>>(() => new Set());
   const [pendingAdd, setPendingAdd] = useState<PendingAdd | null>(null);
   const [showDone, setShowDone] = useState(false);
-  const [spaceDetailsOpen, setSpaceDetailsOpen] = useState(false);
   const [selfNotesOpen, setSelfNotesOpen] = useState<boolean>(() => {
     try {
       return window.localStorage.getItem(SELF_NOTES_OPEN_KEY) === '1';
@@ -244,7 +234,6 @@ const StreamPage = () => {
   const deleteLink = useDeleteLink();
   const setLinkTags = useSetLinkTags();
   const addLinksToProfile = useAddLinksToProfile();
-  const setProfileLinkSuperFavorite = useSetProfileLinkSuperFavorite();
   const createNote = useCreateNote();
   const updateNote = useUpdateNote();
   const deleteNote = useDeleteNote();
@@ -256,23 +245,22 @@ const StreamPage = () => {
   const setTaskTags = useSetTaskTags();
   const addTasksToProfile = useAddTasksToProfile();
   const deleteSelfMessage = useDeleteSelfMessage();
-  const { messages: scopeJots } = useSelfMessages(spaceId ?? null);
+  const { messages: scopeJots } = useSelfMessages(null);
   const { toast, flash, dismiss: dismissToast, handleAnimationEnd } = useFeedbackToast();
 
   /* ---------- URL state: type filter, tag filter, open note ---------- */
 
-  // Every Library filter (docs/library-views.md). The Space filter belongs to
-  // the Library; a space page is already scoped by its route.
+  // Every Library filter (docs/library-views.md)
   const urlFilters = useMemo<LibraryFilters>(
     () =>
       parseLibraryFilters({
         type: searchParams.get(TYPE_PARAM),
         source: searchParams.get(SOURCE_PARAM),
-        space: spaceId ? null : searchParams.get(SPACE_PARAM),
+        space: searchParams.get(SPACE_PARAM),
         tags: searchParams.get(TAGS_PARAM),
         untagged: searchParams.get(UNTAGGED_PARAM),
       }),
-    [searchParams, spaceId],
+    [searchParams],
   );
   const selectedTypes = urlFilters.types;
   const selectedTagIds = urlFilters.tagIds;
@@ -386,20 +374,6 @@ const StreamPage = () => {
 
   const sortBy = useCallback((field: SortField) => setSort(nextSort(sort, field)), [setSort, sort]);
 
-  /* ---------- Space resolution ---------- */
-
-  const space = useMemo(
-    () => (spaceId ? profiles?.find((p) => p.id === spaceId) : undefined),
-    [profiles, spaceId],
-  );
-
-  // A deleted or foreign space id falls back to Home once spaces have loaded
-  useEffect(() => {
-    if (spaceId && profiles && !space) {
-      navigate(LIBRARY_PATH, { replace: true });
-    }
-  }, [navigate, profiles, space, spaceId]);
-
   /* ---------- Notes to Self panel ---------- */
 
   useEffect(() => {
@@ -495,15 +469,6 @@ const StreamPage = () => {
     return map;
   }, [allItems]);
 
-  /** Keys of items that belong to the current space. */
-  const spaceKeys = useMemo(
-    () =>
-      spaceId
-        ? itemKeysInSpace({ links: linkMembership, notes: noteMembership, tasks: taskMembership }, spaceId)
-        : new Set<string>(),
-    [linkMembership, noteMembership, spaceId, taskMembership],
-  );
-
   /** Space ids per item key, for the Space filter, the Table and sorting by space. */
   const spacesByItem = useMemo(
     () => spaceIdsByItem({ links: linkMembership, notes: noteMembership, tasks: taskMembership }),
@@ -526,10 +491,9 @@ const StreamPage = () => {
   );
 
   // A capture while the Space filter holds exactly one space is filed there
-  // (the space pages' rule, DESIGN.md: active filters apply to captures)
+  // (DESIGN.md: active filters apply to captures)
   const captureSpaceId =
-    spaceId ??
-    (activeFilters.spaces.length === 1 && activeFilters.spaces[0] !== UNFILED ? activeFilters.spaces[0] : null);
+    activeFilters.spaces.length === 1 && activeFilters.spaces[0] !== UNFILED ? activeFilters.spaces[0] : null;
 
   const isPendingMatch = useCallback(
     (item: StreamItem) => {
@@ -540,15 +504,6 @@ const StreamPage = () => {
       return item.task.title === pendingAdd.match;
     },
     [pendingAdd],
-  );
-
-  const inScope = useCallback(
-    (item: StreamItem) => {
-      if (!spaceId) return true;
-      if (isPendingMatch(item)) return pendingAdd?.spaceId === spaceId;
-      return spaceKeys.has(item.key);
-    },
-    [isPendingMatch, pendingAdd, spaceId, spaceKeys],
   );
 
   const matchesType = useCallback(
@@ -599,16 +554,14 @@ const StreamPage = () => {
     [spaceById, spacesOf],
   );
 
-  const scopedItems = useMemo(() => allItems.filter(inScope), [allItems, inScope]);
-
   const filteredItems = useMemo(
     () =>
       sortItems(
-        scopedItems.filter((item) => matchesType(item) && matchesPlace(item) && matchesTags(item) && matchesSearch(item)),
+        allItems.filter((item) => matchesType(item) && matchesPlace(item) && matchesTags(item) && matchesSearch(item)),
         sort,
         { spaceNamesOf },
       ),
-    [matchesPlace, matchesSearch, matchesTags, matchesType, scopedItems, sort, spaceNamesOf],
+    [matchesPlace, matchesSearch, matchesTags, matchesType, allItems, sort, spaceNamesOf],
   );
 
   const openItems = useMemo(
@@ -624,16 +577,16 @@ const StreamPage = () => {
   // Type chip counts respect tag + search filters; tag chip counts respect
   // type + search filters — each row describes what the other would show.
   const typeCounts = useMemo(
-    () => countByType(scopedItems.filter((item) => matchesPlace(item) && matchesTags(item) && matchesSearch(item))),
-    [matchesPlace, matchesSearch, matchesTags, scopedItems],
+    () => countByType(allItems.filter((item) => matchesPlace(item) && matchesTags(item) && matchesSearch(item))),
+    [matchesPlace, matchesSearch, matchesTags, allItems],
   );
 
   // Unfiltered per-type totals for the current scope drive the chip order
-  const typeTotals = useMemo(() => countByType(scopedItems), [scopedItems]);
+  const typeTotals = useMemo(() => countByType(allItems), [allItems]);
 
   const itemsForTagRow = useMemo(
-    () => scopedItems.filter((item) => matchesType(item) && matchesPlace(item) && matchesSearch(item)),
-    [matchesPlace, matchesSearch, matchesType, scopedItems],
+    () => allItems.filter((item) => matchesType(item) && matchesPlace(item) && matchesSearch(item)),
+    [matchesPlace, matchesSearch, matchesType, allItems],
   );
 
   const tagCounts = useMemo(() => countTags(itemsForTagRow), [itemsForTagRow]);
@@ -641,15 +594,15 @@ const StreamPage = () => {
   const untaggedCount = useMemo(() => countUntagged(itemsForTagRow), [itemsForTagRow]);
 
   const tagsForRow = useMemo(
-    () => orderTagsForRow(tags ?? [], tagCounts, { inSpace: Boolean(spaceId), selectedTagIds }),
-    [selectedTagIds, spaceId, tagCounts, tags],
+    () => orderTagsForRow(tags ?? [], tagCounts, { inSpace: false, selectedTagIds }),
+    [selectedTagIds, tagCounts, tags],
   );
 
   /* ---------- Super favorites (header) ---------- */
 
   const superFavoriteLinks = useMemo(
-    () => pinnedLinks(allItems, linkMembership ?? [], spaceId),
-    [allItems, linkMembership, spaceId],
+    () => pinnedLinks(allItems, linkMembership ?? [], undefined),
+    [allItems, linkMembership],
   );
 
   /* ---------- Selection ---------- */
@@ -657,11 +610,11 @@ const StreamPage = () => {
   const bulkAssignActive = selectionMode && selectedItemKeys.length > 0;
 
   // Selection survives filters and search (gather across several views);
-  // only switching space starts over
+  // arriving at the Library starts over
   useEffect(() => {
     clearItemSelection();
     setSelectionMode(false);
-  }, [clearItemSelection, setSelectionMode, spaceId]);
+  }, [clearItemSelection, setSelectionMode]);
 
   // Drop keys whose items are gone (deleted here or elsewhere)
   useEffect(() => {
@@ -935,7 +888,7 @@ const StreamPage = () => {
   // never dead-ends behind a filter
   const paletteGroups = useMemo<CommandResultGroup[]>(() => {
     if (!rawInput) return [];
-    const matches = scopedItems.filter((item) => matchesTags(item) && matchesSearch(item)).sort(byUpdatedDesc);
+    const matches = allItems.filter((item) => matchesTags(item) && matchesSearch(item)).sort(byUpdatedDesc);
     const order: ItemType[] = ['note', 'link', 'task'];
     return order.map((type) => {
       const ofType = matches.filter((item) => item.type === type);
@@ -973,7 +926,7 @@ const StreamPage = () => {
         }),
       };
     });
-  }, [matchesSearch, matchesTags, openNote, rawInput, scopedItems, setListParam, updateParams]);
+  }, [matchesSearch, matchesTags, openNote, rawInput, allItems, setListParam, updateParams]);
 
   /* ---------- Item behaviors ---------- */
 
@@ -1182,8 +1135,8 @@ const StreamPage = () => {
     [deleteSelfMessage, scheduleDelete],
   );
 
-  // A jot graduates into a note or task: the new item joins the current
-  // space, and the jot is removed (its text now lives in the item)
+  // A jot graduates into a note or task, and the jot is removed (its text
+  // now lives in the item)
   const handleConvertJot = useCallback(
     async (jot: SelfMessage, kind: 'note' | 'task') => {
       const text = jot.body.trim();
@@ -1193,14 +1146,12 @@ const StreamPage = () => {
           const title = firstLine.length > 80 ? `${firstLine.slice(0, 80)}…` : firstLine;
           const body = text === firstLine && firstLine.length <= 80 ? '' : text;
           const created = await createNote.mutateAsync({ title, body });
-          if (spaceId) await addNotesToProfile.mutateAsync({ profileId: spaceId, noteIds: [created.id] });
           deleteSelfMessage.mutate(jot.id);
           cue('confirm');
           flash('Turned into a note.', { label: 'Open', onClick: () => openNote(created.id) });
         } else {
           const title = text.replace(/\s+/g, ' ').slice(0, 200);
-          const created = await createTask.mutateAsync({ title });
-          if (spaceId) await addTasksToProfile.mutateAsync({ profileId: spaceId, taskIds: [created.id] });
+          await createTask.mutateAsync({ title });
           deleteSelfMessage.mutate(jot.id);
           cue('confirm');
           flash('Added to tasks.');
@@ -1211,7 +1162,7 @@ const StreamPage = () => {
         flash('Couldn’t convert that jot.');
       }
     },
-    [addNotesToProfile, addTasksToProfile, createNote, createTask, deleteSelfMessage, flash, openNote, spaceId],
+    [createNote, createTask, deleteSelfMessage, flash, openNote],
   );
 
   const handleOpenJournalItem = useCallback(
@@ -1236,14 +1187,7 @@ const StreamPage = () => {
     if (expandedLinkId && allLinks && !expandedLink) setExpandedLinkId(null);
   }, [allLinks, expandedLink, expandedLinkId, setExpandedLinkId]);
 
-  const expandedIsPinned = useMemo(() => {
-    if (!expandedLink) return false;
-    if (!spaceId) return Boolean(expandedLink.is_super_favorite);
-    return (linkMembership ?? []).some(
-      (row) =>
-        row.profile_id === spaceId && row.link_id === expandedLink.id && row.is_super_favorite,
-    );
-  }, [expandedLink, linkMembership, spaceId]);
+  const expandedIsPinned = Boolean(expandedLink?.is_super_favorite);
 
   const handleOpenLinkDetails = useCallback(
     (link: LinkWithTag) => {
@@ -1259,17 +1203,9 @@ const StreamPage = () => {
     async (next: boolean) => {
       if (!expandedLinkId) return;
       cue('toggle');
-      if (spaceId) {
-        await setProfileLinkSuperFavorite.mutateAsync({
-          profileId: spaceId,
-          linkId: expandedLinkId,
-          isSuperFavorite: next,
-        });
-        return;
-      }
       await updateLink.mutateAsync({ id: expandedLinkId, updates: { is_super_favorite: next } });
     },
-    [expandedLinkId, setProfileLinkSuperFavorite, spaceId, updateLink],
+    [expandedLinkId, updateLink],
   );
 
   const handleUpdateUrl = useCallback(
@@ -1487,9 +1423,8 @@ const StreamPage = () => {
     if (openNoteId && allNotes && !openNoteItem) closeNote();
   }, [allNotes, closeNote, openNoteId, openNoteItem]);
 
-  /* ---------- Saved views (15A tabs, Library only) ---------- */
+  /* ---------- Saved views (15A tabs) ---------- */
 
-  const isLibrary = !spaceId;
   const { data: savedViewRows } = useSavedViews();
   const createSavedView = useCreateSavedView();
   const updateSavedView = useUpdateSavedView();
@@ -1538,7 +1473,6 @@ const StreamPage = () => {
   );
 
   const viewTabs = useMemo<ViewTab[]>(() => {
-    if (!isLibrary) return [];
     const context = { spacesOf };
     const known = {
       spaceIds: new Set((profiles ?? []).map((p) => p.id)),
@@ -1547,11 +1481,11 @@ const StreamPage = () => {
     return libraryViews
       .map((candidate) => ({
         view: candidate,
-        count: countMatching(scopedItems, sanitizeFilters(candidate.definition.filters, known), context),
+        count: countMatching(allItems, sanitizeFilters(candidate.definition.filters, known), context),
         href: viewHref(candidate),
       }))
       .filter((tab) => !isHideableWhenEmpty(tab.view) || tab.count > 0 || tab.view.id === activeView?.id);
-  }, [activeView, isLibrary, libraryViews, profiles, scopedItems, spacesOf, tags, viewHref]);
+  }, [activeView, allItems, libraryViews, profiles, spacesOf, tags, viewHref]);
 
   // Selection survives switching views, like any other filter change
   const handleOpenView = useCallback((target: LibraryView) => {
@@ -1751,25 +1685,23 @@ const StreamPage = () => {
         <span className="bookmark-tag-chip-label">{sourceSummary}</span>
         <ChevronDown aria-hidden="true" className="memex-filter-menu-caret" />
       </MenuButton>
-      {isLibrary && (
-        <MenuButton
-          triggerClassName={`bookmark-tag-chip memex-filter-menu${activeSpaceFilter.length ? ' is-active' : ''}`}
-          triggerLabel={activeSpaceFilter.length ? `Space: ${spaceSummary}` : 'Filter by space'}
-          menuLabel="Space"
-          entries={spaceEntries}
-          menuClassName="memex-filter-menu-list"
-        >
-          {activeSpaceFilter.length === 1 && activeSpaceFilter[0] !== UNFILED && (
-            <span
-              className="memex-space-dot"
-              style={{ background: spaceColors.get(activeSpaceFilter[0]) }}
-              aria-hidden="true"
-            />
-          )}
-          <span className="bookmark-tag-chip-label">{spaceSummary}</span>
-          <ChevronDown aria-hidden="true" className="memex-filter-menu-caret" />
-        </MenuButton>
-      )}
+      <MenuButton
+        triggerClassName={`bookmark-tag-chip memex-filter-menu${activeSpaceFilter.length ? ' is-active' : ''}`}
+        triggerLabel={activeSpaceFilter.length ? `Space: ${spaceSummary}` : 'Filter by space'}
+        menuLabel="Space"
+        entries={spaceEntries}
+        menuClassName="memex-filter-menu-list"
+      >
+        {activeSpaceFilter.length === 1 && activeSpaceFilter[0] !== UNFILED && (
+          <span
+            className="memex-space-dot"
+            style={{ background: spaceColors.get(activeSpaceFilter[0]) }}
+            aria-hidden="true"
+          />
+        )}
+        <span className="bookmark-tag-chip-label">{spaceSummary}</span>
+        <ChevronDown aria-hidden="true" className="memex-filter-menu-caret" />
+      </MenuButton>
     </>
   );
 
@@ -1797,28 +1729,20 @@ const StreamPage = () => {
     selectedTagIds.length > 0 ||
     includeUntagged;
 
-  const contextName = space?.name ?? 'Library';
+  const contextName = 'Library';
   const typeLabel =
     selectedTypes.length === 1
       ? ITEM_TYPES.find((t) => t.key === selectedTypes[0])?.plural.toLowerCase() ?? 'items'
       : 'items';
 
-  const emptyTitle = hasActiveFilters
-    ? `No ${typeLabel} match`
-    : spaceId
-      ? 'This space is empty'
-      : 'Nothing here yet';
+  const emptyTitle = hasActiveFilters ? `No ${typeLabel} match` : 'Nothing here yet';
   const emptySubtitle = hasActiveFilters
     ? rawInput
       ? 'Other types may match — check the search results above, or press ⌘↵ to save what you typed.'
       : 'Try another type, or clear the filters.'
-    : spaceId
-      ? 'Capture something above, or select items in the Library and add them here.'
-      : 'Paste a URL or type a thought above to capture it.';
+    : 'Paste a URL or type a thought above to capture it.';
 
-  const placeholder = space
-    ? `Search “${space.name}” or capture…`
-    : `Search ${scopedItems.length} item${scopedItems.length === 1 ? '' : 's'} or capture…`;
+  const placeholder = `Search ${allItems.length} item${allItems.length === 1 ? '' : 's'} or capture…`;
 
 
   const openNoteSpaces = useMemo(() => {
@@ -2047,15 +1971,13 @@ const StreamPage = () => {
   const columns = useMemo(() => tableColumns({ showTags: SHOW_TAGS_UI }), []);
   const selectedKeySet = useMemo(() => new Set(selectedItemKeys), [selectedItemKeys]);
 
-  // Inside a space, its own chip would sit on every row: show the others
   const tableSpacesOf = useCallback(
     (key: string): TableSpace[] =>
       spacesOf(key)
-        .filter((id) => id !== spaceId)
         .map((id) => spaceById.get(id))
         .filter((p): p is NonNullable<typeof p> => Boolean(p))
         .map((p) => ({ id: p.id, name: p.name, color: spaceColors.get(p.id) })),
-    [spaceById, spaceColors, spaceId, spacesOf],
+    [spaceById, spaceColors, spacesOf],
   );
 
   const handleTableToggleSelect = useCallback(
@@ -2141,42 +2063,29 @@ const StreamPage = () => {
       <AppHeader
         user={session?.user ?? null}
         title={contextName}
-        titleColor={space ? spaceColors.get(space.id) : undefined}
-        subtitle={`${scopedItems.length} item${scopedItems.length === 1 ? '' : 's'}`}
+        subtitle={`${allItems.length} item${allItems.length === 1 ? '' : 's'}`}
         pinnedLinks={superFavoriteLinks}
         onPinnedOpen={handleOpenLink}
         actions={
-          <>
-            {space && (
-              <button
-                type="button"
-                className="btn-secondary btn-compact"
-                onClick={() => setSpaceDetailsOpen(true)}
-                aria-haspopup="dialog"
-              >
-                <Pencil aria-hidden="true" /> Edit space
-              </button>
+          <button
+            type="button"
+            className={`btn-secondary btn-compact memex-journal-toggle${selfNotesOpen ? ' is-active' : ''}`}
+            onClick={toggleSelfNotes}
+            aria-pressed={selfNotesOpen}
+            aria-keyshortcuts="J"
+            title={selfNotesOpen ? 'Close journal (J)' : 'Open journal (J)'}
+          >
+            <BookOpen aria-hidden="true" />
+            <span>Journal</span>
+            {todayJotCount > 0 && (
+              <span className="memex-journal-toggle-count" aria-label={`${todayJotCount} jots today`}>
+                {todayJotCount}
+              </span>
             )}
-            <button
-              type="button"
-              className={`btn-secondary btn-compact memex-journal-toggle${selfNotesOpen ? ' is-active' : ''}`}
-              onClick={toggleSelfNotes}
-              aria-pressed={selfNotesOpen}
-              aria-keyshortcuts="J"
-              title={selfNotesOpen ? 'Close journal (J)' : 'Open journal (J)'}
-            >
-              <BookOpen aria-hidden="true" />
-              <span>Journal</span>
-              {todayJotCount > 0 && (
-                <span className="memex-journal-toggle-count" aria-label={`${todayJotCount} jots today`}>
-                  {todayJotCount}
-                </span>
-              )}
-              <kbd className="memex-kbd memex-journal-toggle-kbd" aria-hidden="true">
-                J
-              </kbd>
-            </button>
-          </>
+            <kbd className="memex-kbd memex-journal-toggle-kbd" aria-hidden="true">
+              J
+            </kbd>
+          </button>
         }
       />
 
@@ -2221,20 +2130,18 @@ const StreamPage = () => {
                     />
                   </div>
 
-                  {isLibrary && (
-                    <LibraryViewTabs
-                      tabs={viewTabs}
-                      activeId={activeView?.id ?? null}
-                      onOpen={handleOpenView}
-                      canSave={!activeView}
-                      suggestedName={suggestedViewName}
-                      onSave={handleSaveView}
-                      canUpdate={canUpdateView}
-                      onUpdate={handleUpdateView}
-                      onRename={handleRenameView}
-                      onDelete={handleDeleteView}
-                    />
-                  )}
+                  <LibraryViewTabs
+                    tabs={viewTabs}
+                    activeId={activeView?.id ?? null}
+                    onOpen={handleOpenView}
+                    canSave={!activeView}
+                    suggestedName={suggestedViewName}
+                    onSave={handleSaveView}
+                    canUpdate={canUpdateView}
+                    onUpdate={handleUpdateView}
+                    onRename={handleRenameView}
+                    onDelete={handleDeleteView}
+                  />
 
                   <StreamFilterBar
                     selectedTypes={selectedTypes}
@@ -2365,9 +2272,9 @@ const StreamPage = () => {
             aria-label="Journal"
           >
             <JournalPanel
-              scopeId={spaceId ?? null}
+              scopeId={null}
               scopeName={contextName}
-              items={scopedItems}
+              items={allItems}
               hiddenJotIds={hiddenJotIds}
               onOpenItem={handleOpenJournalItem}
               onConvertJot={(jot, kind) => void handleConvertJot(jot, kind)}
@@ -2379,16 +2286,6 @@ const StreamPage = () => {
           <aside className="bookmark-rail bookmark-rail--tags" aria-hidden="true" />
         )}
       </div>
-
-      {space && (
-        <SpaceDetailsModal
-          space={space}
-          isOpen={spaceDetailsOpen}
-          onClose={() => setSpaceDetailsOpen(false)}
-          typeTotals={typeTotals}
-          onFeedback={flash}
-        />
-      )}
 
       {selectionMode && (
         <SelectionBar
