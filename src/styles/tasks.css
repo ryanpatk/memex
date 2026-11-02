@@ -1,0 +1,713 @@
+/*
+ * The Tasks view (pages/TasksPage.tsx, components/tasks/*). Joyful Utility:
+ * the column and the groups are paper (lit edge, hue-tinted shadow, rows
+ * that tint and never lift); checks, the add button, the segment and the
+ * filter chip are objects. A checked task is “on”, so its check carries the
+ * gloss. Space chips and dots reuse the Journal's (journal.css). Pastel Sky
+ * tokens only, so light and dark both follow the theme.
+ */
+
+.tk-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.tk-head {
+  flex: none;
+}
+
+.tk-subtitle .is-overdue {
+  color: var(--error);
+}
+
+.tk-actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* The layout toggle's track, with words instead of icons */
+.tk-segment button {
+  width: auto;
+  padding: 0 var(--space-s);
+  font: inherit;
+  font-weight: var(--weight-ui-medium);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+  white-space: nowrap;
+}
+
+.tk-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: 0 var(--layout-gutter, var(--space-m)) var(--space-m);
+}
+
+/* The page's surface: the same stack as the Journal and the Library */
+.tk-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-m);
+  background: var(--neutral-2);
+  box-shadow:
+    var(--surface-lit),
+    0 0 0 var(--border-s) var(--border-default-color),
+    var(--shadow-m);
+}
+
+.tk-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.tk-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+  max-width: 720px;
+  margin-inline: auto;
+  padding: var(--space-m) var(--space-m) var(--space-xl);
+}
+
+.tk-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+}
+
+/* ------------------------------------------------------------------ */
+/* Add field                                                           */
+/* ------------------------------------------------------------------ */
+
+.tk-composer {
+  position: relative;
+}
+
+.tk-composer-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 4px 4px 4px var(--space-s);
+  border-radius: var(--radius-m);
+  background: var(--neutral-1) var(--surface-recessed-image);
+  box-shadow:
+    0 0 0 var(--border-s) var(--neutral-4),
+    var(--surface-recessed-shadow);
+  transition: box-shadow var(--transition-fast);
+}
+
+.tk-composer-field:focus-within {
+  box-shadow:
+    0 0 0 var(--border-s) var(--color-1-transparent),
+    var(--surface-recessed-shadow),
+    0 0 0 3px color-mix(in oklab, var(--color-1) 22%, transparent);
+}
+
+.tk-composer-plus {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--neutral-6);
+}
+
+.tk-composer-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--neutral-10);
+  font-family: var(--font-editorial);
+  font-size: var(--size-m);
+  line-height: var(--line-m);
+  letter-spacing: var(--letter-spacing-m);
+  outline: none;
+}
+
+.tk-composer-input::placeholder {
+  color: var(--neutral-6);
+}
+
+.tk-composer-send {
+  flex: none;
+}
+
+.tk-composer-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xxs) var(--space-s);
+  margin: var(--space-xxs) 0 0;
+  padding-left: var(--space-xxs);
+  color: var(--neutral-7);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+}
+
+.tk-composer-filing {
+  color: var(--color-1-ink);
+  font-weight: var(--weight-ui-medium);
+}
+
+/* The space picker opens below the field (the Journal's opens above) */
+.tk-picker {
+  top: calc(100% - var(--space-l));
+  left: var(--space-l);
+  right: auto;
+  transform-origin: top left;
+}
+
+.tk-picker > button.is-active {
+  background: var(--neutral-3);
+}
+
+/* ------------------------------------------------------------------ */
+/* Groups                                                              */
+/* ------------------------------------------------------------------ */
+
+.tk-group {
+  border-radius: var(--radius-m);
+  background: var(--neutral-1);
+  box-shadow:
+    var(--surface-lit),
+    0 0 0 var(--border-s) var(--border-default-color),
+    var(--shadow-s);
+}
+
+.tk-group-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: var(--space-xs) var(--space-s);
+  border-radius: var(--radius-m) var(--radius-m) 0 0;
+  background: var(--neutral-1);
+  box-shadow: inset 0 calc(-1 * var(--border-s)) 0 var(--neutral-3);
+  color: var(--neutral-10);
+  font-family: var(--font-ui);
+  font-weight: var(--weight-ui-heavy);
+  font-size: var(--size-s);
+  line-height: var(--line-s);
+  letter-spacing: var(--letter-spacing-s);
+}
+
+.tk-group-head .jr-dot {
+  width: 10px;
+  height: 10px;
+}
+
+.tk-group-head .jr-dot.is-unfiled {
+  background: transparent;
+  box-shadow: inset 0 0 0 var(--border-m, 1.5px) var(--neutral-6);
+}
+
+.tk-group-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--neutral-7);
+}
+
+.tk-group.is-overdue .tk-group-head,
+.tk-group.is-overdue .tk-group-icon {
+  color: var(--error);
+}
+
+.tk-group-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tk-group-count {
+  color: var(--neutral-7);
+  font-family: var(--font-data);
+  font-weight: var(--weight-ui-medium);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.tk-rows {
+  margin: 0;
+  padding: var(--space-xxs);
+  list-style: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Rows                                                                */
+/* ------------------------------------------------------------------ */
+
+.tk-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xxs);
+  min-height: 44px;
+  padding-right: var(--space-xxs);
+  border-radius: var(--radius-s);
+  transition:
+    background-color var(--transition-fast),
+    opacity var(--transition-fast);
+}
+
+/* Hairline between rows: an edge ring, never a border */
+.tk-row + .tk-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 44px;
+  right: var(--space-xs);
+  height: var(--border-s);
+  background: var(--neutral-3);
+}
+
+.tk-row:hover,
+.tk-row:focus-within {
+  background: var(--neutral-2);
+}
+
+.tk-row:hover + .tk-row::before,
+.tk-row:focus-within + .tk-row::before,
+.tk-row:hover::before,
+.tk-row:focus-within::before {
+  opacity: 0;
+}
+
+.tk-row[draggable='true'] {
+  cursor: grab;
+}
+
+.tk-row[draggable='true']:active {
+  cursor: grabbing;
+}
+
+.tk-row.is-new {
+  animation: memex-pop-in var(--motion-duration) var(--motion-easing);
+}
+
+/* A 44px hit area around the 20px check */
+.tk-check-hit {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+}
+
+.tk-check-hit .memex-task-check {
+  position: relative;
+}
+
+.tk-check-hit .memex-task-check::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+}
+
+.tk-title {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-xxs) var(--space-xxs);
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--neutral-10);
+  font-family: var(--font-editorial);
+  font-size: var(--size-m);
+  line-height: var(--line-m);
+  letter-spacing: var(--letter-spacing-m);
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: text;
+}
+
+.tk-title:focus-visible,
+.tk-row-menu:focus-visible {
+  outline: var(--focus-ring-outline);
+  outline-offset: 1px;
+}
+
+.tk-title-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-xxs);
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: var(--neutral-1) var(--surface-recessed-image);
+  box-shadow:
+    0 0 0 var(--border-s) var(--color-1-transparent),
+    0 0 0 3px color-mix(in oklab, var(--color-1) 22%, transparent);
+  color: var(--neutral-10);
+  font-family: var(--font-editorial);
+  font-size: var(--size-m);
+  line-height: var(--line-m);
+  letter-spacing: var(--letter-spacing-m);
+  outline: none;
+}
+
+/* Ticked: struck through, then (after a beat) it moves to Done */
+.tk-row.is-settling .tk-title,
+.tk-row.is-done .tk-title {
+  color: var(--neutral-7);
+  text-decoration: line-through;
+  text-decoration-color: var(--neutral-5);
+}
+
+.tk-row.is-settling {
+  animation: tk-settle var(--settle-duration, 1100ms) ease-in both;
+}
+
+@keyframes tk-settle {
+  0%,
+  70% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.4;
+  }
+}
+
+.tk-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xxs);
+  flex: none;
+  max-width: 50%;
+}
+
+.tk-chip {
+  max-width: 140px;
+}
+
+/* Due date: a quiet label that opens the date picker; empty until hover */
+.tk-due {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xxs);
+  min-height: 28px;
+  padding: 0 var(--space-xs);
+  border-radius: var(--radius-full);
+  color: var(--neutral-7);
+  font-family: var(--font-data);
+  font-weight: var(--weight-ui-medium);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.tk-due svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+.tk-due:hover {
+  background: var(--neutral-3);
+  color: var(--neutral-10);
+}
+
+.tk-due:focus-within {
+  outline: var(--focus-ring-outline);
+  outline-offset: 1px;
+}
+
+.tk-due.is-today {
+  background: var(--option-badge-background);
+  color: var(--color-1-ink);
+}
+
+.tk-due.is-overdue {
+  background: var(--error-transparent);
+  color: var(--error);
+}
+
+/* The native date field sits over the label, invisible; a click opens its picker */
+.tk-due-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tk-due-input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  cursor: pointer;
+}
+
+.tk-done-at {
+  padding: 0 var(--space-xs);
+  color: var(--neutral-7);
+  font-family: var(--font-data);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+  white-space: nowrap;
+}
+
+/* Hover controls: an empty due slot and the ··· show on hover and focus */
+@media (hover: hover) {
+  .tk-due:not(.has-due),
+  .tk-row-menu {
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+  }
+
+  .tk-row:is(:hover, :focus-within) .tk-due,
+  .tk-row:is(:hover, :focus-within) .tk-row-menu,
+  .tk-row-menu[aria-expanded='true'] {
+    opacity: 1;
+  }
+}
+
+.tk-row-menu-list {
+  min-width: 220px;
+}
+
+.tk-menu-label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-s);
+  min-width: 0;
+}
+
+.tk-menu-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tk-menu-count {
+  color: var(--neutral-7);
+  font-family: var(--font-data);
+  font-size: var(--size-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ */
+/* Done                                                                */
+/* ------------------------------------------------------------------ */
+
+.tk-done {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.tk-done-toggle {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 32px;
+  padding: 0 var(--space-s) 0 var(--space-xs);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--neutral-8);
+  font: inherit;
+  font-weight: var(--weight-ui-heavy);
+  font-size: var(--size-s);
+  line-height: var(--line-s);
+  letter-spacing: var(--letter-spacing-s);
+  cursor: pointer;
+}
+
+.tk-done-toggle:hover {
+  background: var(--neutral-3);
+  color: var(--neutral-10);
+}
+
+.tk-done-toggle:focus-visible {
+  outline: var(--focus-ring-outline);
+  outline-offset: 2px;
+}
+
+.tk-done-toggle svg {
+  width: 16px;
+  height: 16px;
+  transition: transform var(--transition-fast);
+}
+
+.tk-done-toggle svg.is-open {
+  transform: rotate(90deg);
+}
+
+.tk-rows--done {
+  border-radius: var(--radius-m);
+  background: var(--neutral-1);
+  box-shadow:
+    0 0 0 var(--border-s) var(--border-default-color),
+    var(--shadow-s);
+}
+
+.tk-more {
+  align-self: center;
+}
+
+/* ------------------------------------------------------------------ */
+/* Empty, loading, keys                                                */
+/* ------------------------------------------------------------------ */
+
+.tk-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xl) var(--space-m);
+  color: var(--neutral-7);
+  text-align: center;
+  font-size: var(--size-s);
+  line-height: var(--line-s);
+  letter-spacing: var(--letter-spacing-s);
+  text-wrap: balance;
+}
+
+.tk-empty p {
+  max-width: 360px;
+  margin: 0;
+}
+
+/* The disc is an object: raised, with gloss when the list is all done */
+.tk-empty-disc {
+  display: inline-grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: var(--space-xs);
+  border-radius: var(--radius-full);
+  background: var(--neutral-1) var(--control-raised-image);
+  color: var(--neutral-7);
+  box-shadow: var(--control-raised-bevel), var(--shadow-s);
+}
+
+.tk-empty-disc svg {
+  width: 26px;
+  height: 26px;
+}
+
+.tk-empty.is-clear .tk-empty-disc {
+  background: var(--color-1) var(--control-gloss-image);
+  color: var(--cte-accent-text);
+  box-shadow: var(--control-raised-bevel), var(--control-glow, var(--shadow-s));
+  animation: memex-pop-in var(--motion-duration) var(--motion-easing);
+}
+
+.tk-empty-title {
+  color: var(--neutral-10);
+  font-weight: var(--weight-ui-heavy);
+  font-size: var(--size-m);
+  line-height: var(--line-m);
+  letter-spacing: var(--letter-spacing-m);
+}
+
+.tk-empty .btn-secondary {
+  margin-top: var(--space-xs);
+}
+
+.tk-skeleton-bar {
+  display: block;
+  height: 12px;
+  border-radius: var(--radius-full);
+  background: var(--neutral-3);
+}
+
+.tk-skeleton-check {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-xs);
+  background: var(--neutral-3);
+}
+
+.tk-keys {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-xxs) var(--space-m);
+  margin: 0;
+  color: var(--neutral-6);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+}
+
+/* ------------------------------------------------------------------ */
+/* Phones                                                              */
+/* ------------------------------------------------------------------ */
+
+@media (max-width: 899px) {
+  .tk-body {
+    padding: 0 var(--space-xs) calc(68px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .tk-column {
+    padding-inline: var(--space-s);
+  }
+
+  .tk-page .memex-page-header-row {
+    flex-wrap: wrap;
+  }
+
+  .tk-composer-input {
+    font-size: max(16px, var(--size-m));
+  }
+
+  .tk-composer-hint,
+  .tk-keys {
+    display: none;
+  }
+
+  .tk-meta {
+    max-width: 45%;
+  }
+
+  .tk-chip {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tk-row.is-new,
+  .tk-row.is-settling,
+  .tk-empty.is-clear .tk-empty-disc {
+    animation: none;
+  }
+
+  .tk-done-toggle svg {
+    transition: none;
+  }
+}

@@ -4,6 +4,7 @@ import SignInPage from "../pages/auth/SignInPage.tsx";
 import SignUpPage from "../pages/auth/SignUpPage.tsx";
 import ProtectedPage from "../pages/ProtectedPage.tsx";
 import StreamPage from "../pages/StreamPage.tsx";
+import TasksPage from "../pages/TasksPage.tsx";
 import ProjectPage from "../pages/ProjectPage.tsx";
 import StyleguidePage from "../pages/StyleguidePage.tsx";
 import MocksPage from "../pages/MocksPage.tsx";
@@ -13,7 +14,7 @@ import LegacyModuleRedirect from "./LegacyModuleRedirect.tsx";
 import OAuthLanding from "./OAuthLanding.tsx";
 import MemexShell from "../components/MemexShell.tsx";
 import Providers from "../Providers.tsx";
-import { LEGACY_HOME_PATH, LIBRARY_PATH } from "../constants/modules.ts";
+import { LEGACY_HOME_PATH, LIBRARY_PATH, TASKS_PATH } from "../constants/modules.ts";
 
 const router = createBrowserRouter([
   // I recommend you reflect the routes here in the pages folder
@@ -39,7 +40,7 @@ const router = createBrowserRouter([
         path: "/",
         element: <AuthProtectedRoute />,
         children: [
-          // memex shell: sidebar (Journal, Library, spaces) around the page
+          // memex shell: sidebar (Journal, Library, Tasks, spaces) around the page
           {
             element: <MemexShell />,
             children: [
@@ -51,9 +52,14 @@ const router = createBrowserRouter([
                 path: "/spaces/:spaceId",
                 element: <StreamPage />,
               },
+              {
+                path: TASKS_PATH,
+                element: <TasksPage />,
+              },
             ],
           },
-          // Former routes → the Library (with a type filter for the per-primitive ones)
+          // Former routes → the Library (with a type filter for the per-primitive ones;
+          // /tasks became the Tasks view on 2026-11-01)
           {
             path: LEGACY_HOME_PATH,
             element: <LegacyModuleRedirect />,
@@ -65,10 +71,6 @@ const router = createBrowserRouter([
           {
             path: "/notes",
             element: <LegacyModuleRedirect type="note" />,
-          },
-          {
-            path: "/tasks",
-            element: <LegacyModuleRedirect type="task" />,
           },
           {
             path: "/spaces",

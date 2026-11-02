@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Check, CircleUser, Plus, Settings } from 'lucide-react';
-import { INBOX_PARAM, JOURNAL_PATH, LIBRARY_PATH, TYPE_PARAM, spacePath } from '../constants/modules';
+import { INBOX_PARAM, JOURNAL_PATH, LIBRARY_PATH, TASKS_PATH, spacePath } from '../constants/modules';
 import { useJournal } from '../hooks/useJournal';
 import { useFeedbackToast } from '../hooks/useFeedbackToast';
 import { useAddToSpace } from '../hooks/useAddToSpace';
@@ -17,7 +17,7 @@ import { FeedbackToast } from './ui';
 import ApiTokensModal from './ApiTokensModal';
 import SettingsMenu from './SettingsMenu';
 import { userDisplayName } from '../utils/userDisplay';
-import { parseItemKey } from '@memex/core';
+import { ITEM_DRAG_TYPE, isFileableKey, parseDragKeys } from '../utils/itemDrag';
 import NewSpaceModal from './NewSpaceModal';
 import { InboxIcon, JournalIcon, LibraryIcon, PlusIcon, TasksIcon } from './icons';
 import Wordmark from './ui/Wordmark';
@@ -27,12 +27,14 @@ const itemClass = ({ isActive }: { isActive: boolean }) =>
 
 /**
  * App navigation (decision 12B): Journal, Library, Inbox (only while a filing
- * suggestion is waiting), Tasks, then the segmented list of spaces. While a stream selection is active, spaces turn into bulk-assign
- * targets — clicking one adds the selected items to that space instead of
- * navigating. The header reads "Add N to…"; hovering a space tints the row in
- * its own hue and grows the dot into a "+" disc. After adding, the disc shows
- * a check and the count a "+N" for a moment; spaces that already hold every
- * selected item read "All in" and step back.
+ * suggestion is waiting), Tasks, then the segmented list of spaces. While a
+ * stream selection is active, spaces turn into bulk-assign targets — clicking
+ * one adds the selected items to that space instead of navigating. While an
+ * item is being dragged (utils/itemDrag.ts), they are drop targets the same
+ * way. The header reads "Add N to…"; hovering (or dragging over) a space tints
+ * the row in its own hue and grows the dot into a "+" disc. After adding, the
+ * disc shows a check and the count a "+N" for a moment; spaces that already
+ * hold every item read "All in" and step back. Every add has Undo.
  */
 
 const JUST_ADDED_MS = 1400;
@@ -48,6 +50,13 @@ const MemexSidebar = () => {
   const selectionMode = useAppStore((state) => state.selectionMode);
   const selectedItemKeys = useAppStore((state) => state.selectedItemKeys);
   const bulkAssignActive = selectionMode && selectedItemKeys.length > 0;
+  const itemDrag = useAppStore((state) => state.itemDrag);
+  const dragKeys = itemDrag?.keys ?? [];
+  const dropActive = dragKeys.length > 0;
+  // What a target row would add: the dragged items, else the selection
+  const targetKeys = dropActive ? dragKeys : selectedItemKeys;
+  const targetMode = dropActive || bulkAssignActive;
+  const [dropSpaceId, setDropSpaceId] = useState<string | null>(null);
   const [justAdded, setJustAdded] = useState<{
     spaceId: string;
     added: number;
@@ -102,7 +111,6 @@ const MemexSidebar = () => {
   const spaces = useMemo(() => profiles ?? [], [profiles]);
   const { inbox } = useJournal();
   const searchParams = new URLSearchParams(location.search);
-  const onTasks = location.pathname === LIBRARY_PATH && searchParams.get(TYPE_PARAM) === 'task';
   const onInbox = location.pathname === JOURNAL_PATH && searchParams.get(INBOX_PARAM) === '1';
 
   const spaceCounts = useMemo(() => {
@@ -130,20 +138,48 @@ const MemexSidebar = () => {
     return bySpace;
   }, [linkMembership, noteMembership, taskMembership]);
 
-  const assignableKeys = useMemo(
-    () => selectedItemKeys.filter((key) => !parseItemKey(key).id.startsWith('temp-')),
-    [selectedItemKeys],
-  );
+  const assignableKeys = useMemo(() => targetKeys.filter(isFileableKey), [targetKeys]);
 
   useEffect(() => () => window.clearTimeout(justAddedTimer.current), []);
 
-  const handleBulkAdd = async (spaceId: string) => {
+  const handleBulkAdd = async (spaceId: string, keys: string[] = selectedItemKeys) => {
     const from = spaceCounts[spaceId] ?? 0;
-    const added = await addToSpace(spaceId, selectedItemKeys);
+    const added = await addToSpace(spaceId, keys);
     if (added === 0) return;
     window.clearTimeout(justAddedTimer.current);
     setJustAdded({ spaceId, added, from });
     justAddedTimer.current = window.setTimeout(() => setJustAdded(null), JUST_ADDED_MS);
+  };
+
+  useEffect(() => {
+    if (!dropActive) setDropSpaceId(null);
+  }, [dropActive]);
+
+  // Spaces accept item drags whatever the drag state in the store says, so a
+  // drop always files even if the target styling missed the drag's start.
+  const dropHandlers = (spaceId: string) => {
+    const accepts = (event: DragEvent) => event.dataTransfer.types.includes(ITEM_DRAG_TYPE);
+    const over = (event: DragEvent) => {
+      if (!accepts(event)) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+      if (dropSpaceId !== spaceId) setDropSpaceId(spaceId);
+    };
+    return {
+      onDragEnter: over,
+      onDragOver: over,
+      onDragLeave: (event: DragEvent) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        setDropSpaceId((current) => (current === spaceId ? null : current));
+      },
+      onDrop: (event: DragEvent) => {
+        if (!accepts(event)) return;
+        event.preventDefault();
+        setDropSpaceId(null);
+        const keys = parseDragKeys(event.dataTransfer.getData(ITEM_DRAG_TYPE));
+        if (keys.length) void handleBulkAdd(spaceId, keys);
+      },
+    };
   };
 
   return (
@@ -169,7 +205,7 @@ const MemexSidebar = () => {
           <NavLink
             to={LIBRARY_PATH}
             end
-            className={() => itemClass({ isActive: location.pathname === LIBRARY_PATH && !onTasks })}
+            className={() => itemClass({ isActive: location.pathname === LIBRARY_PATH })}
           >
             <span className="memex-sidebar-item-icon">
               <LibraryIcon />
@@ -187,7 +223,7 @@ const MemexSidebar = () => {
               </span>
             </NavLink>
           )}
-          <NavLink to={`${LIBRARY_PATH}?${TYPE_PARAM}=task`} className={() => itemClass({ isActive: onTasks })}>
+          <NavLink to={TASKS_PATH} className={itemClass}>
             <span className="memex-sidebar-item-icon">
               <TasksIcon />
             </span>
@@ -198,9 +234,9 @@ const MemexSidebar = () => {
         <div className="memex-sidebar-section">
           <div className="memex-sidebar-section-header">
             <span className="memex-sidebar-kicker" aria-live="polite">
-              {bulkAssignActive ? (
+              {targetMode ? (
                 <>
-                  Add <strong>{selectedItemKeys.length}</strong> to…
+                  Add <strong>{targetKeys.length}</strong> to…
                 </>
               ) : (
                 'Spaces'
@@ -219,12 +255,12 @@ const MemexSidebar = () => {
 
           <div
             className={`memex-sidebar-nav memex-sidebar-spaces${
-              bulkAssignActive ? ' is-bulk-assign' : ''
-            }`}
+              targetMode ? ' is-bulk-assign' : ''
+            }${dropActive ? ' is-drop-targets' : ''}`}
           >
             {spaces.map((space) => {
               const count = spaceCounts[space.id] ?? 0;
-              if (bulkAssignActive) {
+              if (targetMode) {
                 const held = memberKeys.get(space.id);
                 const added = justAdded?.spaceId === space.id ? justAdded.added : 0;
                 // Membership refetches after the write; tick the count up now
@@ -239,15 +275,20 @@ const MemexSidebar = () => {
                     type="button"
                     className={`memex-sidebar-item is-bulk-target${allIn ? ' is-all-in' : ''}${
                       added > 0 ? ' is-just-added' : ''
-                    }`}
+                    }${dropSpaceId === space.id && !allIn ? ' is-drop-over' : ''}`}
                     style={{ '--space-hue': spaceColors.get(space.id) } as CSSProperties}
                     onClick={() => void handleBulkAdd(space.id)}
+                    {...dropHandlers(space.id)}
                     aria-label={
                       allIn
                         ? `“${space.name}” already has ${
-                            assignableKeys.length === 1 ? 'the selected item' : 'all selected items'
+                            assignableKeys.length === 1
+                              ? dropActive ? 'this item' : 'the selected item'
+                              : dropActive ? 'these items' : 'all selected items'
                           }`
-                        : `Add ${selectedItemKeys.length} selected to “${space.name}”`
+                        : dropActive
+                          ? `Drop to add ${targetKeys.length} to “${space.name}”`
+                          : `Add ${selectedItemKeys.length} selected to “${space.name}”`
                     }
                   >
                     <span className="memex-sidebar-target-disc" aria-hidden="true">
@@ -269,6 +310,7 @@ const MemexSidebar = () => {
                   to={spacePath(space.id)}
                   className={(state) => `${itemClass(state)}${count === 0 ? ' is-empty' : ''}`}
                   style={{ '--space-hue': spaceColors.get(space.id) } as CSSProperties}
+                  {...dropHandlers(space.id)}
                 >
                   <span
                     className="memex-space-dot"
@@ -333,6 +375,7 @@ const MemexSidebar = () => {
         <FeedbackToast
           message={toast.message}
           phase={toast.phase}
+          action={toast.action}
           onAnimationEnd={handleAnimationEnd}
         />
       )}

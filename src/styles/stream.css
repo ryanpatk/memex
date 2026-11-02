@@ -2825,26 +2825,26 @@ html[data-link-captions='inset'] .memex-pv-title {
   transition: opacity 80ms linear;
 }
 
-.memex-sidebar-item.is-bulk-target:not(.is-all-in):is(:hover, :focus-visible),
+.memex-sidebar-item.is-bulk-target:not(.is-all-in):is(:hover, :focus-visible, .is-drop-over),
 .memex-sidebar-item.is-just-added {
   background: var(--space-tint);
 }
 
-.memex-sidebar-item.is-bulk-target:not(.is-all-in):is(:hover, :focus-visible)
+.memex-sidebar-item.is-bulk-target:not(.is-all-in):is(:hover, :focus-visible, .is-drop-over)
   .memex-sidebar-target-disc,
 .memex-sidebar-item.is-just-added .memex-sidebar-target-disc {
   transform: scale(1);
   box-shadow: 0 1px 2px var(--neutral-10-transparent);
 }
 
-.memex-sidebar-item.is-bulk-target:not(.is-all-in):is(:hover, :focus-visible)
+.memex-sidebar-item.is-bulk-target:not(.is-all-in):is(:hover, :focus-visible, .is-drop-over)
   .memex-sidebar-target-disc
   svg,
 .memex-sidebar-item.is-just-added .memex-sidebar-target-disc svg {
   opacity: 1;
 }
 
-.memex-sidebar-item.is-bulk-target:not(.is-all-in):is(:hover, :focus-visible)
+.memex-sidebar-item.is-bulk-target:not(.is-all-in):is(:hover, :focus-visible, .is-drop-over)
   .memex-sidebar-item-count,
 .memex-sidebar-item.is-just-added .memex-sidebar-item-count {
   color: var(--space-ink);
@@ -2903,6 +2903,166 @@ html[data-link-captions='inset'] .memex-pv-title {
 
   .memex-sidebar-item.is-just-added .memex-sidebar-target-disc svg,
   .memex-sidebar-item-delta {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Drag to a space (utils/itemDrag.ts, 2026-11-01)                     */
+/* ------------------------------------------------------------------ */
+
+/* While an item is dragged every space is a drop target: a dashed slot in
+   its own hue. The one under the pointer takes the add tint and the “+”
+   disc, exactly like hovering a target while selecting. */
+.memex-sidebar-spaces.is-drop-targets .memex-sidebar-item.is-bulk-target:not(.is-all-in) {
+  outline: var(--border-l) dashed color-mix(in oklab, var(--space-hue) 55%, transparent);
+  outline-offset: calc(-1 * var(--border-l));
+}
+
+.memex-sidebar-spaces.is-drop-targets .memex-sidebar-item.is-drop-over {
+  outline-style: solid;
+  outline-color: color-mix(in oklab, var(--space-hue) 75%, transparent);
+}
+
+/* What's being dragged steps back */
+.is-drag-source {
+  opacity: 0.5;
+}
+
+/* The drag ghost: a small label of paper with the title, or a stack with
+   the count when several items travel together. Rendered off screen for
+   the browser to snapshot (setDragImage), then removed. */
+.memex-drag-ghost {
+  position: fixed;
+  top: -1000px;
+  left: -1000px;
+  z-index: 2147483647;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  max-width: 280px;
+  padding: var(--space-xxs) var(--space-s) var(--space-xxs) var(--space-xs);
+  border-radius: var(--radius-full);
+  background: var(--neutral-1);
+  color: var(--neutral-10);
+  box-shadow:
+    var(--surface-lit),
+    0 0 0 var(--border-s) var(--border-default-color),
+    var(--shadow-m);
+  font-family: var(--font-ui);
+  font-weight: var(--weight-ui-medium);
+  font-size: var(--size-s);
+  line-height: var(--line-s);
+  letter-spacing: var(--letter-spacing-s);
+  pointer-events: none;
+}
+
+.memex-drag-ghost:not(.is-stack) {
+  padding-left: var(--space-s);
+}
+
+.memex-drag-ghost.is-stack {
+  box-shadow:
+    var(--surface-lit),
+    0 0 0 var(--border-s) var(--border-default-color),
+    4px 4px 0 calc(-1 * var(--border-s)) var(--neutral-1),
+    4px 4px 0 0 var(--border-default-color),
+    var(--shadow-m);
+}
+
+.memex-drag-ghost-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memex-drag-ghost-count {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--color-1) var(--control-gloss-image);
+  color: var(--cte-accent-text);
+  font-family: var(--font-data);
+  font-weight: var(--weight-ui-heavy);
+  font-size: var(--size-xs);
+  line-height: 1;
+  letter-spacing: var(--letter-spacing-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------ */
+/* Go to (⌘/Ctrl K, components/GoToPalette.tsx)                        */
+/* ------------------------------------------------------------------ */
+
+.memex-goto {
+  width: min(520px, calc(100vw - 2 * var(--space-m)));
+  max-height: min(70vh, 560px);
+  margin: 12vh auto auto;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  animation: memex-pop-in var(--motion-duration) var(--motion-easing);
+  transform-origin: top center;
+}
+
+.memex-goto-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: inherit;
+}
+
+.memex-goto-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-s) var(--space-s) var(--space-xs);
+  box-shadow: inset 0 calc(-1 * var(--border-s)) 0 var(--neutral-4);
+}
+
+.memex-goto-field > svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--neutral-6);
+}
+
+.memex-goto-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--neutral-10);
+  font-family: var(--font-ui);
+  font-size: max(16px, var(--size-m));
+  line-height: var(--line-m);
+  letter-spacing: var(--letter-spacing-m);
+  outline: none;
+}
+
+.memex-goto-input::placeholder {
+  color: var(--neutral-6);
+}
+
+.memex-goto-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-xxs);
+}
+
+.memex-goto .memex-palette-foot {
+  margin-top: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memex-goto {
     animation: none;
   }
 }

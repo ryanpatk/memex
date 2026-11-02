@@ -86,7 +86,15 @@ export const useUpdateTask = () => {
 
       queryClient.setQueryData<TaskWithTags[]>(taskKeys.lists(), (old = []) =>
         old.map((task) =>
-          task.id === id ? { ...task, ...updates, due_date: updates.due_date ?? task.due_date ?? undefined } : task,
+          task.id === id
+            ? {
+                ...task,
+                ...updates,
+                // null clears the due date; leaving it out keeps the current one
+                due_date: 'due_date' in updates ? (updates.due_date ?? undefined) : task.due_date,
+                updated_at: new Date().toISOString(),
+              }
+            : task,
         ),
       )
 

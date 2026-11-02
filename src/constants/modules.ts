@@ -1,8 +1,9 @@
 /**
  * Navigation model (ROADMAP.md Phase 1, decision 12B): the Journal is home
  * at `/`; the Library (`/library`) is the mixed stream of everything, and
- * `/spaces/:id` scopes it to one space. The old routes (/home, /links,
- * /notes, /tasks) redirect into the Library, carrying their query along.
+ * `/spaces/:id` scopes it to one space. `/tasks` is the Tasks view (open
+ * tasks across every space). The old routes (/home, /links, /notes) redirect
+ * into the Library, carrying their query along.
  */
 
 export const JOURNAL_PATH = '/';
@@ -10,6 +11,8 @@ export const LIBRARY_PATH = '/library';
 /** The Library's old address; the extension still deep-links `/home?link=<id>`. */
 export const LEGACY_HOME_PATH = '/home';
 export const SPACES_PATH = '/spaces';
+/** The Tasks view: open tasks across spaces, grouped by space or due date. */
+export const TASKS_PATH = '/tasks';
 
 export const spacePath = (spaceId: string) => `${SPACES_PATH}/${spaceId}`;
 
@@ -34,6 +37,10 @@ export const NOTE_PARAM = 'note';
 export const LINK_PARAM = 'link';
 /** URL param for the Library layout: absent/`grid` = masonry, `list` = reading list, `table` = the Table. */
 export const VIEW_PARAM = 'view';
+/** Tasks view grouping: absent = by space, `date` = by due date. */
+export const GROUP_PARAM = 'group';
+/** Tasks view: the Done list is open (`?done=1`). */
+export const DONE_PARAM = 'done';
 /** Journal: the Inbox tray is open (`?inbox=1`). */
 export const INBOX_PARAM = 'inbox';
 
