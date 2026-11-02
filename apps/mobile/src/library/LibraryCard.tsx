@@ -19,6 +19,7 @@ export const LibraryCard = memo(function LibraryCard({ item, width, onOpen }: { 
   const { palette } = t;
   const link = item.link;
   const [failed, setFailed] = useState(false);
+  const [favFailed, setFavFailed] = useState(false);
   const ratio = failed ? null : pictureRatio(link);
   const title = getLinkTitle(link);
   const source = sourceOf(link);
@@ -49,8 +50,8 @@ export const LibraryCard = memo(function LibraryCard({ item, width, onOpen }: { 
             </View>
           ) : null}
           <View style={styles.body}>
-            {ratio === null && link.favicon_url ? (
-              <Image source={link.favicon_url} style={styles.fav} accessibilityIgnoresInvertColors />
+            {ratio === null && link.favicon_url && !favFailed ? (
+              <Image source={link.favicon_url} style={styles.fav} onError={() => setFavFailed(true)} accessibilityIgnoresInvertColors />
             ) : null}
             <Text size={ratio === null ? 's' : 'xs'} weight={ratio === null ? 'heavy' : 'medium'} numberOfLines={ratio === null ? 4 : 2}>
               {title}

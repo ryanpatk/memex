@@ -260,7 +260,7 @@ const SpaceToggle = ({
           styles.toggle,
           { borderRadius: t.radius.m },
           on
-            ? { backgroundColor: mix(space.color, palette.paper, palette.dark ? 0.32 : 0.2), boxShadow: `${t.objectShadow}, 0 0 0 1.5px ${alpha(space.color, 0.65)}` }
+            ? { backgroundColor: mix(space.color, palette.paper, palette.dark ? 0.16 : 0.2), boxShadow: `${t.objectShadow}, 0 0 0 1.5px ${alpha(space.color, palette.dark ? 0.8 : 0.65)}` }
             : suggested
               ? { backgroundColor: palette.paper, borderWidth: 1, borderStyle: 'dashed', borderColor: alpha(space.color, 0.8) }
               : { backgroundColor: palette.paper, boxShadow: t.objectShadow },
