@@ -17,6 +17,9 @@
  *   GET    /api/tags               [{ id, name }]
  *   POST   /mcp                    hosted MCP server for agents (agent tokens, mxa_…;
  *                                    src/mcp/, docs/mcp.md)
+ *   POST   /agent-tokens           { name, scope, expires_in_days? } → a new agent token,
+ *                                    shown once; auth is the web app's Supabase session
+ *                                    (src/agentTokens.ts)
  *
  * The capture rules (identify, dedupe, validate) live in @memex/core
  * (`packages/core/src/capture`), so the hosted MCP server can reuse them.
@@ -24,6 +27,7 @@
  * (src/db.ts). When the database moves, only this worker changes.
  */
 import { CaptureError, createCaptureService, isUuid, parseCaptureInput } from '../../packages/core/src/capture';
+import { handleAgentTokens } from './agentTokens';
 import { createDb, userScope, type Db, type DbEnv } from './db';
 import { handleMcp, type RateLimiter } from './mcp/handler';
 import { tryScrape } from './scraper';
@@ -109,6 +113,8 @@ export default {
 
     // Hosted MCP for agents: its own tokens (mxa_…), scopes, limits and audit log (src/mcp/).
     if (pathname === '/mcp') return handleMcp(request, env, ctx);
+    // Agent token creation for the web app: Supabase session auth, not an access token.
+    if (pathname === '/agent-tokens') return handleAgentTokens(request, env);
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: CORS_HEADERS });

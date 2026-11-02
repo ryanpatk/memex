@@ -14,24 +14,29 @@
  *      from the response itself
  *
  * Tools are registered only if the token's scope allows them, and each call
- * checks again. All data access goes through `userScope` for the token's user.
+ * checks again. The write service is built only for `read_write` tokens. All
+ * data access goes through `userScope` for the token's user.
  */
 import { createMcpHandler, McpServer } from '@modelcontextprotocol/server';
+import { CaptureError, createCaptureService } from '../../../packages/core/src/capture';
 import {
   AgentInputError,
   AgentNotFoundError,
   createAgentReadService,
+  createAgentWriteService,
   scopeAllows,
   scopeList,
   summarizeArgs,
-  type AgentReadService,
   type ArgsSummary,
   type AuditStatus,
 } from '../../../packages/core/src/agent';
 import { createDb, userScope, type Db, type DbEnv } from '../db';
 import { authenticateAgent, type AgentPrincipal } from './auth';
+import { tryScrape } from '../scraper';
+import { createPostgrestCaptureStore } from '../store';
 import { createPostgrestAgentStore } from './store';
-import { SERVER_INSTRUCTIONS, TOOLS, type ToolDef } from './tools';
+import { READ_INSTRUCTIONS, TOOLS, WRITE_INSTRUCTIONS, type ToolContext, type ToolDef } from './tools';
+import { createPostgrestAgentWriteStore } from './writeStore';
 
 export const SERVER_INFO = { name: 'memex', title: 'memex', version: '0.1.0' };
 
@@ -42,6 +47,9 @@ export interface RateLimiter {
 export interface McpEnv extends DbEnv {
   /** Workers rate limiting binding for /mcp (wrangler.jsonc → ratelimits); optional. */
   MCP_RATE_LIMITER?: RateLimiter;
+  /** memex-scraper, so save_link fills in titles and pictures like the extension's captures. */
+  SCRAPER?: { fetch(input: string): Promise<Response> };
+  SCRAPER_URL?: string;
 }
 
 const MAX_BODY_BYTES = 64 * 1024;
@@ -85,6 +93,8 @@ export interface AuditRow {
   error: string | null;
   result_count: number | null;
   duration_ms: number | null;
+  /** What a write produced ("note:<id>", "proposal:<id>"); ids only. */
+  result_ref?: string | null;
 }
 
 /** What a tool callback reports about its own run. */
@@ -93,6 +103,7 @@ interface ToolOutcome {
   status: AuditStatus;
   error: string | null;
   count: number | null;
+  ref: string | null;
   ms: number;
 }
 
@@ -173,6 +184,7 @@ export function buildAuditRows(
         row.error = outcome.error;
         row.result_count = outcome.count;
         row.duration_ms = outcome.ms;
+        if (outcome.ref) row.result_ref = outcome.ref;
       } else if (access && !scopeAllows(principal.scope, access)) {
         row.status = 'denied';
         row.error = `scope ${principal.scope} does not allow ${access} tools`;
@@ -217,15 +229,9 @@ const singleRow = (principal: AgentPrincipal, method: string, status: AuditStatu
 
 const errorResult = (message: string) => ({ isError: true, content: [{ type: 'text' as const, text: message }] });
 
-async function runTool(
-  tool: ToolDef,
-  args: unknown,
-  principal: AgentPrincipal,
-  reads: AgentReadService,
-  outcomes: ToolOutcome[],
-) {
+async function runTool(tool: ToolDef, args: unknown, principal: AgentPrincipal, ctx: ToolContext, outcomes: ToolOutcome[]) {
   const started = Date.now();
-  const outcome: ToolOutcome = { tool: tool.name, status: 'ok', error: null, count: null, ms: 0 };
+  const outcome: ToolOutcome = { tool: tool.name, status: 'ok', error: null, count: null, ref: null, ms: 0 };
   outcomes.push(outcome);
   try {
     if (!scopeAllows(principal.scope, tool.access)) {
@@ -233,12 +239,13 @@ async function runTool(
       outcome.error = `scope ${principal.scope} does not allow ${tool.access} tools`;
       return errorResult(`This token (scope: ${principal.scope}) can't use ${tool.name}.`);
     }
-    const result = await tool.run({ reads }, args ?? {});
+    const result = await tool.run(ctx, args ?? {});
     outcome.count = tool.count(result);
+    outcome.ref = tool.ref?.(result) ?? null;
     return { content: [{ type: 'text' as const, text: JSON.stringify(result) }] };
   } catch (err) {
     outcome.status = 'error';
-    if (err instanceof AgentInputError || err instanceof AgentNotFoundError) {
+    if (err instanceof AgentInputError || err instanceof AgentNotFoundError || err instanceof CaptureError) {
       outcome.error = clip(err.message, 200);
       return errorResult(err.message);
     }
@@ -251,8 +258,9 @@ async function runTool(
 }
 
 /** A fresh server for one request, with only the tools this token may use. */
-export function buildServer(principal: AgentPrincipal, reads: AgentReadService, outcomes: ToolOutcome[]): McpServer {
-  const server = new McpServer(SERVER_INFO, { instructions: SERVER_INSTRUCTIONS });
+export function buildServer(principal: AgentPrincipal, ctx: ToolContext, outcomes: ToolOutcome[]): McpServer {
+  const canWrite = scopeAllows(principal.scope, 'write');
+  const server = new McpServer(SERVER_INFO, { instructions: canWrite ? WRITE_INSTRUCTIONS : READ_INSTRUCTIONS });
   for (const tool of TOOLS) {
     if (!scopeAllows(principal.scope, tool.access)) continue;
     server.registerTool(
@@ -264,12 +272,13 @@ export function buildServer(principal: AgentPrincipal, reads: AgentReadService, 
         annotations: {
           title: tool.title,
           readOnlyHint: tool.access === 'read',
+          // Write tools only add items or file proposals: nothing is overwritten or deleted.
           destructiveHint: false,
           idempotentHint: tool.access === 'read',
           openWorldHint: false,
         },
       },
-      (args: unknown) => runTool(tool, args, principal, reads, outcomes),
+      (args: unknown) => runTool(tool, args, principal, ctx, outcomes),
     );
   }
   return server;
@@ -366,8 +375,18 @@ export async function handleMcp(
   }
 
   const outcomes: ToolOutcome[] = [];
-  const reads = createAgentReadService(createPostgrestAgentStore(userScope(db, principal.userId)), { now: () => now });
-  const handler = createMcpHandler(() => buildServer(principal, reads, outcomes), {
+  const user = userScope(db, principal.userId);
+  const reads = createAgentReadService(createPostgrestAgentStore(user), { now: () => now });
+  const writes = scopeAllows(principal.scope, 'write')
+    ? createAgentWriteService(createPostgrestAgentWriteStore(user), {
+        writer: { clientName: principal.clientName, tokenId: principal.tokenId },
+        capture: createCaptureService(createPostgrestCaptureStore(user), {
+          enrich: (url) => tryScrape({ binding: env.SCRAPER, url: env.SCRAPER_URL ?? '' }, url),
+        }),
+        now: () => now,
+      })
+    : null;
+  const handler = createMcpHandler(() => buildServer(principal, { reads, writes }, outcomes), {
     onerror: (err) => console.warn('mcp handler', err.message),
   });
 

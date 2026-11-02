@@ -31,13 +31,25 @@ export type Params = Record<string, string>;
 
 /**
  * Tables that carry user_id and are reachable through userScope. Notes,
- * tasks, jots (self_messages) and the MCP audit log joined for /mcp
- * (api/src/mcp/); their space/tag joins are read only as embeds under an
- * owned parent row, so they inherit its user filter.
+ * tasks, jots (self_messages), the MCP audit log, agent tokens, idempotency
+ * keys and Inbox proposals joined for /mcp (api/src/mcp/); their space/tag
+ * joins are read only as embeds under an owned parent row, so they inherit
+ * its user filter.
  */
-export type OwnedTable = 'links' | 'profiles' | 'tags' | 'projects' | 'notes' | 'tasks' | 'self_messages' | 'mcp_audit_log';
+export type OwnedTable =
+  | 'links'
+  | 'profiles'
+  | 'tags'
+  | 'projects'
+  | 'notes'
+  | 'tasks'
+  | 'self_messages'
+  | 'mcp_audit_log'
+  | 'agent_tokens'
+  | 'agent_write_keys'
+  | 'inbox_proposals';
 /** Join tables, written only after both sides were ownership-checked. */
-export type JoinTable = 'profile_links' | 'link_tags';
+export type JoinTable = 'profile_links' | 'link_tags' | 'profile_notes' | 'profile_tasks';
 
 const qs = (params: Params) => new URLSearchParams(params).toString();
 
@@ -69,6 +81,9 @@ export function createDb(env: DbEnv, fetcher: typeof fetch = fetch) {
     insert: <T>(table: string, rows: unknown, params: Params = {}, prefer = 'return=representation') =>
       call<T[]>('POST', table, params, rows, prefer),
     update: (table: string, params: Params, patch: unknown) => call<void>('PATCH', table, params, patch, 'return=minimal'),
+    /** PATCH that returns the updated rows (an empty list when the filter matched nothing). */
+    updateReturning: <T>(table: string, params: Params, patch: unknown) =>
+      call<T[]>('PATCH', table, params, patch, 'return=representation'),
     delete: <T>(table: string, params: Params) => call<T[]>('DELETE', table, params, undefined, 'return=representation'),
   };
 }
@@ -93,6 +108,12 @@ export function userScope(db: Db, userId: string) {
       const rest = { ...patch };
       delete rest.user_id; // rows never change owner
       return db.update(table, owned(params), rest);
+    },
+    /** Conditional update: returns the rows it changed, so a caller can tell a lost race. */
+    updateReturning: <T>(table: OwnedTable, params: Params, patch: Record<string, unknown>) => {
+      const rest = { ...patch };
+      delete rest.user_id;
+      return db.updateReturning<T>(table, owned(params), rest);
     },
     delete: <T>(table: OwnedTable, params: Params) => db.delete<T>(table, owned(params)),
     /**
