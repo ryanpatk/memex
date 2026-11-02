@@ -1,5 +1,7 @@
 import type { AuthSession, AuthUser, Repository } from '../repository';
 import type {
+  AgentToken,
+  InboxProposal,
   Link,
   LinkWithTag,
   Note,
@@ -37,6 +39,9 @@ export interface MemoryData {
   spaceNotes: { profile_id: string; note_id: string }[];
   spaceTasks: { profile_id: string; task_id: string }[];
   views: SavedView[];
+  /** MCP agent tokens and pending Inbox proposals (optional: older seeds have none). */
+  agentTokens?: AgentToken[];
+  proposals?: InboxProposal[];
 }
 
 export interface MemoryRepositoryOptions {
@@ -384,6 +389,32 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
       create: ({ name, token_hash }) =>
         wait({ id: newId(), user_id: userId, name, token_hash, created_at: now(), last_used_at: null }),
       delete: () => wait(undefined),
+    },
+
+    agentTokens: {
+      getAll: () => wait([...(db.agentTokens ?? [])].sort((a, b) => (a.created_at < b.created_at ? 1 : -1))),
+      revoke: (id) => {
+        const token = db.agentTokens?.find((t) => t.id === id && !t.revoked_at);
+        if (token) token.revoked_at = now();
+        return wait(undefined);
+      },
+      revokeAll: () => {
+        const live = (db.agentTokens ?? []).filter((t) => !t.revoked_at);
+        live.forEach((t) => (t.revoked_at = now()));
+        return wait(live.length);
+      },
+    },
+
+    proposals: {
+      getPending: () =>
+        wait((db.proposals ?? []).filter((p) => p.status === 'pending').sort((a, b) => (a.created_at < b.created_at ? -1 : 1))),
+      decide: (id, status) => {
+        const proposal = db.proposals?.find((p) => p.id === id && p.status === 'pending');
+        if (!proposal) return Promise.reject(new Error('This proposal was already decided'));
+        proposal.status = status;
+        proposal.decided_at = now();
+        return wait(undefined);
+      },
     },
 
     views: {

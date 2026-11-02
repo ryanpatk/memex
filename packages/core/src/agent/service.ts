@@ -5,9 +5,10 @@
  * layer's JSON Schema is the first check, this is the one that counts),
  * caps sizes, and pages with keyset cursors (keyset.ts).
  */
-import { isUuid } from '../capture/input';
+import { httpUrl, isUuid } from '../capture/input';
 import { markdownExcerpt, noteDisplayTitle } from '../markdown';
 import { hostOf, sourceOf, type SourceKey } from '../sources';
+import { IMAGE_LIMITS, markdownImages, type AgentImage } from './images';
 import { addDays, bucketStart, dayOf, dayStartMs, daySpan, isDay, isTimeZone, type Bucket } from './dates';
 import { canonicalTimestamp, compareInScan, decodeCursor, encodeCursor, keyOf } from './keyset';
 import { AGENT_LIMITS, clip, firstLine, searchTerms } from './text';
@@ -96,6 +97,20 @@ export interface OverviewArgs {
   cursor?: string;
 }
 
+export interface ImagesArgs {
+  type?: AgentItemType;
+  id?: string;
+  space_id?: string;
+  limit?: number;
+  cursor?: string;
+}
+
+/** One item's pictures, for get_images. */
+export interface ItemImages {
+  item: { type: AgentItemType; id: string; title: string };
+  images: AgentImage[];
+}
+
 export interface StatsArgs {
   from?: string;
   to?: string;
@@ -178,6 +193,15 @@ function excerptOf(r: AgentRecord, title: string): string | null {
   // A short one-line jot is all title.
   if (r.type === 'jot' && text === title) return null;
   return clip(text.replace(/\s+/g, ' '), E);
+}
+
+/** A record's http(s) pictures: a link's preview, then images in its text. */
+function imagesOf(r: AgentRecord): AgentImage[] {
+  const out: AgentImage[] = [];
+  const preview = r.type === 'link' ? httpUrl(r.preview_image_url) : null;
+  if (preview) out.push({ url: preview, alt: null, kind: 'preview' });
+  for (const img of markdownImages(r.text, IMAGE_LIMITS.perItem)) if (img.url !== preview) out.push(img);
+  return out.slice(0, IMAGE_LIMITS.perItem + 1);
 }
 
 // ── the service ────────────────────────────────────────────────────────────
@@ -400,6 +424,40 @@ export function createAgentReadService(store: AgentReadStore, deps: { now?: () =
         counts: space.counts,
         total: total(space.counts),
         recent: page.records.map((r) => summarize(r, names)),
+        next_cursor: page.next ? encodeCursor(page.next) : null,
+      };
+    },
+
+    /**
+     * Pictures as URLs (never bytes): one item's (`type` + `id`), or the
+     * newest items in a space that have any (`space_id`, paged by item).
+     */
+    async getImages(args: ImagesArgs): Promise<{ items: ItemImages[]; next_cursor: string | null }> {
+      const hasItem = args.type !== undefined || args.id !== undefined;
+      const spaceId = spaceIdArg(args.space_id);
+      if (hasItem === !!spaceId) throw new AgentInputError('Pass either type and id (one item) or space_id (a space), not both');
+      const names = await spaceNames();
+      if (hasItem) {
+        if (args.cursor) throw new AgentInputError('cursor only applies to space_id');
+        if (!isAgentItemType(args.type)) throw new AgentInputError(`type must be one of ${AGENT_ITEM_TYPES.join(', ')}`);
+        if (!isUuid(args.id)) throw new AgentInputError('id must be an item id from another tool');
+        const record = await store.getItem(args.type, args.id.toLowerCase());
+        if (!record) throw new AgentNotFoundError(`No ${args.type} with that id`);
+        const images = imagesOf(record);
+        return { items: images.length ? [{ item: { type: record.type, id: record.id, title: summarize(record, names).title }, images }] : [], next_cursor: null };
+      }
+      await requireSpace(spaceId!);
+      const limit = limitArg(args.limit, IMAGE_LIMITS.pageDefault, IMAGE_LIMITS.pageMax);
+      const page = await scanPage({
+        types: ['link', 'note', 'task', 'jot'],
+        base: { terms: [], spaceId, source: null, from: null, to: null },
+        direction: 'desc',
+        after: cursorArg(args.cursor),
+        limit,
+        keep: (r) => imagesOf(r).length > 0,
+      });
+      return {
+        items: page.records.map((r) => ({ item: { type: r.type, id: r.id, title: summarize(r, names).title }, images: imagesOf(r) })),
         next_cursor: page.next ? encodeCursor(page.next) : null,
       };
     },

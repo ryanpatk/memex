@@ -250,3 +250,26 @@ describe('timeline_stats', () => {
     await expect(service.timelineStats({ from: '2020-01-01', to: '2026-12-31' })).rejects.toThrow(/at most/);
   });
 });
+
+describe('getImages', () => {
+  it('returns one item’s pictures, or a space’s newest items with pictures, as URLs', async () => {
+    const store = fixture();
+    store.items.push(
+      record('link', T(5), { title: 'Moss garden', url: 'https://example.com/moss', preview_image_url: 'https://img.example/moss.jpg', space_ids: [SPACE] }),
+      record('note', T(6), { title: 'Mood', text: 'Look: ![temple](https://img.example/t.jpg) and ![](data:image/png;base64,AAAA)', space_ids: [SPACE] }),
+      record('link', T(7), { title: 'Inline svg', url: 'https://example.com/svg', preview_image_url: 'data:image/svg+xml;utf8,<svg/>', space_ids: [SPACE] }),
+    );
+    const service = createAgentReadService(store);
+    const space = await service.getImages({ space_id: SPACE });
+    expect(space.items.map((i) => [i.item.title, i.images.map((img) => [img.kind, img.url])])).toEqual([
+      ['Mood', [['embedded', 'https://img.example/t.jpg']]],
+      ['Moss garden', [['preview', 'https://img.example/moss.jpg']]],
+    ]);
+    const one = await service.getImages({ type: 'note', id: space.items[0].item.id });
+    expect(one.items[0].images[0]).toEqual({ url: 'https://img.example/t.jpg', alt: 'temple', kind: 'embedded' });
+    await expect(service.getImages({})).rejects.toThrow(/either/);
+    await expect(service.getImages({ type: 'note', id: uuid(1), space_id: SPACE })).rejects.toThrow(/either/);
+    await expect(service.getImages({ type: 'note', id: uuid(999) })).rejects.toThrow(AgentNotFoundError);
+    await expect(service.getImages({ space_id: OTHER_SPACE.replace('2', '7') })).rejects.toThrow(AgentNotFoundError);
+  });
+});

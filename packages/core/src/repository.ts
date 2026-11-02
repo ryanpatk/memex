@@ -1,4 +1,5 @@
 import type {
+  AgentToken,
   ApiToken,
   CreateLinkData,
   CreateNoteData,
@@ -8,6 +9,7 @@ import type {
   CreateSelfMessageData,
   CreateTagData,
   CreateTaskData,
+  InboxProposal,
   Link,
   LinkWithTag,
   Note,
@@ -200,6 +202,33 @@ export interface ApiTokensRepository {
 }
 
 /**
+ * MCP agent tokens (`agent_tokens`, docs/mcp.md). The app lists and revokes
+ * them; creating one goes through memex-api (`POST /agent-tokens`), which
+ * generates the token server-side and shows it once. Extension tokens
+ * (`apiTokens`) are separate and untouched by anything here.
+ */
+export interface AgentTokensRepository {
+  /** Every agent token, newest first, never the hash. Empty if the table isn't there yet. */
+  getAll(): Promise<AgentToken[]>;
+  /** Revoke one token; memex-api refuses it on its next request. */
+  revoke(id: string): Promise<void>;
+  /** The kill switch: revoke every agent token that isn't revoked yet. Returns how many. */
+  revokeAll(): Promise<number>;
+}
+
+/**
+ * Inbox proposals from agents (`inbox_proposals`): changes to existing items
+ * waiting for the user. Applying one is `applyProposal` (@memex/core/agent),
+ * which writes through the other Repository areas and then calls `decide`.
+ */
+export interface ProposalsRepository {
+  /** Pending proposals, oldest first. Empty if the table isn't there yet. */
+  getPending(): Promise<InboxProposal[]>;
+  /** Record the decision on a pending proposal; the row stays. */
+  decide(id: string, status: 'applied' | 'rejected'): Promise<void>;
+}
+
+/**
  * Saved Library views (decision 15A): named filters with a layout and sort.
  * The built-in tabs (Everything, Unfiled, From X…) live in code, not here.
  */
@@ -232,6 +261,8 @@ export interface Repository {
   spaceNotes: SpaceNotesRepository;
   spaceTasks: SpaceTasksRepository;
   apiTokens: ApiTokensRepository;
+  agentTokens: AgentTokensRepository;
+  proposals: ProposalsRepository;
   views: SavedViewsRepository;
   projects: ProjectsRepository;
 }

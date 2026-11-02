@@ -4,6 +4,7 @@
  * pure consumers of @memex/core never load supabase-js.
  */
 import type { Repository } from '../repository'
+import { createAgentTokensRepository, createProposalsRepository } from './agentTokens'
 import { createApiTokensRepository } from './apiTokens'
 import { createAuthRepository } from './auth'
 import type { MemexSupabaseClient } from './client'
@@ -35,6 +36,8 @@ export const createSupabaseRepository = (client: MemexSupabaseClient): Repositor
   spaceNotes: createSpaceNotesRepository(client),
   spaceTasks: createSpaceTasksRepository(client),
   apiTokens: createApiTokensRepository(client),
+  agentTokens: createAgentTokensRepository(client),
+  proposals: createProposalsRepository(client),
   views: createSavedViewsRepository(client),
   projects: createProjectsRepository(client),
 })

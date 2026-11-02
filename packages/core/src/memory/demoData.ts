@@ -1,4 +1,4 @@
-import type { Link, Note, Profile, SavedView, SelfMessage, Tag, Task } from '../types';
+import type { AgentToken, InboxProposal, Link, Note, Profile, SavedView, SelfMessage, Tag, Task } from '../types';
 import type { MemoryData } from './repository';
 
 /*
@@ -94,7 +94,7 @@ export const createDemoData = (nowMs: number = Date.now()): MemoryData => {
     { id: 'nt-1', user_id: USER, title: 'Kitchen measurements', body: '- Back wall: 3.42 m\n- Window sill height: 1.05 m\n- Island: 2.4 × 0.9 m, 1 m clearance all round\n\nAsk about the soffit before ordering cabinets.', order_index: 0, created_at: ago(9 * DAY), updated_at: ago(4 * HOUR) },
     { id: 'nt-2', user_id: USER, title: 'Portfolio walkthrough script', body: 'Open with the problem, not the screens. Three projects, eight minutes each.\n\n1. memex — the Journal\n2. Design system migration\n3. Onboarding rewrite', order_index: 1, created_at: ago(6 * DAY), updated_at: ago(1 * DAY + 3 * HOUR) },
     { id: 'nt-3', user_id: USER, title: 'Kyoto day 2', body: 'Morning: Fushimi Inari before 7.\nLunch: Nishiki market.\nAfternoon: Gio-ji moss garden, Arashiyama.\nEvening: Pontocho.', order_index: 2, created_at: ago(11 * DAY), updated_at: ago(2 * DAY + 2 * HOUR) },
-    { id: 'nt-4', user_id: USER, title: 'Calm Technology — reading notes', body: 'Tech should inform without demanding focus. Make the periphery do the work.\n\n> The right amount of technology is the minimum needed to solve the problem.', order_index: 3, created_at: ago(1 * DAY + 5 * HOUR), updated_at: ago(1 * DAY + 4 * HOUR) },
+    { id: 'nt-4', user_id: USER, title: 'Calm Technology — reading notes', body: 'Tech should inform without demanding focus. Make the periphery do the work.\n\n> The right amount of technology is the minimum needed to solve the problem.', order_index: 3, captured_by: 'agent', captured_client: 'Grok Bot: reading', created_at: ago(1 * DAY + 5 * HOUR), updated_at: ago(1 * DAY + 4 * HOUR) },
     { id: 'nt-5', user_id: USER, title: 'Gift ideas', body: 'Celadon cups for Mum. A good pour-over kettle. Linen napkins.', order_index: 4, created_at: ago(18 * DAY), updated_at: ago(18 * DAY) },
   ];
 
@@ -149,6 +149,29 @@ export const createDemoData = (nowMs: number = Date.now()): MemoryData => {
     },
   ];
 
+  // An agent at work (MCP, docs/mcp.md): one token and three proposals waiting in the Inbox.
+  const agentTokens: AgentToken[] = [
+    { id: 'at-1', client_name: 'Grok Bot: reading', scope: 'read_write', created_at: ago(20 * DAY), expires_at: new Date(nowMs + 70 * DAY).toISOString(), revoked_at: null, last_used_at: ago(1 * DAY + 4 * HOUR) },
+    { id: 'at-2', client_name: 'Claude Code', scope: 'read', created_at: ago(40 * DAY), expires_at: null, revoked_at: ago(10 * DAY), last_used_at: ago(12 * DAY) },
+  ];
+  const proposal = (p: Pick<InboxProposal, 'id' | 'kind' | 'item_type' | 'item_id' | 'changes'> & Partial<InboxProposal>, at: number): InboxProposal => ({
+    user_id: USER,
+    token_id: 'at-1',
+    client_name: 'Grok Bot: reading',
+    space_id: null,
+    reason: null,
+    base_updated_at: ago(at + HOUR),
+    status: 'pending',
+    decided_at: null,
+    created_at: ago(at),
+    ...p,
+  });
+  const proposals: InboxProposal[] = [
+    proposal({ id: 'pr-1', kind: 'file', item_type: 'link', item_id: 'ln-14', space_id: 'sp-reading', changes: {}, reason: 'A design retrospective, like the rest of Reading' }, 3 * HOUR),
+    proposal({ id: 'pr-2', kind: 'append', item_type: 'note', item_id: 'nt-1', changes: { text: '- Soffit: 30 cm drop above the window (from the builder’s email)' }, reason: 'Adds the soffit size you asked about' }, 2 * HOUR),
+    proposal({ id: 'pr-3', kind: 'edit', item_type: 'task', item_id: 'tk-4', changes: { title: 'Call the electrician about the island outlet and the pendant circuit', due_date: new Date(nowMs + 3 * DAY).toISOString().slice(0, 10) }, base_updated_at: ago(4 * DAY) }, 1 * HOUR),
+  ];
+
   return {
     user: { id: USER, email: 'demo@memex.local', user_metadata: { full_name: 'Demo' } },
     links,
@@ -164,5 +187,7 @@ export const createDemoData = (nowMs: number = Date.now()): MemoryData => {
     spaceNotes,
     spaceTasks,
     views,
+    agentTokens,
+    proposals,
   };
 };

@@ -35,6 +35,43 @@ export interface ApiToken {
   last_used_at: string | null
 }
 
+/**
+ * An MCP agent token (`agent_tokens`), as the app lists it: never the hash.
+ * Created only by memex-api (`POST /agent-tokens`), which shows the plaintext once.
+ */
+export interface AgentToken {
+  id: string
+  client_name: string
+  scope: 'read' | 'read_write'
+  created_at: string
+  expires_at: string | null
+  revoked_at: string | null
+  last_used_at: string | null
+}
+
+/**
+ * An agent's request to change an existing item (`inbox_proposals`), shown
+ * in the Inbox until the user applies or rejects it. `changes.text` is the
+ * note body, task detail or link description; for `append` it is the text
+ * to add at the end of the note.
+ */
+export interface InboxProposal {
+  id: string
+  user_id: string
+  token_id: string | null
+  client_name: string
+  kind: 'file' | 'edit' | 'append'
+  item_type: 'link' | 'note' | 'task'
+  item_id: string
+  space_id: string | null
+  changes: { title?: string; text?: string; due_date?: string | null; done?: boolean }
+  reason: string | null
+  base_updated_at: string | null
+  status: 'pending' | 'applied' | 'rejected'
+  decided_at: string | null
+  created_at: string
+}
+
 export interface LinkTag {
   id: string
   link_id: string
@@ -94,6 +131,9 @@ export interface Note {
   title?: string
   body: string
   order_index: number
+  /** 'agent' when an MCP agent wrote it (with the token's client name); null = written in the app. */
+  captured_by?: string | null
+  captured_client?: string | null
   created_at: string
   updated_at: string
 }
@@ -122,6 +162,9 @@ export interface Task {
   is_done: boolean
   due_date?: string
   order_index: number
+  /** 'agent' when an MCP agent wrote it (with the token's client name); null = written in the app. */
+  captured_by?: string | null
+  captured_client?: string | null
   created_at: string
   updated_at: string
 }
@@ -184,6 +227,9 @@ export interface SelfMessage {
   profile_id: string | null
   body: string
   legacy_id?: string | null
+  /** 'agent' when an MCP agent wrote it (with the token's client name); null = written in the app. */
+  captured_by?: string | null
+  captured_client?: string | null
   created_at: string
   updated_at: string
 }
