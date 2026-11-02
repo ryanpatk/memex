@@ -28,6 +28,8 @@ import { dragAttrs } from '../../utils/itemDrag';
 
 export interface JournalHandlers {
   onFile: (keys: string[], spaceId: string) => void;
+  /** Take items out of a space (“File to…” on a space that's already ticked). Without it, ticked spaces are inert. */
+  onUnfile?: (keys: string[], spaceId: string, label?: string) => void;
   onToggleTask: (task: TaskWithTags) => void;
   onOpenNote: (noteId: string) => void;
   onJotToNote: (jot: SelfMessage) => void;
@@ -40,6 +42,8 @@ interface PartProps {
   filer: Filer;
   spaces: JournalSpace[];
   handlers: JournalHandlers;
+  /** On a space page: the space itself, whose chip every entry would carry, so it's left out. */
+  scopeSpaceId?: string;
 }
 
 const timeFmt = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -169,7 +173,20 @@ const Menu = ({
   );
 };
 
-const FileMenu = ({ keys, inSpaces, spaces, onFile }: { keys: string[]; inSpaces: JournalSpace[]; spaces: JournalSpace[]; onFile: JournalHandlers['onFile'] }) => (
+const FileMenu = ({
+  keys,
+  label,
+  inSpaces,
+  spaces,
+  handlers,
+}: {
+  keys: string[];
+  /** What's being filed, for the toast. */
+  label?: string;
+  inSpaces: JournalSpace[];
+  spaces: JournalSpace[];
+  handlers: JournalHandlers;
+}) => (
   <Menu label="File to…" icon={<FolderInput aria-hidden="true" />}>
     {(close) =>
       spaces.length === 0 ? (
@@ -177,17 +194,24 @@ const FileMenu = ({ keys, inSpaces, spaces, onFile }: { keys: string[]; inSpaces
       ) : (
         spaces.map((space) => {
           const already = inSpaces.some((s) => s.id === space.id);
+          const canUnfile = already && Boolean(handlers.onUnfile);
           return (
             <button
               key={space.id}
               type="button"
-              role="menuitem"
-              aria-disabled={already}
-              className={already ? 'is-in' : undefined}
+              role="menuitemcheckbox"
+              aria-checked={already}
+              aria-disabled={already && !canUnfile}
+              title={canUnfile ? `Take out of ${space.name}` : undefined}
+              className={already ? `is-in${canUnfile ? ' can-unfile' : ''}` : undefined}
               style={hue(space)}
               onClick={() => {
-                if (already) return;
-                onFile(keys, space.id);
+                if (already) {
+                  if (!handlers.onUnfile) return;
+                  handlers.onUnfile(keys, space.id, label);
+                } else {
+                  handlers.onFile(keys, space.id);
+                }
                 close();
               }}
             >
@@ -246,10 +270,11 @@ const agentClient = (entry: Entry): string | null => {
   return row.captured_by === 'agent' ? row.captured_client || 'an agent' : null;
 };
 
-const Filing = ({ entry, filer, handlers }: { entry: Entry; filer: Filer; handlers: JournalHandlers }) => {
+const Filing = ({ entry, filer, handlers, scopeSpaceId }: { entry: Entry; filer: Filer; handlers: JournalHandlers; scopeSpaceId?: string }) => {
   const suggestion = filer.suggest(entry);
   const via = agentClient(entry);
-  if (!entry.spaces.length && !suggestion && !via) return null;
+  const chips = entry.spaces.filter((s) => s.id !== scopeSpaceId);
+  if (!chips.length && !suggestion && !via) return null;
   return (
     <div className="jr-filing">
       {via && (
@@ -260,7 +285,7 @@ const Filing = ({ entry, filer, handlers }: { entry: Entry; filer: Filer; handle
           </span>
         </span>
       )}
-      {entry.spaces.map((s) => (
+      {chips.map((s) => (
         <SpaceChip key={s.id} space={s} />
       ))}
       {suggestion && (
@@ -294,6 +319,7 @@ const EntryShell = ({
   children,
   filer,
   handlers,
+  scopeSpaceId,
 }: {
   entry: Entry;
   className: string;
@@ -301,20 +327,23 @@ const EntryShell = ({
   children: ReactNode;
   filer: Filer;
   handlers: JournalHandlers;
+  scopeSpaceId?: string;
 }) => (
   <article className={`jr-entry ${className}`} data-item-key={entry.id} {...dragAttrs(entry.id, entryTitle(entry))}>
     <div className="jr-entry-row">
       {children}
       <div className="jr-actions">{actions}</div>
     </div>
-    <Filing entry={entry} filer={filer} handlers={handlers} />
+    <Filing entry={entry} filer={filer} handlers={handlers} scopeSpaceId={scopeSpaceId} />
   </article>
 );
 
-const RunView = ({ run, spaces, handlers }: { run: Run; spaces: JournalSpace[]; handlers: JournalHandlers }) => {
+const RunView = ({ run, spaces, handlers, scopeSpaceId }: { run: Run; spaces: JournalSpace[]; handlers: JournalHandlers; scopeSpaceId?: string }) => {
   const [expanded, setExpanded] = useState(false);
   const shown = expanded ? run.entries : run.entries.slice(0, 6);
-  const filedIn = spaces.filter((s) => run.entries.some((e) => e.spaces.some((x) => x.id === s.id)));
+  const filedIn = spaces.filter((s) => s.id !== scopeSpaceId && run.entries.some((e) => e.spaces.some((x) => x.id === s.id)));
+  // Spaces every save in the run is in (on a space page, at least that space): pressing one takes the run out
+  const allIn = spaces.filter((s) => run.entries.every((e) => e.spaces.some((x) => x.id === s.id)));
   const n = run.entries.length;
   return (
     <article
@@ -360,7 +389,13 @@ const RunView = ({ run, spaces, handlers }: { run: Run; spaces: JournalSpace[]; 
           )}
         </div>
         <div className="jr-actions">
-          <FileMenu keys={run.entries.map((e) => e.id)} inSpaces={[]} spaces={spaces} onFile={handlers.onFile} />
+          <FileMenu
+            keys={run.entries.map((e) => e.id)}
+            label={`${run.entries.length} ${run.entries.length === 1 ? run.source.one : run.source.many} from ${run.source.label}`}
+            inSpaces={allIn}
+            spaces={spaces}
+            handlers={handlers}
+          />
         </div>
       </div>
       {filedIn.length > 0 && (
@@ -375,10 +410,10 @@ const RunView = ({ run, spaces, handlers }: { run: Run; spaces: JournalSpace[]; 
 };
 
 const FileAction = ({ entry, spaces, handlers }: { entry: FileableEntry; spaces: JournalSpace[]; handlers: JournalHandlers }) => (
-  <FileMenu keys={[entry.id]} inSpaces={entry.spaces} spaces={spaces} onFile={handlers.onFile} />
+  <FileMenu keys={[entry.id]} label={entryTitle(entry)} inSpaces={entry.spaces} spaces={spaces} handlers={handlers} />
 );
 
-export const PartView = ({ part, filer, spaces, handlers }: PartProps) => {
+export const PartView = ({ part, filer, spaces, handlers, scopeSpaceId }: PartProps) => {
   if (part.kind === 'day') {
     return (
       <h2 className="jr-day">
@@ -386,9 +421,9 @@ export const PartView = ({ part, filer, spaces, handlers }: PartProps) => {
       </h2>
     );
   }
-  if (part.kind === 'run') return <RunView run={part} spaces={spaces} handlers={handlers} />;
+  if (part.kind === 'run') return <RunView run={part} spaces={spaces} handlers={handlers} scopeSpaceId={scopeSpaceId} />;
 
-  const shell = { entry: part, filer, handlers };
+  const shell = { entry: part, filer, handlers, scopeSpaceId };
   switch (part.kind) {
     case 'jot':
       return (

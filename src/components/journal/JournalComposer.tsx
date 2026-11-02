@@ -1,18 +1,26 @@
-import { useId, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
+import { forwardRef, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { ArrowUp } from 'lucide-react';
-import { mentionQuery, parseComposer, type ComposerResult, type JournalSpace } from '@memex/core';
+import { mentionQuery, parseComposer, withDefaultSpace, type ComposerResult, type JournalSpace } from '@memex/core';
 
 /*
  * The Journal composer: one field at the bottom of the feed. What you type
  * decides what Enter makes (utils/composer.ts): a jot, a link for a lone
  * URL, a task after "[] ", a note with ⌘/Ctrl+Enter; "@Space" files it.
- * The hint under the field always says what Enter will do.
+ * The hint under the field always says what Enter will do. On a space page
+ * (`defaultSpace`) everything files there unless you @ another space.
  */
+
+export interface JournalComposerHandle {
+  /** Focus the field; `prefill` replaces an empty field's text (e.g. "[] " to start a task). */
+  focus: (prefill?: string) => void;
+}
 
 interface JournalComposerProps {
   spaces: JournalSpace[];
   /** Resolves when saved; rejecting puts the text back. */
   onSubmit: (result: Exclude<ComposerResult, { kind: 'empty' }>) => Promise<void>;
+  /** A space page's space: what you write files there unless it names another space. */
+  defaultSpace?: JournalSpace;
 }
 
 const ENTER_LABEL: Record<Exclude<ComposerResult['kind'], 'empty'>, string> = {
@@ -31,7 +39,7 @@ const SEND_LABEL: Record<Exclude<ComposerResult['kind'], 'empty'>, string> = {
 
 const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);
 
-const JournalComposer = ({ spaces, onSubmit }: JournalComposerProps) => {
+const JournalComposer = forwardRef<JournalComposerHandle, JournalComposerProps>(({ spaces, onSubmit, defaultSpace }, ref) => {
   const [text, setText] = useState('');
   const [caret, setCaret] = useState(0);
   const [pickIndex, setPickIndex] = useState(0);
@@ -40,7 +48,26 @@ const JournalComposer = ({ spaces, onSubmit }: JournalComposerProps) => {
   const hintId = useId();
   const listId = useId();
 
-  const parsed = useMemo(() => parseComposer(text, spaces), [spaces, text]);
+  const parsed = useMemo(() => withDefaultSpace(parseComposer(text, spaces), defaultSpace), [defaultSpace, spaces, text]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      focus: (prefill) => {
+        const el = fieldRef.current;
+        if (!el) return;
+        if (prefill && !el.value.trim()) {
+          setText(prefill);
+          requestAnimationFrame(() => {
+            el.setSelectionRange(prefill.length, prefill.length);
+            setCaret(prefill.length);
+          });
+        }
+        el.focus();
+      },
+    }),
+    [],
+  );
 
   const query = mentionQuery(text.slice(0, caret));
   const matches = useMemo(() => {
@@ -78,7 +105,7 @@ const JournalComposer = ({ spaces, onSubmit }: JournalComposerProps) => {
   };
 
   const submit = (asNote: boolean) => {
-    const result = asNote ? parseComposer(text, spaces, true) : parsed;
+    const result = asNote ? withDefaultSpace(parseComposer(text, spaces, true), defaultSpace) : parsed;
     if (result.kind === 'empty') return;
     const saved = text;
     setText('');
@@ -141,8 +168,12 @@ const JournalComposer = ({ spaces, onSubmit }: JournalComposerProps) => {
           className="jr-composer-input"
           rows={1}
           value={text}
-          placeholder="Write a jot, paste a link, “[] ” for a task, @space to file…"
-          aria-label="Write in your Journal"
+          placeholder={
+            defaultSpace
+              ? `Jot in ${defaultSpace.name}, paste a link, “[] ” for a task, @ to file elsewhere…`
+              : 'Write a jot, paste a link, “[] ” for a task, @space to file…'
+          }
+          aria-label={defaultSpace ? `Write in ${defaultSpace.name}` : 'Write in your Journal'}
           aria-describedby={hintId}
           aria-autocomplete="list"
           aria-expanded={pickerOpen}
@@ -187,6 +218,8 @@ const JournalComposer = ({ spaces, onSubmit }: JournalComposerProps) => {
       </p>
     </div>
   );
-};
+});
+
+JournalComposer.displayName = 'JournalComposer';
 
 export default JournalComposer;

@@ -1112,3 +1112,8 @@
     animation-duration: 2.4s;
   }
 }
+
+/* “File to…”: a space that's already ticked takes the item out when pressed */
+.jr-menu > button.is-in.can-unfile {
+  cursor: pointer;
+}
