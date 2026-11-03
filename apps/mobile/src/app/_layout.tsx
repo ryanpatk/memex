@@ -38,7 +38,10 @@ export const unstable_settings = { anchor: '(tabs)' };
 // The share extension's native module (null in Expo Go, where there's no extension).
 const shareIntentOptions = { disabled: !ShareIntentModule, resetOnBackground: false };
 
-void SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+/** A render error anywhere in the app (Expo Router's convention): calm copy and Try again. */
+export { ErrorBoundary } from '../ui/ErrorScreen';
 
 /** Providers, fonts, and the signed-in / signed-out split (Stack.Protected). */
 export default function RootLayout() {
@@ -77,7 +80,7 @@ const Root = ({ fontsReady }: { fontsReady: boolean }) => {
   useShareSheetReturn(loaded && isConfigured, Boolean(session));
 
   useEffect(() => {
-    if (loaded) void SplashScreen.hideAsync();
+    if (loaded) SplashScreen.hideAsync().catch(() => {});
   }, [loaded]);
 
   if (!loaded) return null;

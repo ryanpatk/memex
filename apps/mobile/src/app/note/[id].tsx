@@ -13,6 +13,7 @@ import { MarkdownView } from '../../notes/MarkdownView';
 import { alpha } from '../../theme/palette';
 import { typeRole, useTheme } from '../../theme/theme';
 import { Canvas } from '../../ui/Canvas';
+import { FeedError } from '../../ui/FeedStates';
 import { Paper } from '../../ui/Paper';
 import { Placeholder } from '../../ui/Placeholder';
 import { Button } from '../../ui/Pressable';
@@ -39,15 +40,20 @@ const dateFmt = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeSt
 export default function NoteScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { journal, isLoading } = useJournal();
+  const { journal, isLoading, unavailable, error, refreshing, refresh } = useJournal();
   const entry = journal?.entries.find((e): e is NoteEntry => e.kind === 'note' && e.note.id === id);
   const back = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   if (entry && journal) return <Note entry={entry} spaces={journal.spaces} onBack={back} />;
+  // “Gone” only after a load that worked and didn't find it.
   return (
     <Canvas>
       <StackHeader />
-      {!isLoading && <Gone onBack={back} />}
+      {isLoading ? null : unavailable ? (
+        <FeedError error={error} onRetry={refresh} title="Couldn’t load this note" retrying={refreshing} />
+      ) : (
+        <Gone onBack={back} />
+      )}
     </Canvas>
   );
 }

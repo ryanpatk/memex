@@ -1,16 +1,17 @@
 import { useMemo } from 'react';
-import { Platform, StyleSheet, Text as RNText, View } from 'react-native';
+import { Linking, Platform, StyleSheet, Text as RNText, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { Check } from 'lucide-react-native';
 import { alpha } from '../theme/palette';
 import { FONTS, useTheme } from '../theme/theme';
 import { Text } from '../ui/Text';
+import { useToast } from '../ui/Toast';
 import { parseMarkdown, safeHref, type Block, type Span } from './markdown';
 
 /*
  * A note, read: markdown/parseMarkdown's blocks on the Pastel Sky type
- * scale (web: MarkdownText's reading view). Links open in the in-app
- * Safari; task boxes show their state (ticking them is the editor's job).
+ * scale (web: MarkdownText's reading view). Web links open in the in-app
+ * Safari, mailto: in Mail (the in-app browser only takes http(s)); task boxes show their state (ticking them is the editor's job).
  */
 
 const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
@@ -18,6 +19,14 @@ const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
 /** Inline runs inside a block's Text: plain RN Text, so size, line height and colour come from the block. */
 const Spans = ({ spans }: { spans: Span[] }) => {
   const { palette } = useTheme();
+  const toast = useToast();
+  const open = (href: string) => {
+    const opening = /^https?:/i.test(href) ? WebBrowser.openBrowserAsync(href, { controlsColor: palette.accentText }) : Linking.openURL(href);
+    opening.catch((e: unknown) => {
+      console.warn('Opening a note link failed:', e);
+      toast.show('Couldn’t open that link.', { tone: 'error' });
+    });
+  };
   return (
     <>
       {spans.map((span, i) => {
@@ -26,7 +35,7 @@ const Spans = ({ spans }: { spans: Span[] }) => {
           <RNText
             key={i}
             accessibilityRole={href ? 'link' : undefined}
-            onPress={href ? () => void WebBrowser.openBrowserAsync(href, { controlsColor: palette.accentText }) : undefined}
+            onPress={href ? () => open(href) : undefined}
             style={[
               span.bold && { fontFamily: FONTS.heavy },
               span.italic && { fontFamily: span.bold ? FONTS.heavyItalic : FONTS.italic },

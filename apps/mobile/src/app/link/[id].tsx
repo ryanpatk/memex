@@ -22,6 +22,7 @@ import { useEntryActions } from '../../journal/useEntryActions';
 import { alpha, mix } from '../../theme/palette';
 import { useTheme } from '../../theme/theme';
 import { Canvas } from '../../ui/Canvas';
+import { FeedError } from '../../ui/FeedStates';
 import { Paper } from '../../ui/Paper';
 import { Placeholder } from '../../ui/Placeholder';
 import { Button, usePressSettle } from '../../ui/Pressable';
@@ -48,12 +49,17 @@ export default function LinkDetailScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const repository = useRepository();
-  const { journal, isLoading } = useJournal();
+  const { journal, isLoading, refresh } = useJournal();
   const entry = journal?.entries.find((e): e is LinkEntry => e.kind === 'link' && e.link.id === id);
-  // Deep links can arrive before (or without) the Journal's copy.
+  // Deep links can arrive before (or without) the Journal's copy. Supabase's
+  // .single() answers “no rows” (PGRST116) for a link that's gone: that's null, not an error.
   const fallback = useQuery({
     queryKey: ['link', id],
-    queryFn: () => repository.links.getById(id),
+    queryFn: () =>
+      repository.links.getById(id).catch((e: unknown) => {
+        if ((e as { code?: unknown } | null)?.code === 'PGRST116') return null;
+        throw e;
+      }),
     enabled: Boolean(id) && !isLoading && !entry,
   });
 
@@ -74,14 +80,25 @@ export default function LinkDetailScreen() {
         {link && (
           <RoundButton
             label="Share"
-            onPress={() => void Share.share({ url: link.url, message: link.url })}
+            onPress={() => Share.share({ url: link.url, message: link.url }).catch((e: unknown) => console.warn('Share failed:', e))}
             icon={(color) => <ShareIcon size={19} color={color} strokeWidth={2} />}
           />
         )}
       </View>
       {link ? (
         <Detail link={link} entry={entry} spaces={journal?.spaces ?? []} filer={journal?.filer} onDeleted={back} bottom={insets.bottom} />
-      ) : isLoading || fallback.isPending ? null : (
+      ) : isLoading || fallback.isPending ? null : fallback.isError ? (
+        // It didn't load (offline, refused): not the same as gone.
+        <FeedError
+          error={fallback.error}
+          onRetry={() => {
+            void fallback.refetch();
+            void refresh();
+          }}
+          title="Couldn’t load this link"
+          retrying={fallback.isFetching}
+        />
+      ) : (
         <Gone onBack={back} />
       )}
     </Canvas>
@@ -106,6 +123,7 @@ const Detail = ({
   const t = useTheme();
   const { palette } = t;
   const actions = useEntryActions();
+  const toast = useToast();
   const [imageFailed, setImageFailed] = useState(false);
   const source = sourceOf(link);
   const host = getHostname(link.url).replace(/^www\./, '');
@@ -169,9 +187,12 @@ const Detail = ({
         label="Open in Safari"
         icon={<Compass size={18} color={palette.onAccent} strokeWidth={2.25} />}
         onPress={() =>
-          void WebBrowser.openBrowserAsync(link.url, {
+          WebBrowser.openBrowserAsync(link.url, {
             presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
             controlsColor: palette.accentText,
+          }).catch((e: unknown) => {
+            console.warn('Opening the link failed:', e);
+            toast.show('Couldn’t open the link.', { tone: 'error' });
           })
         }
       />

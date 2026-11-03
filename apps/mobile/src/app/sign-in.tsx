@@ -1,6 +1,8 @@
 import { useRef, useState, type ComponentRef } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { isTransientError } from '@memex/core';
 import Svg, { Path } from 'react-native-svg';
 import { signInWithGitHub } from '../auth/signInWithGitHub';
 import { repository } from '../data/repository';
@@ -27,6 +29,17 @@ const GitHubMark = ({ color }: { color: string }) => (
   </Svg>
 );
 
+/** A sign-in that threw (rather than answering with an error): usually no connection. */
+const thrown = (e: unknown) => {
+  console.warn('Sign-in failed:', e);
+  return isTransientError(e) ? 'Couldn’t reach memex. Check your connection and try again.' : 'Couldn’t sign in. Try again.';
+};
+
+/** `/sign-in?error=callback`: the GitHub redirect came back but its code exchange failed (auth/callback). */
+const PARAM_ERRORS: Record<string, string> = {
+  callback: 'GitHub sign-in didn’t finish. Try again.',
+};
+
 export default function SignIn() {
   const { palette } = useTheme();
   const insets = useSafeAreaInsets();
@@ -34,7 +47,8 @@ export default function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState<'password' | 'github' | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const params = useLocalSearchParams<{ error?: string }>();
+  const [error, setError] = useState<string | null>((params.error && PARAM_ERRORS[params.error]) || null);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
   const submit = async () => {
@@ -47,17 +61,27 @@ export default function SignIn() {
     setError(null);
     if (errors.email || errors.password) return;
     setBusy('password');
-    const { error: authError } = await repository.auth.signInWithPassword({ email: trimmed, password });
-    setBusy(null);
-    if (authError) setError(authError.message);
+    try {
+      const { error: authError } = await repository.auth.signInWithPassword({ email: trimmed, password });
+      if (authError) setError(authError.message);
+    } catch (e) {
+      setError(thrown(e));
+    } finally {
+      setBusy(null);
+    }
   };
 
   const github = async () => {
     setError(null);
     setBusy('github');
-    const { error: authError } = await signInWithGitHub();
-    setBusy(null);
-    if (authError) setError(authError);
+    try {
+      const { error: authError } = await signInWithGitHub();
+      if (authError) setError(authError);
+    } catch (e) {
+      setError(thrown(e));
+    } finally {
+      setBusy(null);
+    }
   };
 
   return (

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View, type ListRenderItem } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Inbox as InboxIcon } from 'lucide-react-native';
+import { CloudOff, Inbox as InboxIcon } from 'lucide-react-native';
 import type { FileableEntry, Suggestion } from '@memex/core';
 import type { ProposalView } from '../../data/inbox';
 import { useActions } from '../../data/DataProvider';
@@ -12,7 +12,9 @@ import { useEntryActions } from '../../journal/useEntryActions';
 import { useTheme } from '../../theme/theme';
 import { Canvas } from '../../ui/Canvas';
 import { FeedError, FeedSkeleton } from '../../ui/FeedStates';
+import { Paper } from '../../ui/Paper';
 import { Placeholder } from '../../ui/Placeholder';
+import { Button } from '../../ui/Pressable';
 import { ScreenHeader } from '../../ui/ScreenHeader';
 import { Text } from '../../ui/Text';
 import { useToast } from '../../ui/Toast';
@@ -27,6 +29,7 @@ import { useToast } from '../../ui/Toast';
 
 type Item =
   | { kind: 'head'; id: string; title: string; lede: string }
+  | { kind: 'proposalsFailed'; id: string }
   | { kind: 'proposal'; id: string; view: ProposalView }
   | { kind: 'suggestion'; id: string; entry: FileableEntry; suggestion: Suggestion };
 
@@ -37,7 +40,7 @@ export default function InboxScreen() {
   const toast = useToast();
   const actions = useActions();
   const entryActions = useEntryActions();
-  const { journal, proposals, suggestions, count, isLoading, error, refreshing, refresh } = useInbox();
+  const { journal, proposals, suggestions, count, isLoading, unavailable, error, proposalsFailed, retryingProposals, refreshing, refresh, retryProposals } = useInbox();
   const [deciding, setDeciding] = useState<{ id: string; decision: 'apply' | 'reject' } | null>(null);
 
   const decide = async (view: ProposalView, decision: 'apply' | 'reject') => {
@@ -56,6 +59,8 @@ export default function InboxScreen() {
   };
 
   const items: Item[] = [
+    // Agents' proposals didn't load: say so, rather than “Nothing waiting”.
+    ...(proposalsFailed ? [{ kind: 'proposalsFailed' as const, id: 'proposals-failed' }] : []),
     ...(proposals.length
       ? [
           { kind: 'head' as const, id: 'head:agents', title: 'From agents', lede: 'Changes an agent asked to make. Nothing changes until you approve; rejected ones are kept as a record.' },
@@ -82,6 +87,16 @@ export default function InboxScreen() {
               {item.lede}
             </Text>
           </View>
+        );
+      case 'proposalsFailed':
+        return (
+          <Paper level="s" radius={t.radius.l} style={styles.failed}>
+            <CloudOff size={18} color={t.palette.muted} strokeWidth={2} />
+            <Text size="s" tone="soft" style={styles.failedText}>
+              Couldn’t load agents’ proposals
+            </Text>
+            <Button label="Try again" compact loading={retryingProposals} onPress={retryProposals} />
+          </Paper>
         );
       case 'proposal':
         return (
@@ -110,11 +125,11 @@ export default function InboxScreen() {
 
   return (
     <Canvas>
-      <ScreenHeader title="Inbox" subtitle={journal ? (count ? `${countFmt.format(count)} waiting` : 'All caught up') : undefined} />
+      <ScreenHeader title="Inbox" subtitle={journal && !unavailable ? (count ? `${countFmt.format(count)} waiting` : proposalsFailed ? undefined : 'All caught up') : undefined} />
       {isLoading ? (
         <FeedSkeleton />
-      ) : error && !journal ? (
-        <FeedError error={error} onRetry={() => void refresh()} />
+      ) : unavailable ? (
+        <FeedError error={error} onRetry={() => void refresh()} title="Couldn’t load your Inbox" retrying={refreshing} />
       ) : (
         <FlatList
           data={items}
@@ -141,4 +156,6 @@ const styles = StyleSheet.create({
   list: { paddingTop: 4, paddingBottom: 33, paddingHorizontal: 17, gap: 10 },
   emptyList: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 0 },
   head: { gap: 2, paddingHorizontal: 4, paddingTop: 6 },
+  failed: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 14, paddingRight: 8, paddingVertical: 8 },
+  failedText: { flex: 1, minWidth: 0 },
 });

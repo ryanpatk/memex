@@ -23,8 +23,14 @@ export default function AuthCallback() {
       if (!done) router.replace('/');
       done = true;
     };
+    // A failed exchange goes back to sign-in with a message, not to a Journal you can't open.
+    const fail = (e: unknown) => {
+      console.warn('GitHub code exchange failed:', e);
+      if (!done) router.replace('/sign-in?error=callback');
+      done = true;
+    };
     if (session || !code) return finish();
-    repository.auth.exchangeCodeForSession(code).finally(finish);
+    repository.auth.exchangeCodeForSession(code).then(({ error }) => (error ? fail(error) : finish()), fail);
   }, [code, router, session]);
 
   return (

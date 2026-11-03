@@ -55,7 +55,7 @@ export default function TasksScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const params = useLocalSearchParams<{ group?: string; space?: string; done?: string }>();
-  const { journal, isLoading, error, refreshing, refresh } = useJournal();
+  const { journal, isLoading, unavailable, error, refreshing, refresh } = useJournal();
   const entryActions = useEntryActions();
   const taskActions = useTaskActions();
   const [by, setBy] = useState<TaskGrouping>(parseTaskGrouping(params.group));
@@ -242,7 +242,7 @@ export default function TasksScreen() {
     </View>
   );
 
-  const subtitle = totals
+  const subtitle = totals && !unavailable
     ? totals.open === 0
       ? 'All clear'
       : [`${countFmt.format(totals.open)} open`, totals.overdue ? `${countFmt.format(totals.overdue)} overdue` : null, totals.today ? `${countFmt.format(totals.today)} due today` : null]
@@ -256,8 +256,8 @@ export default function TasksScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.fill}>
         {isLoading ? (
           <FeedSkeleton />
-        ) : error && !journal ? (
-          <FeedError error={error} onRetry={refresh} />
+        ) : unavailable ? (
+          <FeedError error={error} onRetry={refresh} title="Couldn’t load your tasks" retrying={refreshing} />
         ) : (
           <FlatList
             data={items}

@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useHiddenEntries, useRepository } from './DataProvider';
+import { useToast } from '../ui/Toast';
 import { keys } from './keys';
 import { LIBRARY_PAGE, libraryItems, sourceTabs, type LibraryQuery } from './library';
+import { refreshFailed } from './refreshFailed';
 
 /**
  * The Library's links for a source and search, a page at a time (infinite
@@ -12,6 +14,7 @@ import { LIBRARY_PAGE, libraryItems, sourceTabs, type LibraryQuery } from './lib
 export const useLibrary = (query: LibraryQuery) => {
   const repository = useRepository();
   const hidden = useHiddenEntries();
+  const toast = useToast();
   const links = useQuery({ queryKey: keys.links, queryFn: () => repository.links.getAll() });
   const [refreshing, setRefreshing] = useState(false);
 
@@ -39,11 +42,12 @@ export const useLibrary = (query: LibraryQuery) => {
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await refetch();
+      const result = await refetch();
+      if (result.isError && result.data !== undefined) toast.show(refreshFailed(result.error), { tone: 'error' });
     } finally {
       setRefreshing(false);
     }
-  }, [refetch]);
+  }, [refetch, toast]);
 
   return {
     items: items.slice(0, limit),
@@ -55,6 +59,8 @@ export const useLibrary = (query: LibraryQuery) => {
     refresh,
     refreshing,
     isLoading: links.isPending,
+    /** The links never loaded (offline on a cold start, or refused): an error, not an empty Library. */
+    unavailable: links.isError && links.data === undefined,
     error: links.error,
   };
 };

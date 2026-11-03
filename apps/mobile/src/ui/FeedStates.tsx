@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 import { CloudOff, MessageSquareText } from 'lucide-react-native';
-import { getErrorMessage } from '@memex/core';
+import { getErrorMessage, isTransientError } from '@memex/core';
 import { useTheme } from '../theme/theme';
 import { Button } from './Pressable';
 import { Paper } from './Paper';
@@ -32,16 +32,38 @@ export const FeedSkeleton = () => {
   );
 };
 
-export const FeedError = ({ error, onRetry }: { error: unknown; onRetry: () => void }) => {
+/** What to say when something didn't load: offline reads as offline, not as "Network request failed". */
+export const errorCopy = (error: unknown, title: string): { title: string; body: string } => {
+  if (isTransientError(error)) {
+    const status = (error as { status?: unknown }).status;
+    return typeof status === 'number'
+      ? { title, body: 'memex didn’t answer just now. Try again in a moment.' }
+      : { title: 'You’re offline', body: 'memex can’t reach the internet. Check your connection; this tries again when you’re back.' };
+  }
+  return { title, body: getErrorMessage(error) || 'Something went wrong. Try again.' };
+};
+
+/**
+ * Something this screen needs didn't load. `title` names it (“Couldn’t load
+ * your spaces”); offline says so instead. `retrying` shows the button's spinner.
+ */
+export const FeedError = ({
+  error,
+  onRetry,
+  title = 'Couldn’t load your Journal',
+  retrying,
+}: {
+  error: unknown;
+  onRetry: () => void;
+  title?: string;
+  retrying?: boolean;
+}) => {
   const { palette } = useTheme();
+  const copy = errorCopy(error, title);
   return (
     <View style={styles.center}>
-      <Placeholder
-        icon={<CloudOff size={26} color={palette.onAccent} strokeWidth={2} />}
-        title="Couldn’t load your Journal"
-        body={getErrorMessage(error)}
-      >
-        <Button label="Try again" onPress={onRetry} />
+      <Placeholder icon={<CloudOff size={26} color={palette.onAccent} strokeWidth={2} />} title={copy.title} body={copy.body}>
+        <Button label="Try again" loading={retrying} onPress={onRetry} />
       </Placeholder>
     </View>
   );

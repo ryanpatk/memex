@@ -31,13 +31,13 @@ const countToday = (feed: Part[]) => {
  * it with text in the composer (nothing is saved until you send).
  */
 export default function JournalScreen() {
-  const { journal, isLoading, error, refreshing, refresh } = useJournal();
+  const { journal, isLoading, unavailable, error, refreshing, refresh } = useJournal();
   const actions = useEntryActions();
   const placeToasts = useComposerToasts();
   const pending = usePendingSaves();
   const params = useLocalSearchParams<{ draft?: string; send?: string }>();
   const today = journal ? countToday(journal.feed) : 0;
-  const subtitle = journal
+  const subtitle = journal && !unavailable
     ? `${countFmt.format(journal.entries.length)} entries${today ? ` · ${today} today` : ''}`
     : undefined;
 
@@ -69,8 +69,8 @@ export default function JournalScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.fill}>
         {isLoading ? (
           <FeedSkeleton />
-        ) : error && !journal?.entries.length ? (
-          <FeedError error={error} onRetry={refresh} />
+        ) : unavailable ? (
+          <FeedError error={error} onRetry={refresh} retrying={refreshing} />
         ) : !journal?.entries.length && !pending.length ? (
           <FeedEmpty />
         ) : journal?.entries.length ? (
@@ -78,12 +78,13 @@ export default function JournalScreen() {
         ) : (
           <View style={styles.fill} />
         )}
-        {!isLoading && !journal?.entries.length && pending.length > 0 && (
+        {!isLoading && (unavailable || !journal?.entries.length) && pending.length > 0 && (
           <View style={styles.pendingOnly}>
             <PendingSaves items={pending} />
           </View>
         )}
-        {!isLoading && !(error && !journal) && (
+        {/* Shown even when the Journal didn't load: offline, its saves wait on the phone. */}
+        {!isLoading && (
           <Composer spaces={journal?.spaces ?? []} filer={journal?.filer} onSubmit={actions.compose} draft={draft} onTop={placeToasts} />
         )}
       </KeyboardAvoidingView>

@@ -10,6 +10,8 @@ import { useJournal } from './useJournal';
  * suggestions for recent unfiled items. Agents write proposals from
  * elsewhere, so the list refreshes every minute while the app is open, like
  * the web's. `count` is what the tab's badge shows: both kinds together.
+ * `unavailable` is the Journal's (FeedError); `proposalsFailed` only the
+ * agents' half, shown as an inline row with Try again.
  */
 export const useProposals = () => {
   const repository = useRepository();
@@ -17,8 +19,10 @@ export const useProposals = () => {
 };
 
 export const useInbox = () => {
-  const { journal, isLoading, error, refreshing, refresh } = useJournal();
+  const { journal, isLoading, unavailable, error, refreshing, refresh } = useJournal();
   const proposals = useProposals();
+  // Proposals that never loaded aren't “none”: the screen says so inline.
+  const proposalsFailed = proposals.isError && proposals.data === undefined;
   const views = useMemo(() => {
     if (!journal || !proposals.data) return [];
     const byKey = new Map(journal.entries.map((e) => [e.id, e]));
@@ -31,7 +35,11 @@ export const useInbox = () => {
     suggestions,
     count: suggestions.length + (proposals.data?.length ?? 0),
     isLoading: isLoading || proposals.isPending,
-    error: error ?? proposals.error ?? null,
+    unavailable,
+    error,
+    proposalsFailed,
+    retryingProposals: proposalsFailed && proposals.isFetching,
+    retryProposals: () => void proposals.refetch(),
     refreshing,
     refresh: async () => {
       await Promise.all([refresh(), proposals.refetch()]);

@@ -43,7 +43,7 @@ export default function LibraryScreen() {
   );
 
   const filtered = Boolean(source || search.trim());
-  const subtitle = library.isLoading
+  const subtitle = library.isLoading || library.unavailable
     ? undefined
     : filtered
       ? `${countFmt.format(library.matching)} of ${countFmt.format(library.total)} links`
@@ -91,8 +91,8 @@ export default function LibraryScreen() {
 
       {library.isLoading ? (
         <FeedSkeleton />
-      ) : library.error && !library.total ? (
-        <FeedError error={library.error} onRetry={library.refresh} />
+      ) : library.unavailable ? (
+        <FeedError error={library.error} onRetry={library.refresh} title="Couldn’t load your Library" retrying={library.refreshing} />
       ) : library.total === 0 ? (
         <View style={styles.center}>
           <Placeholder

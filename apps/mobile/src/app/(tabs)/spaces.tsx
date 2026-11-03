@@ -8,7 +8,7 @@ import { useJournal } from '../../data/useJournal';
 import { SpaceCard } from '../../spaces/SpaceCard';
 import { useTheme } from '../../theme/theme';
 import { Canvas } from '../../ui/Canvas';
-import { FeedError } from '../../ui/FeedStates';
+import { FeedError, FeedSkeleton } from '../../ui/FeedStates';
 import { IconBadge } from '../../ui/IconBadge';
 import { Paper } from '../../ui/Paper';
 import { Placeholder } from '../../ui/Placeholder';
@@ -26,16 +26,18 @@ const countFmt = new Intl.NumberFormat();
 export default function SpacesScreen() {
   const t = useTheme();
   const router = useRouter();
-  const { journal, isLoading, error, refreshing, refresh } = useJournal();
+  const { journal, isLoading, unavailable, error, refreshing, refresh } = useJournal();
   const summaries = useMemo(() => (journal ? summarizeSpaces(journal) : []), [journal]);
   const totals = journal ? taskTotals(journal.tasks) : null;
   const n = journal?.spaces.length ?? 0;
 
   return (
     <Canvas>
-      <ScreenHeader title="Spaces" subtitle={journal ? `${countFmt.format(n)} ${n === 1 ? 'space' : 'spaces'}` : undefined} />
-      {error && !journal ? (
-        <FeedError error={error} onRetry={refresh} />
+      <ScreenHeader title="Spaces" subtitle={journal && !unavailable ? `${countFmt.format(n)} ${n === 1 ? 'space' : 'spaces'}` : undefined} />
+      {isLoading ? (
+        <FeedSkeleton />
+      ) : unavailable ? (
+        <FeedError error={error} onRetry={refresh} title="Couldn’t load your spaces" retrying={refreshing} />
       ) : (
         <ScrollView
           contentContainerStyle={styles.scroll}

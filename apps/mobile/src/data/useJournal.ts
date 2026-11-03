@@ -1,8 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from '../theme/theme';
+import { useToast } from '../ui/Toast';
 import { useDismissed, useHiddenEntries, useRepository } from './DataProvider';
 import { toJournal } from './journal';
+import { refreshFailed } from './refreshFailed';
 import { keys } from './keys';
 
 /*
@@ -10,6 +12,12 @@ import { keys } from './keys';
  * (keys.ts), so a shared @memex/react package can take these over later.
  * Every tab reads this; React Query dedupes the fetches. Entries waiting out
  * their Undo window are left out.
+ *
+ * `unavailable`: some of it never loaded (offline on a cold start, or the
+ * server said no). A failed query isn't pending in React Query v5, so
+ * `journal` is still built (from what did load; the composer needs it to
+ * keep saves offline), and screens show FeedError instead of an empty state.
+ * A pull-to-refresh that fails while older data is on screen says so in a toast.
  */
 
 export const useJournal = () => {
@@ -17,6 +25,7 @@ export const useJournal = () => {
   const repository = useRepository();
   const hidden = useHiddenEntries();
   const dismissed = useDismissed();
+  const toast = useToast();
   const jots = useQuery({ queryKey: keys.jots, queryFn: () => repository.jots.getAll() });
   const links = useQuery({ queryKey: keys.links, queryFn: () => repository.links.getAll() });
   const notes = useQuery({ queryKey: keys.notes, queryFn: () => repository.notes.getAll() });
@@ -29,7 +38,9 @@ export const useJournal = () => {
   const [refreshing, setRefreshing] = useState(false);
 
   const isLoading = all.some((q) => q.isPending);
-  const error = all.find((q) => q.error)?.error ?? null;
+  const failed = all.find((q) => q.isError && q.data === undefined);
+  const unavailable = Boolean(failed);
+  const error = failed?.error ?? null;
 
   const journal = useMemo(() => {
     if (isLoading) return null;
@@ -54,13 +65,15 @@ export const useJournal = () => {
   const refresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await Promise.all(refetchers.map((refetch) => refetch()));
+      const results = await Promise.all(refetchers.map((refetch) => refetch()));
+      const stale = results.find((r) => r.isError && r.data !== undefined);
+      if (stale) toast.show(refreshFailed(stale.error), { tone: 'error' });
     } finally {
       setRefreshing(false);
     }
     // refetch functions are stable per query
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [toast]);
 
-  return { journal, isLoading, error, refreshing, refresh };
+  return { journal, isLoading, unavailable, error, refreshing, refresh };
 };

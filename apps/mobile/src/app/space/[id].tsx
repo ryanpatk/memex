@@ -30,7 +30,7 @@ export default function SpaceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const t = useTheme();
   const router = useRouter();
-  const { journal, isLoading, error, refreshing, refresh } = useJournal();
+  const { journal, isLoading, unavailable, error, refreshing, refresh } = useJournal();
   const actions = useEntryActions();
   const placeToasts = useComposerToasts();
   const space = journal?.spaces.find((s) => s.id === id);
@@ -38,7 +38,8 @@ export default function SpaceScreen() {
   const spaceTasks = useMemo(() => (scoped ? [...scoped.board.openTasks, ...scoped.board.doneTasks] : []), [scoped]);
   const n = scoped?.board.total ?? 0;
 
-  if (journal && !space) {
+  // Gone only once everything loaded and it isn't there (not when it didn't load).
+  if (journal && !unavailable && !space) {
     return (
       <Canvas>
         <StackHeader />
@@ -59,7 +60,7 @@ export default function SpaceScreen() {
     <Canvas>
       <StackHeader
         title={space?.name}
-        subtitle={scoped ? `${countFmt.format(n)} ${n === 1 ? 'entry' : 'entries'}` : undefined}
+        subtitle={scoped && !unavailable ? `${countFmt.format(n)} ${n === 1 ? 'entry' : 'entries'}` : undefined}
         lead={
           space && (
             <View
@@ -74,8 +75,8 @@ export default function SpaceScreen() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.fill}>
         {isLoading ? (
           <FeedSkeleton />
-        ) : error && !journal ? (
-          <FeedError error={error} onRetry={refresh} />
+        ) : unavailable ? (
+          <FeedError error={error} onRetry={refresh} title="Couldn’t load this space" retrying={refreshing} />
         ) : scoped && n === 0 ? (
           <View style={styles.center}>
             <Placeholder
