@@ -85,6 +85,10 @@ The sheet is a screen in the app (`src/app/share.tsx`, presented as a form sheet
 
 **Proven by tests**, on the demo repository behind a network switch (`src/testing/network.ts`): `src/data/saves.test.ts` (offline → kept and stored → sent once when online; a lost answer for a jot and for a link → still one copy; refused saves aren't kept; only the owner's saves send; discard asks nothing of the server), `src/journal/PendingSaves.test.tsx` (the pending row, Retry offline and online, sending on its own after the backoff, Discard with Undo, a refused save's reason) and core's `outbox/outbox.test.ts` and `supabase/creates.test.ts`.
 
+## When something fails (M7)
+
+A load that fails, offline or refused by the server, says so instead of looking like an empty account. Spaces, Inbox, Tasks, a space's board, a note and a link show “You're offline” or “Couldn't load your …” with **Try again**, and never “No spaces yet” or “isn't here anymore”. They refetch when the connection returns (React Query's `onlineManager` on NetInfo). The Journal keeps its composer, so saves still queue offline. A root `ErrorBoundary` (`src/ui/ErrorScreen.tsx`) catches render errors. Failed pull-to-refresh, sign-in, sign-out and link opens show a message. Tests: `src/screens/errors.test.tsx`, `src/screens/auth.test.tsx`.
+
 ## Run it
 
 You need Node 22+, Xcode with an iOS Simulator runtime, and the Xcode license accepted once (`sudo xcodebuild -license accept`; done on Ryan's Mac as of 2026-11-01). Without the license, Expo CLI can't drive the simulator (`xcrun simctl … exited with code 69`).
