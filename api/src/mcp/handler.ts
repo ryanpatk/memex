@@ -31,6 +31,7 @@ import {
   type AuditStatus,
 } from '../../../packages/core/src/agent';
 import { createDb, userScope, type Db, type DbEnv } from '../db';
+import { BodyTooLargeError, MAX_BODY_BYTES, overLimit, readBodyLimited, type RateLimiter } from '../limits';
 import { authenticateAgent, type AgentPrincipal } from './auth';
 import { tryScrape } from '../scraper';
 import { createPostgrestCaptureStore } from '../store';
@@ -40,9 +41,7 @@ import { createPostgrestAgentWriteStore } from './writeStore';
 
 export const SERVER_INFO = { name: 'memex', title: 'memex', version: '0.1.0' };
 
-export interface RateLimiter {
-  limit(options: { key: string }): Promise<{ success: boolean }>;
-}
+export type { RateLimiter };
 
 export interface McpEnv extends DbEnv {
   /** Workers rate limiting binding for /mcp (wrangler.jsonc → ratelimits); optional. */
@@ -52,7 +51,6 @@ export interface McpEnv extends DbEnv {
   SCRAPER_URL?: string;
 }
 
-const MAX_BODY_BYTES = 64 * 1024;
 const MAX_BATCH = 20;
 const RATE_LOG_EVERY_MS = 60_000;
 
@@ -289,11 +287,7 @@ export function buildServer(principal: AgentPrincipal, ctx: ToolContext, outcome
 /** When each token last had a rate_limited row written (per isolate). */
 const rateLogged = new Map<string, number>();
 
-async function rateLimited(env: McpEnv, tokenId: string): Promise<boolean> {
-  if (!env.MCP_RATE_LIMITER) return false;
-  const { success } = await env.MCP_RATE_LIMITER.limit({ key: `mcp:${tokenId}` }).catch(() => ({ success: true }));
-  return !success;
-}
+const rateLimited = (env: McpEnv, tokenId: string) => overLimit(env.MCP_RATE_LIMITER, `mcp:${tokenId}`);
 
 export async function handleMcp(
   request: Request,
@@ -355,9 +349,11 @@ export async function handleMcp(
     return rpcError(405, -32000, 'Method not allowed: this server is stateless, POST JSON-RPC messages', { Allow: 'POST, OPTIONS' });
   }
 
-  const declared = Number(request.headers.get('Content-Length') ?? 0);
-  const text = declared > MAX_BODY_BYTES ? null : await request.text();
-  if (text === null || text.length > MAX_BODY_BYTES) {
+  let text: string;
+  try {
+    text = await readBodyLimited(request, MAX_BODY_BYTES);
+  } catch (err) {
+    if (!(err instanceof BodyTooLargeError)) throw err;
     ctx.waitUntil(writeAudit(db, principal, [singleRow(principal, '(body)', 'invalid', 'body too large')]));
     return rpcError(413, -32600, 'Request body too large');
   }

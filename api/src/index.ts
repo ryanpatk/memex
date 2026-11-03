@@ -29,7 +29,8 @@
 import { CaptureError, createCaptureService, isUuid, parseCaptureInput } from '../../packages/core/src/capture';
 import { handleAgentTokens } from './agentTokens';
 import { createDb, userScope, type Db, type DbEnv } from './db';
-import { handleMcp, type RateLimiter } from './mcp/handler';
+import { BodyTooLargeError, clientIp, overLimit, readBodyLimited, type RateLimiter } from './limits';
+import { handleMcp } from './mcp/handler';
 import { tryScrape } from './scraper';
 import { createPostgrestCaptureStore } from './store';
 
@@ -38,13 +39,14 @@ export interface Env extends DbEnv {
   SCRAPER?: { fetch(input: string): Promise<Response> };
   /** Fallback for local dev without the binding. */
   SCRAPER_URL: string;
-  /** Workers rate limiting binding (wrangler.jsonc → ratelimits); optional. */
-  RATE_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
+  /** Per-token limit for /api/* and /agent-tokens (wrangler.jsonc → ratelimits); optional. */
+  RATE_LIMITER?: RateLimiter;
+  /** Per-IP limit on every route, checked before any token lookup (src/limits.ts); optional. */
+  IP_RATE_LIMITER?: RateLimiter;
   /** Per-agent-token rate limit for /mcp (wrangler.jsonc → ratelimits); optional. */
   MCP_RATE_LIMITER?: RateLimiter;
 }
 
-const MAX_BODY_BYTES = 64 * 1024;
 const TOKEN_RE = /^mx_[A-Za-z0-9_-]{20,128}$/;
 
 // Token-gated API: CORS stays wide open so the extension (and future clients)
@@ -96,10 +98,7 @@ async function authenticate(request: Request, db: Db, ctx: ExecutionContext): Pr
 }
 
 async function readJson(request: Request): Promise<unknown> {
-  const length = Number(request.headers.get('Content-Length') ?? 0);
-  if (length > MAX_BODY_BYTES) throw new CaptureError('Body too large');
-  const text = await request.text();
-  if (text.length > MAX_BODY_BYTES) throw new CaptureError('Body too large');
+  const text = await readBodyLimited(request); // BodyTooLargeError → 413
   try {
     return JSON.parse(text);
   } catch {
@@ -107,9 +106,24 @@ async function readJson(request: Request): Promise<unknown> {
   }
 }
 
+/** 429 for an IP over its budget, in the shape each route's clients expect. */
+function tooManyFromIp(pathname: string): Response {
+  const headers = { 'Content-Type': 'application/json', 'Retry-After': '60', ...CORS_HEADERS };
+  const body =
+    pathname === '/mcp'
+      ? { jsonrpc: '2.0', id: null, error: { code: -32000, message: 'Too many requests from this address; slow down' } }
+      : { success: false, error: 'Too many requests from this address, slow down' };
+  return new Response(JSON.stringify(body), { status: 429, headers });
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const { pathname, searchParams } = new URL(request.url);
+
+    // Per-IP brake before anything touches the database (src/limits.ts).
+    if (request.method !== 'OPTIONS' && (await overLimit(env.IP_RATE_LIMITER, `ip:${clientIp(request)}`))) {
+      return tooManyFromIp(pathname);
+    }
 
     // Hosted MCP for agents: its own tokens (mxa_…), scopes, limits and audit log (src/mcp/).
     if (pathname === '/mcp') return handleMcp(request, env, ctx);
@@ -129,10 +143,7 @@ export default {
     }
     if (!auth) return error('Missing or invalid token', 401);
 
-    if (env.RATE_LIMITER) {
-      const { success } = await env.RATE_LIMITER.limit({ key: auth.id }).catch(() => ({ success: true }));
-      if (!success) return error('Too many requests, slow down', 429);
-    }
+    if (await overLimit(env.RATE_LIMITER, auth.id)) return error('Too many requests, slow down', 429);
 
     const user = userScope(db, auth.user_id);
     const capture = createCaptureService(createPostgrestCaptureStore(user), {
@@ -175,6 +186,7 @@ export default {
 
       return error('Not found', 404);
     } catch (err) {
+      if (err instanceof BodyTooLargeError) return error(err.message, 413);
       if (err instanceof CaptureError) return error(err.message, err.status);
       console.error('memex-api error', err instanceof Error ? err.message : err);
       return error('memex couldn’t complete that request', 502);

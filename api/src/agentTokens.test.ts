@@ -90,6 +90,13 @@ describe('POST /agent-tokens', () => {
     expect(full.calls.some((c) => c.method === 'POST')).toBe(false);
   });
 
+  it('refuses oversized bodies with 413 and writes nothing', async () => {
+    const b = backend();
+    const res = await run(request({ name: 'x'.repeat(5000), scope: 'read' }), b);
+    expect(res.status).toBe(413);
+    expect(b.calls.filter((c) => c.method !== 'GET')).toEqual([]);
+  });
+
   it('defaults to read scope and no expiry', () => {
     expect(parseCreateToken({ name: '  Claude   Code ' })).toEqual({ ok: true, value: { name: 'Claude Code', scope: 'read', expiresInDays: null } });
   });

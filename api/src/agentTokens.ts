@@ -18,6 +18,7 @@
 import { AGENT_SCOPES, isAgentScope, normalizeClientName, type AgentScope } from '../../packages/core/src/agent';
 import { isUuid } from '../../packages/core/src/capture';
 import { createDb, userScope, type Db, type DbEnv } from './db';
+import { BodyTooLargeError, overLimit, readBodyLimited, type RateLimiter } from './limits';
 import { sha256Hex } from './mcp/auth';
 
 export const AGENT_TOKEN_LIMITS = {
@@ -89,7 +90,7 @@ export function parseCreateToken(body: unknown): { ok: true; value: CreateTokenI
 }
 
 export interface AgentTokensEnv extends DbEnv {
-  RATE_LIMITER?: { limit(options: { key: string }): Promise<{ success: boolean }> };
+  RATE_LIMITER?: RateLimiter;
 }
 
 export async function handleAgentTokens(
@@ -108,13 +109,15 @@ export async function handleAgentTokens(
   }
   if (!userId) return fail('Sign in to memex to create agent tokens', 401);
 
-  if (env.RATE_LIMITER) {
-    const { success } = await env.RATE_LIMITER.limit({ key: `agent-tokens:${userId}` }).catch(() => ({ success: true }));
-    if (!success) return fail('Too many requests, slow down', 429);
-  }
+  if (await overLimit(env.RATE_LIMITER, `agent-tokens:${userId}`)) return fail('Too many requests, slow down', 429);
 
-  const text = await request.text();
-  if (text.length > MAX_BODY) return fail('Body too large', 413);
+  let text: string;
+  try {
+    text = await readBodyLimited(request, MAX_BODY);
+  } catch (err) {
+    if (err instanceof BodyTooLargeError) return fail('Body too large', 413);
+    throw err;
+  }
   let body: unknown;
   try {
     body = JSON.parse(text || '{}');

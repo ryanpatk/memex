@@ -129,9 +129,21 @@ curl -X POST http://localhost:8788/api/capture \
 - Every id that reaches a filter is validated first: UUIDs for links, spaces
   and tags; platform patterns for source ids; tokens must look like `mx_…`
   before they're hashed and looked up.
-- Bodies over 64 KB are refused. Each token is rate-limited to about 120
-  requests a minute (`ratelimits` in `wrangler.jsonc`; per Cloudflare
-  location, so a brake rather than a quota).
+- Bodies over 64 KB get `413` on every route (`/agent-tokens`: 4 KB). The
+  cap counts bytes as the body streams in (`src/limits.ts`), so a request
+  without or lying about `Content-Length` can't make the Worker buffer more.
+- Two rate-limit layers, both Workers rate limiting bindings (`ratelimits` in
+  `wrangler.jsonc`): every route is limited to 600 requests a minute **per
+  client IP before any token lookup** (`IP_RATE_LIMITER`), so floods of bad
+  tokens never reach the database; then each token gets about 120 a minute
+  on `/api/*` (`RATE_LIMITER`) and 60 on `/mcp` (`MCP_RATE_LIMITER`). Counts
+  are per Cloudflare location and approximate: a brake, not a quota. Over the
+  limit → `429` with `Retry-After: 60`. Why the binding rather than a Durable
+  Object or KV counter: `src/limits.ts`.
+- The database backs all of this up: since migration
+  `20261104120000_same_owner_checks.sql`, a trigger refuses any row that
+  points at another user's space, tag, project, token or item, even from the
+  service role (`docs/security-audit.md`).
 - Database errors are logged and returned as a generic 502, never echoed.
 - `/mcp`: agent tokens are checked for revocation and expiry on every
   request, tools are filtered by scope, and every message is audited without

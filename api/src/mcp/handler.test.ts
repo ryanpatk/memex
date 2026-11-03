@@ -182,6 +182,34 @@ describe('/mcp auth', () => {
       ['(batch)', 'invalid'],
     ]);
   });
+
+  it('refuses bodies over 64 KB with 413, even streamed without a Content-Length', async () => {
+    const backend = await fakeBackend();
+    const { call, settle } = harness();
+    const huge = JSON.stringify({ ...listTools, params: { pad: 'x'.repeat(70 * 1024) } });
+    expect((await call(post(LIVE, JSON.parse(huge)))).status).toBe(413);
+    const chunk = new TextEncoder().encode('x'.repeat(16 * 1024));
+    let sent = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(c) {
+        if (sent++ >= 10) return c.close();
+        c.enqueue(chunk);
+      },
+    });
+    const streamed = new Request('https://api.example/mcp', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${LIVE}` },
+      body,
+      duplex: 'half',
+    } as RequestInit);
+    expect((await call(streamed)).status).toBe(413);
+    expect(sent).toBeLessThanOrEqual(6);
+    await settle();
+    expect(backend.audit().map((r) => [r.method, r.error])).toEqual([
+      ['(body)', 'body too large'],
+      ['(body)', 'body too large'],
+    ]);
+  });
 });
 
 /** An MCP SDK client whose HTTP goes straight into handleMcp. */
