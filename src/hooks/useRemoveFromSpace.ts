@@ -12,6 +12,7 @@ import { useProfiles } from './useProfiles';
 import { useMoveJots } from './useMoveJots';
 import type { ToastAction } from './useFeedbackToast';
 import { cue } from '../utils/sound';
+import { HANDLES_ERRORS } from '../utils/mutationErrors';
 
 type Flash = (message: string, action?: ToastAction) => void;
 
@@ -24,14 +25,15 @@ type Flash = (message: string, action?: ToastAction) => void;
  */
 export function useRemoveFromSpace(flash: Flash) {
   const { data: profiles } = useProfiles();
-  const removeLink = useRemoveLinkFromProfile();
-  const removeNote = useRemoveNoteFromProfile();
-  const removeTask = useRemoveTaskFromProfile();
-  const addLinks = useAddLinksToProfile();
-  const addNotes = useAddNotesToProfile();
-  const addTasks = useAddTasksToProfile();
+  // Every write below reports its own failure (and Undo's)
+  const removeLink = useRemoveLinkFromProfile(HANDLES_ERRORS);
+  const removeNote = useRemoveNoteFromProfile(HANDLES_ERRORS);
+  const removeTask = useRemoveTaskFromProfile(HANDLES_ERRORS);
+  const addLinks = useAddLinksToProfile(HANDLES_ERRORS);
+  const addNotes = useAddNotesToProfile(HANDLES_ERRORS);
+  const addTasks = useAddTasksToProfile(HANDLES_ERRORS);
   const { data: linkMembership } = useProfileLinkMembership();
-  const setPin = useSetProfileLinkSuperFavorite();
+  const setPin = useSetProfileLinkSuperFavorite(HANDLES_ERRORS);
   const jots = useMoveJots();
 
   return useCallback(

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { dueDayKey, itemKey, type JournalSpace, type TaskWithTags } from '@memex/core';
+import { dueDayKey, itemKey, type TaskWithTags } from '@memex/core';
 import { useDeleteTask, useUpdateTask } from './useTasks';
-import { useAddTasksToProfile, useRemoveTaskFromProfile } from './useProfileTasks';
 import { useAddToSpace } from './useAddToSpace';
+import { useRemoveFromSpace } from './useRemoveFromSpace';
 import type { ToastAction } from './useFeedbackToast';
 import { cue } from '../utils/sound';
 import type { TaskRowHandlers } from '../components/tasks/TaskRow';
@@ -12,8 +12,10 @@ import type { TaskRowHandlers } from '../components/tasks/TaskRow';
  * (decision 14B) so both behave the same: ticking keeps the row in place for
  * a beat (`settling`), then it moves to Done, with Undo in the toast; deletes
  * hide at once and commit after the Undo window (leaving the page commits
- * them); filing toggles a space with Undo; rename and due dates write
- * straight through.
+ * them); filing toggles a space with Undo (the shared add/remove-from-space
+ * hooks); rename and due dates write straight through. A failed tick,
+ * rename, due date or delete is reported by the shell's fallback toast
+ * (Providers' MutationCache), and the optimistic change rolls back.
  */
 
 const UNDO_WINDOW_MS = 6000;
@@ -25,17 +27,15 @@ interface TaskActionsOptions {
   dismiss: () => void;
   /** Task id → the ids of the spaces it's filed in. */
   membership: Map<string, string[]>;
-  spaceById: Map<string, JournalSpace>;
   /** Called just before a row leaves its list (ticked and settled, or deleted), so focus can move on. */
   beforeRowLeaves?: (taskId: string) => void;
 }
 
-export function useTaskActions({ flash, dismiss, membership, spaceById, beforeRowLeaves }: TaskActionsOptions) {
+export function useTaskActions({ flash, dismiss, membership, beforeRowLeaves }: TaskActionsOptions) {
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
-  const addTasks = useAddTasksToProfile();
-  const removeTask = useRemoveTaskFromProfile();
   const addToSpace = useAddToSpace(flash);
+  const removeFromSpace = useRemoveFromSpace(flash);
 
   const [hidden, setHidden] = useState<Set<string>>(() => new Set());
   const [settling, setSettling] = useState<Set<string>>(() => new Set());
@@ -128,31 +128,11 @@ export function useTaskActions({ flash, dismiss, membership, spaceById, beforeRo
     (task: TaskWithTags, spaceId: string) => {
       if (task.id.startsWith('temp-')) return;
       const filed = (membership.get(task.id) ?? []).includes(spaceId);
-      if (!filed) {
-        void addToSpace(spaceId, [itemKey('task', task.id)]);
-        return;
-      }
-      const name = spaceById.get(spaceId)?.name ?? 'space';
-      cue('move');
-      removeTask.mutate(
-        { profileId: spaceId, taskId: task.id },
-        {
-          onError: () => {
-            cue('error');
-            flash(`Couldn’t take it out of “${name}”.`);
-          },
-        },
-      );
-      flash(`Took “${task.title}” out of “${name}”.`, {
-        label: 'Undo',
-        onClick: () => {
-          addTasks.mutate({ profileId: spaceId, taskIds: [task.id] });
-          cue('confirm');
-          dismiss();
-        },
-      });
+      const key = itemKey('task', task.id);
+      if (filed) void removeFromSpace(spaceId, [key], task.title);
+      else void addToSpace(spaceId, [key]);
     },
-    [addTasks, addToSpace, dismiss, flash, membership, removeTask, spaceById],
+    [addToSpace, membership, removeFromSpace],
   );
 
   const onDelete = useCallback(

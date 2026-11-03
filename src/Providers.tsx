@@ -1,8 +1,10 @@
 import { Outlet } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { persistQueryClient } from "@tanstack/query-persist-client-core";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { SessionProvider } from "./context/SessionContext";
+import { mutationErrorMessage, shouldReportMutationError } from "./utils/mutationErrors";
+import { notices } from "./utils/notices";
 
 // For now, we'll use Chakra UI with default theme and rely on Tailwind for custom styling
 
@@ -18,11 +20,29 @@ const persister = createSyncStoragePersister({
 // device) never sits on old data: restored/hydrated queries refetch right
 // away, and switching back to a memex tab picks up writes made elsewhere.
 const queryClient = new QueryClient({
+  // A failed write is never silent: unless the mutation's caller reports it
+  // itself (`meta.handlesErrors`, set by passing HANDLES_ERRORS to the hook;
+  // the rule is in utils/mutationErrors.ts), the shell shows one generic,
+  // polite toast (components/ShellNotices.tsx).
+  mutationCache: new MutationCache({
+    onError: (error, _variables, _context, mutation) => {
+      if (!shouldReportMutationError(mutation.meta)) return;
+      console.error("A write failed:", error);
+      notices.publish(mutationErrorMessage(navigator.onLine));
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 30 * 1000, // 30 seconds — dedupes rapid remounts only
       gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
       refetchOnWindowFocus: true,
+    },
+    // Writes run (and fail fast) offline instead of pausing until the network
+    // returns: React Query's default 'online' mode would leave a send pending
+    // forever, its optimistic row hanging, with nothing said. Reads keep the
+    // default (they pause, and pages show "Couldn't load…" when there's nothing cached).
+    mutations: {
+      networkMode: "always",
     },
   },
 });

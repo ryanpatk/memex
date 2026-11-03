@@ -8,6 +8,7 @@ import { linkKeys } from './useLinks'
 import { profileLinkKeys } from './useProfileLinks'
 import { profileNoteKeys } from './useProfileNotes'
 import { profileTaskKeys } from './useProfileTasks'
+import { errorMeta, type MutationHookOptions } from '../utils/mutationErrors'
 
 export const proposalKeys = {
   all: ['proposals'] as const,
@@ -32,9 +33,10 @@ export type ProposalDecision = { proposal: InboxProposal; target: ProposalTarget
  * Approve (apply the change through the Repository, then mark it applied) or
  * reject (the item stays as it is; the proposal is kept, marked rejected).
  */
-export const useDecideProposal = () => {
+export const useDecideProposal = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: async ({ proposal, target, decision }: ProposalDecision) => {
       if (decision === 'apply') await applyProposal(repository, proposal, target)
       else await rejectProposal(repository, proposal)

@@ -34,7 +34,10 @@ const InlineCreateForm = ({
     if (!name) {
       return;
     }
-    void onSubmit(name);
+    // The parent reports a failure (and keeps the form open); never leave the rejection unhandled
+    Promise.resolve()
+      .then(() => onSubmit(name))
+      .catch((error: unknown) => console.error('Inline create failed:', error));
   };
 
   return (

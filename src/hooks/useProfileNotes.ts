@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { repository } from '../data/repository'
+import { errorMeta, type MutationHookOptions } from '../utils/mutationErrors'
 
 export const profileNoteKeys = {
   all: ['profile-notes'] as const,
@@ -16,22 +17,25 @@ export const useProfileNoteMembership = () => {
   })
 }
 
-export const useAddNotesToProfile = () => {
+export const useAddNotesToProfile = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: ({ profileId, noteIds }: { profileId: string; noteIds: string[] }) =>
       profileNotesApi.addNotes(profileId, noteIds),
-    onSuccess: () => {
+    // Settled: a failed add refetches too (see useAddTasksToProfile)
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: profileNoteKeys.membership() })
     },
   })
 }
 
-export const useRemoveNoteFromProfile = () => {
+export const useRemoveNoteFromProfile = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: ({ profileId, noteId }: { profileId: string; noteId: string }) =>
       profileNotesApi.removeNote(profileId, noteId),
     onSuccess: () => {

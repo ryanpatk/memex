@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { repository } from '../data/repository'
 import { TaskWithTags, CreateTaskData, UpdateTaskData } from '@memex/core'
+import { errorMeta, type MutationHookOptions } from '../utils/mutationErrors'
 
 export const taskKeys = {
   all: ['tasks'] as const,
@@ -16,10 +17,11 @@ export const useAllTasks = () => {
   })
 }
 
-export const useCreateTask = () => {
+export const useCreateTask = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: (taskData: CreateTaskData) => tasksApi.create(taskData),
     onMutate: async (taskData) => {
       await queryClient.cancelQueries({ queryKey: taskKeys.lists() })

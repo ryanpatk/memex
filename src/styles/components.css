@@ -1308,3 +1308,69 @@
   font-family: var(--font-code);
   overflow-wrap: anywhere;
 }
+
+/* ------------------------------------------------------------------ */
+/* Shell notices — offline line, route error panel                     */
+/* ------------------------------------------------------------------ */
+
+/* Offline: a quiet pill at the top of the page column; never blocks input */
+.memex-offline-region {
+  position: absolute;
+  top: var(--space-s);
+  right: var(--space-m);
+  left: var(--space-m);
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.memex-offline-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: var(--space-xxs) var(--space-s);
+  border-radius: var(--radius-full);
+  background: var(--popover-background);
+  color: var(--neutral-10);
+  box-shadow:
+    0 0 0 var(--border-s) var(--neutral-4-transparent),
+    var(--shadow-s);
+  font-family: var(--font-ui);
+  font-weight: var(--weight-ui-medium);
+  font-size: var(--size-xs);
+  line-height: var(--line-xs);
+  letter-spacing: var(--letter-spacing-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+.memex-offline-notice svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+/* Route error: the empty-state anatomy with Reload + home */
+.memex-route-error {
+  justify-content: center;
+}
+
+.memex-route-error.is-panel {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+
+.memex-route-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-s);
+}

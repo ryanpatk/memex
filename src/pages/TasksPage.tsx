@@ -50,6 +50,9 @@ import { focusTaskRow, nextFocusAfter, taskListKeyDown } from '../components/tas
 import MenuButton, { type MenuEntry } from '../components/library/MenuButton';
 import TaskComposer, { type TaskComposerHandle } from '../components/tasks/TaskComposer';
 import { FeedbackToast } from '../components/ui';
+import LoadErrorState from '../components/LoadErrorState';
+import { HANDLES_ERRORS } from '../utils/mutationErrors';
+import { loadStateOf } from '../utils/loadState';
 import { DONE_PARAM, GROUP_PARAM, SPACE_PARAM } from '../constants/modules';
 import { cue } from '../utils/sound';
 import '../styles/journal.css';
@@ -82,12 +85,16 @@ const TasksPage = () => {
   const showDone = searchParams.get(DONE_PARAM) === '1';
 
   const queryClient = useQueryClient();
-  const { data: tasks, isLoading } = useAllTasks();
+  const tasksQuery = useAllTasks();
+  const tasks = tasksQuery.data;
+  const loadState = loadStateOf([tasksQuery]);
+  const isLoading = loadState === 'loading';
   const { data: profiles, isLoading: spacesLoading } = useProfiles();
   const colors = useSpaceColors();
   const { data: taskRows } = useProfileTaskMembership();
-  const createTask = useCreateTask();
-  const addTasks = useAddTasksToProfile();
+  // handleCreate reports both steps' failures itself
+  const createTask = useCreateTask(HANDLES_ERRORS);
+  const addTasks = useAddTasksToProfile(HANDLES_ERRORS);
   const { toast, flash, dismiss: dismissToast, handleAnimationEnd } = useFeedbackToast();
 
   const spaces = useMemo(() => toJournalSpaces(profiles ?? [], colors), [colors, profiles]);
@@ -113,7 +120,6 @@ const TasksPage = () => {
     flash,
     dismiss: dismissToast,
     membership,
-    spaceById,
     // A focused row that leaves (ticked, deleted) hands focus to its neighbour, else the add field
     beforeRowLeaves: (taskId) => {
       const next = nextFocusAfter(listRef.current, taskId, 'composer');
@@ -183,29 +189,41 @@ const TasksPage = () => {
 
   /* ---------- Writes ---------- */
 
+  // Two steps: add, then file. Only a failed add rejects (the field gets the
+  // text back); once the task exists, a failed filing says so instead, so
+  // adding again can't make a duplicate.
   const handleCreate = useCallback(
     async ({ title, spaces: filing }: { title: string; spaces: JournalSpace[] }) => {
+      let taskId: string;
       try {
         cue('confirm');
-        const task = await createTask.mutateAsync({ title });
-        if (filing.length) {
-          // Show it in its spaces at once; the writes below confirm it
-          queryClient.setQueryData<{ profile_id: string; task_id: string }[]>(profileTaskKeys.membership(), (old = []) => [
-            ...old,
-            ...filing.map((space) => ({ profile_id: space.id, task_id: task.id })),
-          ]);
-          await Promise.all(filing.map((space) => addTasks.mutateAsync({ profileId: space.id, taskIds: [task.id] })));
-        }
-        const shown =
-          spaceFilter.length === 0 ||
-          (filing.length ? filing.some((s) => spaceFilter.includes(s.id)) : spaceFilter.includes(UNFILED_TASKS));
-        if (!shown) flash(`Added “${title}”. The Space filter hides it.`);
+        taskId = (await createTask.mutateAsync({ title })).id;
       } catch (error) {
         console.error('Failed to add task:', error);
         cue('error');
         flash('Couldn’t add that task. Your text is back in the box.');
         throw error;
       }
+      if (filing.length) {
+        // Show it in its spaces at once; the writes below confirm it (a failed
+        // one refetches the membership, which drops these rows again)
+        queryClient.setQueryData<{ profile_id: string; task_id: string }[]>(profileTaskKeys.membership(), (old = []) => [
+          ...old,
+          ...filing.map((space) => ({ profile_id: space.id, task_id: taskId })),
+        ]);
+        try {
+          await Promise.all(filing.map((space) => addTasks.mutateAsync({ profileId: space.id, taskIds: [taskId] })));
+        } catch (error) {
+          console.error('Failed to file a new task:', error);
+          cue('error');
+          flash(`Saved, but couldn’t file it in ${filing.map((space) => space.name).join(', ')}.`);
+          return;
+        }
+      }
+      const shown =
+        spaceFilter.length === 0 ||
+        (filing.length ? filing.some((s) => spaceFilter.includes(s.id)) : spaceFilter.includes(UNFILED_TASKS));
+      if (!shown) flash(`Added “${title}”. The Space filter hides it.`);
     },
     [addTasks, createTask, flash, queryClient, spaceFilter],
   );
@@ -269,7 +287,7 @@ const TasksPage = () => {
         : `Space · ${spaceFilter.length}`;
 
   const subtitleParts = [
-    isLoading ? 'Loading…' : openCount === 0 ? 'Nothing open' : `${openCount} open`,
+    loadState === 'failed' ? '\u00a0' : isLoading ? 'Loading…' : openCount === 0 ? 'Nothing open' : `${openCount} open`,
     todayCount > 0 ? `${todayCount} due today` : '',
     overdueCount > 0 ? `${overdueCount} overdue` : '',
   ].filter(Boolean);
@@ -294,7 +312,8 @@ const TasksPage = () => {
   /* ---------- Render ---------- */
 
   const filtered = spaceFilter.length > 0;
-  const nothingAtAll = !isLoading && open.length === 0 && done.length === 0;
+  const failed = loadState === 'failed';
+  const nothingAtAll = loadState === 'ready' && open.length === 0 && done.length === 0;
 
   return (
     <div className="tk-page">
@@ -359,6 +378,8 @@ const TasksPage = () => {
               <div className="tk-list" ref={listRef} onKeyDown={onListKeyDown}>
                 {isLoading && <TaskSkeleton />}
 
+                {failed && <LoadErrorState what="your tasks" onRetry={() => tasksQuery.refetch()} />}
+
                 {nothingAtAll && !filtered && (
                   <TasksEmpty
                     tone="start"
@@ -372,7 +393,7 @@ const TasksPage = () => {
                   />
                 )}
 
-                {!isLoading && open.length === 0 && (done.length > 0 || filtered) && (
+                {loadState === 'ready' && open.length === 0 && (done.length > 0 || filtered) && (
                   filtered ? (
                     <TasksEmpty
                       tone="start"
@@ -444,7 +465,7 @@ const TasksPage = () => {
                 )}
               </div>
 
-              {!nothingAtAll && !isLoading && (
+              {!nothingAtAll && loadState === 'ready' && (
                 <p className="tk-keys" aria-hidden="true">
                   <span>
                     <kbd className="memex-kbd">N</kbd> new task

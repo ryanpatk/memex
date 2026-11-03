@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { repository } from '../data/repository'
 import { NoteWithTags, CreateNoteData, UpdateNoteData } from '@memex/core'
+import { errorMeta, type MutationHookOptions } from '../utils/mutationErrors'
 
 export const noteKeys = {
   all: ['notes'] as const,
@@ -16,10 +17,11 @@ export const useAllNotes = () => {
   })
 }
 
-export const useCreateNote = () => {
+export const useCreateNote = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: (noteData: CreateNoteData) => notesApi.create(noteData),
     onMutate: async (noteData) => {
       await queryClient.cancelQueries({ queryKey: noteKeys.lists() })
@@ -64,10 +66,11 @@ export const useCreateNote = () => {
   })
 }
 
-export const useUpdateNote = () => {
+export const useUpdateNote = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: ({ id, updates }: { id: string; updates: UpdateNoteData }) =>
       notesApi.update(id, updates),
     onMutate: async ({ id, updates }) => {

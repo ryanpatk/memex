@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { repository } from '../data/repository'
+import { errorMeta, type MutationHookOptions } from '../utils/mutationErrors'
 
 export const profileTaskKeys = {
   all: ['profile-tasks'] as const,
@@ -16,22 +17,26 @@ export const useProfileTaskMembership = () => {
   })
 }
 
-export const useAddTasksToProfile = () => {
+export const useAddTasksToProfile = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: ({ profileId, taskIds }: { profileId: string; taskIds: string[] }) =>
       profileTasksApi.addTasks(profileId, taskIds),
-    onSuccess: () => {
+    // Settled, not success: a failed add also refetches, dropping any row a
+    // caller wrote into the membership cache ahead of the write (TasksPage)
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: profileTaskKeys.membership() })
     },
   })
 }
 
-export const useRemoveTaskFromProfile = () => {
+export const useRemoveTaskFromProfile = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: ({ profileId, taskId }: { profileId: string; taskId: string }) =>
       profileTasksApi.removeTask(profileId, taskId),
     onSuccess: () => {

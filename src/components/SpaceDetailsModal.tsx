@@ -5,6 +5,7 @@ import { LIBRARY_PATH } from '../constants/modules';
 import { useDeleteProfile, useUpdateProfile } from '../hooks/useProfiles';
 import { useSelfMessages } from '../hooks/useSelfMessages';
 import { cue } from '../utils/sound';
+import { HANDLES_ERRORS } from '../utils/mutationErrors';
 
 interface SpaceDetailsModalProps {
   space: Profile;
@@ -31,11 +32,14 @@ const SpaceDetailsModal = ({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const updateProfile = useUpdateProfile();
-  const deleteProfile = useDeleteProfile();
+  // Failures show inline: the dialog sits above the page's toast
+  const updateProfile = useUpdateProfile(HANDLES_ERRORS);
+  const deleteProfile = useDeleteProfile(HANDLES_ERRORS);
   const { messages } = useSelfMessages(space.id);
 
   const [name, setName] = useState(space.name);
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -43,6 +47,8 @@ const SpaceDetailsModal = ({
     if (isOpen && !dialog.open) {
       dialog.showModal();
       setName(space.name);
+      setRenameError(null);
+      setDeleteError(null);
       requestAnimationFrame(() => nameRef.current?.select());
     } else if (!isOpen && dialog.open) {
       dialog.close();
@@ -54,6 +60,7 @@ const SpaceDetailsModal = ({
 
   const handleSave = async () => {
     if (!canSave) return;
+    setRenameError(null);
     try {
       await updateProfile.mutateAsync({ id: space.id, updates: { name: trimmed } });
       cue('confirm');
@@ -61,6 +68,7 @@ const SpaceDetailsModal = ({
     } catch (error) {
       cue('error');
       console.error('Failed to rename space:', error);
+      setRenameError('Couldn’t rename the space. Check your connection and try again.');
     }
   };
 
@@ -69,6 +77,7 @@ const SpaceDetailsModal = ({
       `Delete “${space.name}”?\n\nIts notes, links, and tasks stay in your Library. Jots written in the space are deleted with it. This cannot be undone.`,
     );
     if (!ok) return;
+    setDeleteError(null);
     try {
       await deleteProfile.mutateAsync(space.id);
       cue('dismiss');
@@ -78,6 +87,7 @@ const SpaceDetailsModal = ({
     } catch (error) {
       cue('error');
       console.error('Failed to delete space:', error);
+      setDeleteError('Couldn’t delete the space. Check your connection and try again.');
     }
   };
 
@@ -122,8 +132,13 @@ const SpaceDetailsModal = ({
               type="text"
               className="bookmark-detail-input"
               value={name}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                setName(event.target.value);
+                if (renameError) setRenameError(null);
+              }}
               aria-label="Space name"
+              aria-invalid={renameError ? true : undefined}
+              aria-describedby={renameError ? 'space-rename-error' : undefined}
               autoComplete="off"
               spellCheck={false}
               disabled={updateProfile.isPending}
@@ -136,6 +151,11 @@ const SpaceDetailsModal = ({
               {updateProfile.isPending ? 'Saving…' : 'Save'}
             </button>
           </form>
+          {renameError && (
+            <p id="space-rename-error" className="memex-new-space-error" role="alert">
+              {renameError}
+            </p>
+          )}
         </section>
 
         <section className="bookmark-detail-section">
@@ -174,6 +194,11 @@ const SpaceDetailsModal = ({
           >
             {deleteProfile.isPending ? 'Deleting…' : 'Delete space'}
           </button>
+          {deleteError && (
+            <p className="memex-new-space-error" role="alert">
+              {deleteError}
+            </p>
+          )}
         </section>
       </div>
     </dialog>

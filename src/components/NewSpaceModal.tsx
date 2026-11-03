@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { spacePath } from '../constants/modules';
 import { useCreateProfile } from '../hooks/useProfiles';
 import { cue } from '../utils/sound';
+import { HANDLES_ERRORS } from '../utils/mutationErrors';
 
 interface NewSpaceModalProps {
   isOpen: boolean;
@@ -20,7 +21,7 @@ const NewSpaceModal = ({ isOpen, onClose, onFeedback }: NewSpaceModalProps) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const createProfile = useCreateProfile();
+  const createProfile = useCreateProfile(HANDLES_ERRORS);
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
 

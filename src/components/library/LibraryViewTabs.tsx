@@ -156,6 +156,8 @@ const LibraryViewTabs = ({
     try {
       await onSave(name);
       setNaming(false);
+    } catch {
+      // The page said why; the field stays open with the name so Save can try again
     } finally {
       setSavePending(false);
     }

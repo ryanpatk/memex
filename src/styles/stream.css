@@ -1738,6 +1738,36 @@ html[data-link-captions='inset'] .memex-pv-title {
   height: 15px;
 }
 
+/* A save that failed: the draft stays; Retry sends it again */
+.memex-note-editor-status.is-error {
+  gap: var(--space-xxs);
+  color: var(--error);
+}
+
+.memex-note-editor-retry {
+  min-height: 24px;
+  margin: 0;
+  padding: 0 var(--space-xxs);
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--neutral-10);
+  font: inherit;
+  font-weight: var(--weight-ui-medium);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.memex-note-editor-retry:hover {
+  background: var(--neutral-3);
+}
+
+.memex-note-editor-retry:focus-visible {
+  outline: var(--focus-ring-outline);
+}
+
 .memex-note-editor-body {
   flex: 1;
   min-height: 0;

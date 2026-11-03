@@ -11,6 +11,7 @@ import {
   withAppProvenance,
 } from '@memex/core'
 import { urlScraperApi } from './useUrlScraper'
+import { errorMeta, type MutationHookOptions } from '../utils/mutationErrors'
 
 // Query keys
 export const linkKeys = {
@@ -76,11 +77,12 @@ export const useLink = (id: string) => {
   })
 }
 
-export const useCreateLink = () => {
+export const useCreateLink = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
   const addLink = useAppStore(state => state.addLink)
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: async (input: CreateLinkData) => {
       // Saved in the web app: captured_by 'app', like the phone's saves
       const linkData = withAppProvenance(input, WEB_CLIENT)
@@ -219,11 +221,12 @@ export const useCreateLink = () => {
   })
 }
 
-export const useUpdateLink = () => {
+export const useUpdateLink = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
   const updateLink = useAppStore(state => state.updateLink)
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: ({ id, updates }: { id: string; updates: UpdateLinkData; oldProjectId?: string }) =>
       linksApi.update(id, updates),
     onSuccess: (data, variables) => {

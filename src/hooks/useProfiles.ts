@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { repository } from '../data/repository'
 import { UpdateProfileData } from '@memex/core'
 import { profileLinkKeys } from './useProfileLinks'
+import { errorMeta, type MutationHookOptions } from '../utils/mutationErrors'
 
 export const profileKeys = {
   all: ['profiles'] as const,
@@ -28,10 +29,11 @@ export const useProfile = (id: string) => {
   })
 }
 
-export const useCreateProfile = () => {
+export const useCreateProfile = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: profilesApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: profileKeys.lists() })
@@ -39,10 +41,11 @@ export const useCreateProfile = () => {
   })
 }
 
-export const useUpdateProfile = () => {
+export const useUpdateProfile = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: ({ id, updates }: { id: string; updates: UpdateProfileData }) =>
       profilesApi.update(id, updates),
     onSuccess: (data) => {
@@ -52,10 +55,11 @@ export const useUpdateProfile = () => {
   })
 }
 
-export const useDeleteProfile = () => {
+export const useDeleteProfile = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: profilesApi.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: profileKeys.lists() })

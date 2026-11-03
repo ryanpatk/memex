@@ -21,6 +21,7 @@ import {
   type StreamItem,
 } from '@memex/core';
 import { cue } from '../../utils/sound';
+import { HANDLES_ERRORS } from '../../utils/mutationErrors';
 
 const MAX_COMPOSER_ROWS = 6;
 const DAYS_PER_PAGE = 14;
@@ -108,6 +109,8 @@ interface JournalPanelProps {
   onConvertJot: (jot: SelfMessage, kind: 'note' | 'task') => void;
   onDeleteJot: (jot: SelfMessage) => void;
   onClose: () => void;
+  /** The page's toast, for a jot that didn't save. */
+  onFeedback: (message: string) => void;
 }
 
 /**
@@ -125,9 +128,11 @@ const JournalPanel = ({
   onConvertJot,
   onDeleteJot,
   onClose,
+  onFeedback,
 }: JournalPanelProps) => {
   const { messages, isLoading } = useSelfMessages(scopeId);
-  const createMessage = useCreateSelfMessage();
+  // send() reports a failed jot itself
+  const createMessage = useCreateSelfMessage(HANDLES_ERRORS);
   const [draft, setDraft] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -256,7 +261,8 @@ const JournalPanel = ({
       {
         onError: () => {
           cue('error');
-          setDraft(body);
+          setDraft((current) => current || body);
+          onFeedback('Couldn’t save that jot. Your text is back in the box.');
         },
       },
     );

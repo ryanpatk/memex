@@ -1,13 +1,15 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { repository } from '../data/repository'
 import { noteKeys } from './useNotes'
+import { errorMeta, type MutationHookOptions } from '../utils/mutationErrors'
 
 export const noteTagsApi = { setForNote: repository.notes.setTags }
 
-export const useSetNoteTags = () => {
+export const useSetNoteTags = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: ({ noteId, tagIds }: { noteId: string; tagIds: string[] }) =>
       noteTagsApi.setForNote(noteId, tagIds),
     onSuccess: () => {

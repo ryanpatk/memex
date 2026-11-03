@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useAllLinks } from './useLinks';
 import { useAllNotes } from './useNotes';
 import { useAllTasks } from './useTasks';
@@ -10,13 +10,16 @@ import { useProfileTaskMembership } from './useProfileTasks';
 import { useSpaceColors } from './useSpaceColors';
 import { usePendingProposals } from './useProposals';
 import { buildEntries, createFiler, inboxOf, toJournalSpaces } from '@memex/core';
+import { loadStateOf } from '../utils/loadState';
 
 /**
  * The Journal's data: every entry (jots + links + notes + tasks, oldest
  * first), the spaces, the filing suggester and the Inbox: filing
  * suggestions plus agents' pending proposals (`inboxCount` counts both).
  * Reads only; the page owns the writes. Shared by the Journal page and the sidebar's Inbox
- * count (React Query dedupes the fetches).
+ * count (React Query dedupes the fetches). `loadState` covers the entries'
+ * four reads ('failed' when one errored, or paused offline, with nothing
+ * cached); `refetch` retries them.
  */
 export const useJournal = () => {
   const links = useAllLinks();
@@ -30,7 +33,16 @@ export const useJournal = () => {
   const colors = useSpaceColors();
   const { data: proposalRows } = usePendingProposals();
 
-  const isLoading = links.isLoading || notes.isLoading || tasks.isLoading || jots.isLoading;
+  const loadState = loadStateOf([links, notes, tasks, jots]);
+  const isLoading = loadState === 'loading';
+  const { refetch: refetchLinks } = links;
+  const { refetch: refetchNotes } = notes;
+  const { refetch: refetchTasks } = tasks;
+  const { refetch: refetchJots } = jots;
+  const refetch = useCallback(
+    () => Promise.all([refetchLinks(), refetchNotes(), refetchTasks(), refetchJots()]),
+    [refetchJots, refetchLinks, refetchNotes, refetchTasks],
+  );
 
   return useMemo(() => {
     const spaces = toJournalSpaces(profiles ?? [], colors);
@@ -45,6 +57,6 @@ export const useJournal = () => {
     const filer = createFiler(entries, spaces);
     const inbox = inboxOf(entries, filer);
     const proposals = proposalRows ?? [];
-    return { isLoading, spaces, entries, filer, inbox, proposals, inboxCount: inbox.length + proposals.length };
-  }, [colors, isLoading, jots.data, linkRows, links.data, noteRows, notes.data, profiles, proposalRows, taskRows, tasks.data]);
+    return { isLoading, loadState, refetch, spaces, entries, filer, inbox, proposals, inboxCount: inbox.length + proposals.length };
+  }, [colors, isLoading, jots.data, linkRows, links.data, loadState, noteRows, notes.data, profiles, proposalRows, refetch, taskRows, tasks.data]);
 };

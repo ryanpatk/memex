@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo } from 'react'
 import { repository } from '../data/repository'
 import type { SelfMessage, UpdateSelfMessageData } from '@memex/core'
+import { errorMeta, type MutationHookOptions } from '../utils/mutationErrors'
 
 export const selfMessageKeys = {
   all: ['self-messages'] as const,
@@ -26,10 +27,11 @@ export const useSelfMessages = (profileId: string | null) => {
   return { ...query, messages }
 }
 
-export const useCreateSelfMessage = () => {
+export const useCreateSelfMessage = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: selfMessagesApi.create,
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: selfMessageKeys.list() })
@@ -88,10 +90,11 @@ export const useDeleteSelfMessage = () => {
  * Edit a jot or move it (`profile_id`: a space, or null for the Journal).
  * Optimistic: the feed shows the change at once and rolls back on failure.
  */
-export const useUpdateSelfMessage = () => {
+export const useUpdateSelfMessage = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: ({ id, updates }: { id: string; updates: UpdateSelfMessageData }) =>
       selfMessagesApi.update(id, updates),
     onMutate: async ({ id, updates }) => {

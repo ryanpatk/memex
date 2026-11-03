@@ -9,6 +9,8 @@ import JournalFeed from '../components/journal/JournalFeed';
 import { ProposalRow } from '../components/journal/ProposalRow';
 import { proposalTarget } from '../components/journal/proposalTarget';
 import { FeedbackToast } from '../components/ui';
+import LoadErrorState from '../components/LoadErrorState';
+import { HANDLES_ERRORS } from '../utils/mutationErrors';
 import { INBOX_PARAM } from '../constants/modules';
 import {
   type Entry,
@@ -36,10 +38,10 @@ const titleOf = (entry: FileableEntry) =>
 const JournalPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const inboxOpen = searchParams.get(INBOX_PARAM) === '1';
-  const { isLoading, spaces, entries, filer, inbox, proposals, inboxCount } = useJournal();
+  const { isLoading, loadState, refetch, spaces, entries, filer, inbox, proposals, inboxCount } = useJournal();
   const { toast, flash, dismiss, handleAnimationEnd } = useFeedbackToast();
   const addToSpace = useAddToSpace(flash);
-  const decideProposal = useDecideProposal();
+  const decideProposal = useDecideProposal(HANDLES_ERRORS);
   const [deciding, setDeciding] = useState<{ id: string; decision: 'apply' | 'reject' } | null>(null);
   const entriesByKey = useMemo(() => new Map<string, Entry>(entries.map((e) => [e.id, e])), [entries]);
 
@@ -96,7 +98,9 @@ const JournalPage = () => {
             <h1 className="memex-page-title">
               <span className="memex-page-title-text">Journal</span>
             </h1>
-            <p className="memex-page-subtitle">{todayCount === 0 ? 'Nothing yet today' : `${todayCount} today`}</p>
+            <p className="memex-page-subtitle">
+              {loadState !== 'ready' ? '\u00a0' : todayCount === 0 ? 'Nothing yet today' : `${todayCount} today`}
+            </p>
           </div>
           {inboxCount > 0 && (
             <div className="memex-page-actions">
@@ -125,6 +129,7 @@ const JournalPage = () => {
           label="Journal"
           flash={flash}
           dismiss={dismiss}
+          failure={loadState === 'failed' ? <LoadErrorState what="your Journal" onRetry={refetch} /> : undefined}
           empty={
             <div className="jr-empty">
               <p className="jr-empty-title">Your Journal starts here</p>

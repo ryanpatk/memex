@@ -12,6 +12,9 @@ import JournalFeed, { type JournalFeedHandle } from '../components/journal/Journ
 import SpaceBoard from '../components/space/SpaceBoard';
 import SpaceDetailsModal from '../components/SpaceDetailsModal';
 import { FeedbackToast } from '../components/ui';
+import LoadErrorState from '../components/LoadErrorState';
+import { HANDLES_ERRORS } from '../utils/mutationErrors';
+import { loadStateOf } from '../utils/loadState';
 import { JOURNAL_PATH, LIBRARY_PATH, NOTE_PARAM, SPACE_PARAM } from '../constants/modules';
 import { cue } from '../utils/sound';
 import '../styles/journal.css';
@@ -36,11 +39,14 @@ const SpacePage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const boardOpen = searchParams.get(BOARD_PARAM) === '1';
-  const { isLoading, spaces, entries, filer } = useJournal();
-  const { data: profiles } = useProfiles();
+  const { isLoading, loadState, refetch, spaces, entries, filer } = useJournal();
+  const profilesQuery = useProfiles();
+  const profiles = profilesQuery.data;
+  const spaceLoad = loadStateOf([profilesQuery]);
   const { data: linkRows } = useProfileLinkMembership();
   const { data: taskRows } = useProfileTaskMembership();
-  const setPin = useSetProfileLinkSuperFavorite();
+  // togglePin reports its own failure
+  const setPin = useSetProfileLinkSuperFavorite(HANDLES_ERRORS);
   const { toast, flash, dismiss, handleAnimationEnd } = useFeedbackToast();
   const feedRef = useRef<JournalFeedHandle>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -57,7 +63,7 @@ const SpacePage = () => {
   const board = useMemo(() => spaceBoard(entries, spaceId, linkRows ?? []), [entries, linkRows, spaceId]);
   const spaceById = useMemo(() => new Map(spaces.map((s) => [s.id, s])), [spaces]);
   const membership = useMemo(() => taskSpaceMap(taskRows ?? []), [taskRows]);
-  const { hidden, settling, renamingId, handlers: taskHandlers } = useTaskActions({ flash, dismiss, membership, spaceById });
+  const { hidden, settling, renamingId, handlers: taskHandlers } = useTaskActions({ flash, dismiss, membership });
 
   const taskSpaces = useCallback(
     (task: TaskWithTags) =>
@@ -109,6 +115,15 @@ const SpacePage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boardOpen]);
 
+  // The spaces didn't load: say so (the title skeleton would otherwise stay forever)
+  if (spaceLoad === 'failed') {
+    return (
+      <div className="jr-page sp-page">
+        <LoadErrorState what="this space" onRetry={() => profilesQuery.refetch()} />
+      </div>
+    );
+  }
+
   if (!space || !profile) {
     return (
       <div className="jr-page sp-page" aria-busy="true">
@@ -125,11 +140,14 @@ const SpacePage = () => {
     );
   }
 
-  const subtitle = isLoading
-    ? 'Loading…'
-    : scoped.length === 0
-      ? 'Nothing here yet'
-      : `${scoped.length} ${scoped.length === 1 ? 'entry' : 'entries'}${todayCount ? ` · ${todayCount} today` : ''}`;
+  const subtitle =
+    loadState === 'failed'
+      ? '\u00a0'
+      : isLoading
+        ? 'Loading…'
+        : scoped.length === 0
+          ? 'Nothing here yet'
+          : `${scoped.length} ${scoped.length === 1 ? 'entry' : 'entries'}${todayCount ? ` · ${todayCount} today` : ''}`;
 
   return (
     <div className={`jr-page sp-page${boardOpen ? ' has-board' : ''}`} style={{ '--hue': space.color } as CSSProperties}>
@@ -176,6 +194,7 @@ const SpacePage = () => {
           label={`${space.name} Journal`}
           flash={flash}
           dismiss={dismiss}
+          failure={loadState === 'failed' ? <LoadErrorState what="this space" onRetry={refetch} /> : undefined}
           empty={
             <div className="sp-empty" role="status">
               <span className="sp-empty-disc" aria-hidden="true">

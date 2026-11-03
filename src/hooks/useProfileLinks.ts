@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { repository } from '../data/repository'
 import { ProfileLinkMembership } from '@memex/core'
+import { errorMeta, type MutationHookOptions } from '../utils/mutationErrors'
 
 export const profileLinkKeys = {
   all: ['profile-links'] as const,
@@ -27,23 +28,26 @@ export const useProfileLinkMembership = () => {
   })
 }
 
-export const useAddLinksToProfile = () => {
+export const useAddLinksToProfile = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: ({ profileId, linkIds }: { profileId: string; linkIds: string[] }) =>
       profileLinksApi.addLinks(profileId, linkIds),
-    onSuccess: (_data, variables) => {
+    // Settled: a failed add refetches too (see useAddTasksToProfile)
+    onSettled: (_data, _error, variables) => {
       queryClient.invalidateQueries({ queryKey: profileLinkKeys.byProfile(variables.profileId) })
       queryClient.invalidateQueries({ queryKey: profileLinkKeys.membership() })
     },
   })
 }
 
-export const useSetProfileLinkSuperFavorite = () => {
+export const useSetProfileLinkSuperFavorite = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: ({
       profileId,
       linkId,
@@ -81,10 +85,11 @@ export const useSetProfileLinkSuperFavorite = () => {
   })
 }
 
-export const useRemoveLinkFromProfile = () => {
+export const useRemoveLinkFromProfile = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
 
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: ({ profileId, linkId }: { profileId: string; linkId: string }) =>
       profileLinksApi.removeLink(profileId, linkId),
     onSuccess: (_data, variables) => {

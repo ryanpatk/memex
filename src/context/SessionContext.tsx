@@ -25,10 +25,17 @@ export const SessionProvider = ({ children }: Props) => {
   const [authHydrated, setAuthHydrated] = useState(false);
 
   useEffect(() => {
-    void repository.auth.getSession().then((s) => {
-      setSession(s);
-      setAuthHydrated(true);
-    });
+    repository.auth
+      .getSession()
+      .then((s) => {
+        setSession(s);
+        setAuthHydrated(true);
+      })
+      .catch((error: unknown) => {
+        // Reading the stored session failed: carry on signed out rather than render nothing
+        console.error("Couldn't read the session:", error);
+        setAuthHydrated(true);
+      });
 
     const unsubscribe = repository.auth.onAuthStateChange((s) => {
       setSession(s);

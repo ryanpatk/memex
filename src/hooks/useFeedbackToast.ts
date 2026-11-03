@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FeedbackToastPhase } from '../components/ui'
+import { toastShown } from '../utils/notices'
 
 const TOAST_VISIBLE_MS = 3400
 const ACTION_TOAST_VISIBLE_MS = 6000
@@ -19,10 +20,14 @@ interface ToastState {
  * Timing/phase state machine for the bottom-right FeedbackToast:
  * flash() shows optimistically, auto-exits after a beat, and the
  * animation-end handler finalizes removal (instant under reduced motion).
+ * Toasts from different owners (the page, the sidebar, the shell's
+ * fallback for failed writes) share that corner, so showing one dismisses
+ * the others: the latest message wins.
  */
 export function useFeedbackToast() {
   const [toast, setToast] = useState<ToastState | null>(null)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [owner] = useState(() => Symbol('toast'))
 
   const dismiss = useCallback(() => {
     if (hideTimerRef.current) {
@@ -41,6 +46,7 @@ export function useFeedbackToast() {
     }
 
     setToast({ message, phase: 'entering', action })
+    toastShown.publish(owner)
 
     hideTimerRef.current = setTimeout(() => {
       setToast((current) => (current ? { ...current, phase: 'exiting' } : null))
@@ -50,7 +56,16 @@ export function useFeedbackToast() {
         setToast((current) => (current?.phase === 'exiting' ? null : current))
       }, 240)
     }, action ? ACTION_TOAST_VISIBLE_MS : TOAST_VISIBLE_MS)
-  }, [])
+  }, [owner])
+
+  // Another owner's toast took the corner
+  useEffect(
+    () =>
+      toastShown.subscribe((shown) => {
+        if (shown !== owner) dismiss()
+      }),
+    [dismiss, owner],
+  )
 
   const handleAnimationEnd = useCallback(
     (event: React.AnimationEvent<HTMLDivElement>) => {

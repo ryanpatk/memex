@@ -120,6 +120,9 @@ import { urlScraperApi } from '../hooks/useUrlScraper';
 import { useAppStore } from '../store';
 import { handleBackgroundLinkClick, openUrlInBackgroundTab } from '../utils/openUrlInBackgroundTab';
 import { cue } from '../utils/sound';
+import { HANDLES_ERRORS } from '../utils/mutationErrors';
+import { loadStateOf } from '../utils/loadState';
+import LoadErrorState from '../components/LoadErrorState';
 import { useSpaceColors } from '../hooks/useSpaceColors';
 import type { RescrapeResult } from '../components/stream/LinkExpandedCard';
 import {
@@ -219,9 +222,20 @@ const StreamPage = () => {
   const setItemSelection = useAppStore((state) => state.setItemSelection);
   const clearItemSelection = useAppStore((state) => state.clearItemSelection);
 
-  const { data: allLinks } = useAllLinks();
-  const { data: allNotes } = useAllNotes();
-  const { data: allTasks } = useAllTasks();
+  const linksQuery = useAllLinks();
+  const notesQuery = useAllNotes();
+  const tasksQuery = useAllTasks();
+  const allLinks = linksQuery.data;
+  const allNotes = notesQuery.data;
+  const allTasks = tasksQuery.data;
+  const loadState = loadStateOf([linksQuery, notesQuery, tasksQuery]);
+  const { refetch: refetchLinks } = linksQuery;
+  const { refetch: refetchNotes } = notesQuery;
+  const { refetch: refetchTasks } = tasksQuery;
+  const refetchLibrary = useCallback(
+    () => Promise.all([refetchLinks(), refetchNotes(), refetchTasks()]),
+    [refetchLinks, refetchNotes, refetchTasks],
+  );
   const { data: profiles } = useProfiles();
   const spaceColors = useSpaceColors();
   const { data: tags } = useTags();
@@ -229,21 +243,25 @@ const StreamPage = () => {
   const { data: noteMembership } = useProfileNoteMembership();
   const { data: taskMembership } = useProfileTaskMembership();
 
-  const createLink = useCreateLink();
-  const updateLink = useUpdateLink();
+  // HANDLES_ERRORS: every use on this page reports its own failure (capture,
+  // conversions, tagging, filing after a capture, the note editor's status,
+  // the expanded link's status line). The rest (deletes, ticks) fall back to
+  // the shell's toast.
+  const createLink = useCreateLink(HANDLES_ERRORS);
+  const updateLink = useUpdateLink(HANDLES_ERRORS);
   const deleteLink = useDeleteLink();
-  const setLinkTags = useSetLinkTags();
-  const addLinksToProfile = useAddLinksToProfile();
-  const createNote = useCreateNote();
-  const updateNote = useUpdateNote();
+  const setLinkTags = useSetLinkTags(HANDLES_ERRORS);
+  const addLinksToProfile = useAddLinksToProfile(HANDLES_ERRORS);
+  const createNote = useCreateNote(HANDLES_ERRORS);
+  const updateNote = useUpdateNote(HANDLES_ERRORS);
   const deleteNote = useDeleteNote();
-  const setNoteTags = useSetNoteTags();
-  const addNotesToProfile = useAddNotesToProfile();
-  const createTask = useCreateTask();
+  const setNoteTags = useSetNoteTags(HANDLES_ERRORS);
+  const addNotesToProfile = useAddNotesToProfile(HANDLES_ERRORS);
+  const createTask = useCreateTask(HANDLES_ERRORS);
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
-  const setTaskTags = useSetTaskTags();
-  const addTasksToProfile = useAddTasksToProfile();
+  const setTaskTags = useSetTaskTags(HANDLES_ERRORS);
+  const addTasksToProfile = useAddTasksToProfile(HANDLES_ERRORS);
   const deleteSelfMessage = useDeleteSelfMessage();
   const { messages: scopeJots } = useSelfMessages(null);
   const { toast, flash, dismiss: dismissToast, handleAnimationEnd } = useFeedbackToast();
@@ -653,21 +671,31 @@ const StreamPage = () => {
         flash(`Selection already had “${tagName}”.`);
         return;
       }
-      flash(`Applied “${tagName}” to ${targets.length} item${targets.length === 1 ? '' : 's'}.`);
       cue('move');
 
-      try {
-        await Promise.all(
-          targets.map((item) => {
-            const tagIds = [...item.tags.map((t) => t.id), tagId];
-            if (item.type === 'link') return setLinkTags.mutateAsync({ linkId: item.id, tagIds });
-            if (item.type === 'note') return setNoteTags.mutateAsync({ noteId: item.id, tagIds });
-            return setTaskTags.mutateAsync({ taskId: item.id, tagIds });
-          }),
-        );
-      } catch (error) {
-        console.error('Failed to bulk-apply tag:', error);
+      // Count what landed: the toast says so only after the writes
+      const results = await Promise.allSettled(
+        targets.map((item) => {
+          const tagIds = [...item.tags.map((t) => t.id), tagId];
+          if (item.type === 'link') return setLinkTags.mutateAsync({ linkId: item.id, tagIds });
+          if (item.type === 'note') return setNoteTags.mutateAsync({ noteId: item.id, tagIds });
+          return setTaskTags.mutateAsync({ taskId: item.id, tagIds });
+        }),
+      );
+      const failed = results.filter((result) => result.status === 'rejected').length;
+      const applied = targets.length - failed;
+      const items = (n: number) => `${n} item${n === 1 ? '' : 's'}`;
+      if (failed === 0) {
+        flash(`Applied “${tagName}” to ${items(applied)}.`);
+        return;
       }
+      console.error('Failed to bulk-apply tag:', results.find((result) => result.status === 'rejected'));
+      cue('error');
+      flash(
+        applied === 0
+          ? `Couldn’t apply “${tagName}”. Try again.`
+          : `Applied “${tagName}” to ${items(applied)}; ${items(failed)} didn’t save. Try again.`,
+      );
     },
     [flash, itemsByKey, selectedItemKeys, setLinkTags, setNoteTags, setTaskTags, tags],
   );
@@ -695,38 +723,41 @@ const StreamPage = () => {
 
   const afterCreate = useCallback(
     (kind: ItemType, id: string, context: PendingAdd) => {
-      const postCreate: Promise<unknown>[] = [];
-      if (context.spaceId) {
-        if (kind === 'link') {
-          postCreate.push(
-            addLinksToProfile.mutateAsync({ profileId: context.spaceId, linkIds: [id] }),
-          );
-        } else if (kind === 'note') {
-          postCreate.push(
-            addNotesToProfile.mutateAsync({ profileId: context.spaceId, noteIds: [id] }),
-          );
-        } else {
-          postCreate.push(
-            addTasksToProfile.mutateAsync({ profileId: context.spaceId, taskIds: [id] }),
-          );
-        }
-      }
-      if (context.tagIds.length > 0) {
-        if (kind === 'link') {
-          postCreate.push(setLinkTags.mutateAsync({ linkId: id, tagIds: context.tagIds }));
-        } else if (kind === 'note') {
-          postCreate.push(setNoteTags.mutateAsync({ noteId: id, tagIds: context.tagIds }));
-        } else {
-          postCreate.push(setTaskTags.mutateAsync({ taskId: id, tagIds: context.tagIds }));
-        }
-      }
-      if (postCreate.length === 0) {
+      const filing: Promise<unknown> | null = !context.spaceId
+        ? null
+        : kind === 'link'
+          ? addLinksToProfile.mutateAsync({ profileId: context.spaceId, linkIds: [id] })
+          : kind === 'note'
+            ? addNotesToProfile.mutateAsync({ profileId: context.spaceId, noteIds: [id] })
+            : addTasksToProfile.mutateAsync({ profileId: context.spaceId, taskIds: [id] });
+      const tagging: Promise<unknown> | null =
+        context.tagIds.length === 0
+          ? null
+          : kind === 'link'
+            ? setLinkTags.mutateAsync({ linkId: id, tagIds: context.tagIds })
+            : kind === 'note'
+              ? setNoteTags.mutateAsync({ noteId: id, tagIds: context.tagIds })
+              : setTaskTags.mutateAsync({ taskId: id, tagIds: context.tagIds });
+      if (!filing && !tagging) {
         setPendingAdd(null);
         return;
       }
-      void Promise.all(postCreate)
-        .catch((error) => {
-          console.error('Failed to apply filters after create:', error);
+      // The item is saved either way: say what didn't stick, never put the text back
+      void Promise.allSettled([filing, tagging])
+        .then(([filed, tagged]) => {
+          const fileFailed = filed.status === 'rejected';
+          const tagFailed = tagged.status === 'rejected';
+          if (!fileFailed && !tagFailed) return;
+          console.error('Failed to apply filters after create:', filed, tagged);
+          cue('error');
+          const spaceName = profiles?.find((p) => p.id === context.spaceId)?.name ?? 'that space';
+          flash(
+            fileFailed && tagFailed
+              ? `Saved, but couldn’t file it in ${spaceName} or add its tags.`
+              : fileFailed
+                ? `Saved, but couldn’t file it in ${spaceName}.`
+                : 'Saved, but couldn’t add its tags.',
+          );
         })
         .finally(() => setPendingAdd(null));
     },
@@ -734,10 +765,23 @@ const StreamPage = () => {
       addLinksToProfile,
       addNotesToProfile,
       addTasksToProfile,
+      flash,
+      profiles,
       setLinkTags,
       setNoteTags,
       setTaskTags,
     ],
+  );
+
+  /** A capture that didn't save: its text is back in the search box. */
+  const reportCaptureFailed = useCallback(
+    (context: PendingAdd) => {
+      cue('error');
+      setSearchQuery(context.rawInput);
+      setPendingAdd(null);
+      flash('Couldn’t save that. Your text is back in the search box.');
+    },
+    [flash],
   );
 
   const handleAddLink = useCallback(() => {
@@ -757,14 +801,10 @@ const StreamPage = () => {
       { url },
       {
         onSuccess: (created) => afterCreate('link', created.id, context),
-        onError: () => {
-          cue('error');
-          setSearchQuery(context.rawInput);
-          setPendingAdd(null);
-        },
+        onError: () => reportCaptureFailed(context),
       },
     );
-  }, [afterCreate, captureSpaceId, captureTagIds, createLink, inputIsUrl, pendingAdd, rawInput]);
+  }, [afterCreate, captureSpaceId, captureTagIds, createLink, inputIsUrl, pendingAdd, rawInput, reportCaptureFailed]);
 
   const handleAddNote = useCallback(() => {
     if (!rawInput || pendingAdd !== null) return;
@@ -785,14 +825,10 @@ const StreamPage = () => {
           afterCreate('note', created.id, context);
           openNote(created.id);
         },
-        onError: () => {
-          cue('error');
-          setSearchQuery(context.rawInput);
-          setPendingAdd(null);
-        },
+        onError: () => reportCaptureFailed(context),
       },
     );
-  }, [afterCreate, captureSpaceId, captureTagIds, createNote, openNote, pendingAdd, rawInput]);
+  }, [afterCreate, captureSpaceId, captureTagIds, createNote, openNote, pendingAdd, rawInput, reportCaptureFailed]);
 
   const handleAddTask = useCallback(() => {
     if (!rawInput || pendingAdd !== null) return;
@@ -810,14 +846,10 @@ const StreamPage = () => {
       { title: rawInput },
       {
         onSuccess: (created) => afterCreate('task', created.id, context),
-        onError: () => {
-          cue('error');
-          setSearchQuery(context.rawInput);
-          setPendingAdd(null);
-        },
+        onError: () => reportCaptureFailed(context),
       },
     );
-  }, [afterCreate, captureSpaceId, captureTagIds, createTask, pendingAdd, rawInput]);
+  }, [afterCreate, captureSpaceId, captureTagIds, createTask, pendingAdd, rawInput, reportCaptureFailed]);
 
   const linkAlreadyInStream = useMemo(() => {
     if (!inputIsUrl) return false;
@@ -1426,8 +1458,8 @@ const StreamPage = () => {
   /* ---------- Saved views (15A tabs) ---------- */
 
   const { data: savedViewRows } = useSavedViews();
-  const createSavedView = useCreateSavedView();
-  const updateSavedView = useUpdateSavedView();
+  const createSavedView = useCreateSavedView(HANDLES_ERRORS);
+  const updateSavedView = useUpdateSavedView(HANDLES_ERRORS);
   const deleteSavedView = useDeleteSavedView();
   const [hiddenViewIds, setHiddenViewIds] = useState<Set<string>>(() => new Set());
   const pendingViewDeletes = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; commit: () => void }>());
@@ -1783,6 +1815,7 @@ const StreamPage = () => {
       onUpdateUrl={handleUpdateUrl}
       onRescrape={handleRescrape}
       onDelete={() => handleDeleteLink(link)}
+      flash={flash}
     />
   );
 
@@ -2063,7 +2096,13 @@ const StreamPage = () => {
       <AppHeader
         user={session?.user ?? null}
         title={contextName}
-        subtitle={`${allItems.length} item${allItems.length === 1 ? '' : 's'}`}
+        subtitle={
+          loadState === 'ready'
+            ? `${allItems.length} item${allItems.length === 1 ? '' : 's'}`
+            : loadState === 'loading'
+              ? 'Loading…'
+              : '\u00a0'
+        }
         pinnedLinks={superFavoriteLinks}
         onPinnedOpen={handleOpenLink}
         actions={
@@ -2180,7 +2219,11 @@ const StreamPage = () => {
 
                   <div className="bookmark-list-panel-stack">
                     <div key={view} className={`memex-grid-view memex-stream-body is-${view}`}>
-                      {nothingToShow ? (
+                      {loadState === 'failed' ? (
+                        <LoadErrorState what="your Library" onRetry={refetchLibrary} />
+                      ) : loadState === 'loading' && nothingToShow ? (
+                        <EmptyState title="Loading your Library…" role="status" />
+                      ) : nothingToShow ? (
                         <EmptyState title={emptyTitle} subtitle={emptySubtitle} />
                       ) : view === 'table' ? (
                         <LibraryTable
@@ -2280,6 +2323,7 @@ const StreamPage = () => {
               onConvertJot={(jot, kind) => void handleConvertJot(jot, kind)}
               onDeleteJot={handleDeleteJot}
               onClose={closeSelfNotes}
+              onFeedback={flash}
             />
           </aside>
         ) : (

@@ -19,6 +19,7 @@ import { useMoveJots } from './useMoveJots';
 import type { ToastAction } from './useFeedbackToast';
 import { parseItemKey, undoMoves } from '@memex/core';
 import { cue } from '../utils/sound';
+import { HANDLES_ERRORS } from '../utils/mutationErrors';
 
 type Flash = (message: string, action?: ToastAction) => void;
 
@@ -37,12 +38,13 @@ export function useAddToSpace(flash: Flash) {
   const { data: linkMembership } = useProfileLinkMembership();
   const { data: noteMembership } = useProfileNoteMembership();
   const { data: taskMembership } = useProfileTaskMembership();
-  const addLinks = useAddLinksToProfile();
-  const addNotes = useAddNotesToProfile();
-  const addTasks = useAddTasksToProfile();
-  const removeLink = useRemoveLinkFromProfile();
-  const removeNote = useRemoveNoteFromProfile();
-  const removeTask = useRemoveTaskFromProfile();
+  // Every write below reports its own failure (and Undo's)
+  const addLinks = useAddLinksToProfile(HANDLES_ERRORS);
+  const addNotes = useAddNotesToProfile(HANDLES_ERRORS);
+  const addTasks = useAddTasksToProfile(HANDLES_ERRORS);
+  const removeLink = useRemoveLinkFromProfile(HANDLES_ERRORS);
+  const removeNote = useRemoveNoteFromProfile(HANDLES_ERRORS);
+  const removeTask = useRemoveTaskFromProfile(HANDLES_ERRORS);
   const jots = useMoveJots();
 
   return useCallback(

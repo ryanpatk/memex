@@ -3,13 +3,15 @@ import { Outlet, useLocation, useParams } from 'react-router-dom';
 import { TASKS_PATH } from '../constants/modules';
 import MemexSidebar from './MemexSidebar';
 import GoToPalette from './GoToPalette';
+import ShellNotices from './ShellNotices';
 import { useProfiles } from '../hooks/useProfiles';
 import { useItemDragSource } from '../hooks/useItemDragSource';
 
 /**
  * The signed-in frame: sidebar + the current page (an Outlet, or the Journal
- * at `/`). Also hosts what works on every page: ⌘/Ctrl K (Go to) and item
- * drags onto sidebar spaces.
+ * at `/`). Also hosts what works on every page: ⌘/Ctrl K (Go to), item
+ * drags onto sidebar spaces, the offline line and the fallback toast for
+ * failed writes (ShellNotices).
  */
 const MemexShell = ({ children }: { children?: ReactNode }) => {
   const { spaceId } = useParams<{ spaceId?: string }>();
@@ -28,6 +30,7 @@ const MemexShell = ({ children }: { children?: ReactNode }) => {
       <MemexSidebar />
       <div className="memex-shell-main">
         {children ?? <Outlet />}
+        <ShellNotices />
       </div>
       <GoToPalette />
     </div>

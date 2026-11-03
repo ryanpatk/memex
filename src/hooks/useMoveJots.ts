@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { planJotMoves, type JotMove } from '@memex/core';
 import { useAllSelfMessages, useUpdateSelfMessage } from './useSelfMessages';
+import { HANDLES_ERRORS } from '../utils/mutationErrors';
 
 /**
  * Moving jots between spaces (a jot lives in one place: a space, or the
@@ -11,7 +12,8 @@ import { useAllSelfMessages, useUpdateSelfMessage } from './useSelfMessages';
  */
 export function useMoveJots() {
   const { data: jots } = useAllSelfMessages();
-  const update = useUpdateSelfMessage();
+  // Callers (useAddToSpace, useRemoveFromSpace) report failures themselves
+  const update = useUpdateSelfMessage(HANDLES_ERRORS);
 
   const plan = useCallback((keys: string[], to: string | null) => planJotMoves(jots ?? [], keys, to), [jots]);
 

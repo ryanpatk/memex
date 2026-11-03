@@ -20,11 +20,10 @@ import {
   normalizeUrlInput,
 } from '@memex/core';
 import { useProfiles } from '../../hooks/useProfiles';
-import {
-  useAddLinksToProfile,
-  useProfileLinkMembership,
-  useRemoveLinkFromProfile,
-} from '../../hooks/useProfileLinks';
+import { useProfileLinkMembership } from '../../hooks/useProfileLinks';
+import { useAddToSpace } from '../../hooks/useAddToSpace';
+import { useRemoveFromSpace } from '../../hooks/useRemoveFromSpace';
+import type { ToastAction } from '../../hooks/useFeedbackToast';
 import { useSpaceColors } from '../../hooks/useSpaceColors';
 import { cue } from '../../utils/sound';
 
@@ -39,6 +38,8 @@ interface LinkExpandedCardProps {
   onUpdateUrl: (url: string) => Promise<void>;
   onRescrape: () => Promise<RescrapeResult>;
   onDelete: () => void;
+  /** The page's toast: filing in and out of spaces reports there, with Undo. */
+  flash: (message: string, action?: ToastAction) => void;
   /** Compact layout for the list view (no hero image). */
   variant?: 'card' | 'row';
 }
@@ -63,6 +64,7 @@ const LinkExpandedCard = ({
   onUpdateUrl,
   onRescrape,
   onDelete,
+  flash,
   variant = 'card',
 }: LinkExpandedCardProps) => {
   const rootRef = useRef<HTMLElement>(null);
@@ -79,8 +81,10 @@ const LinkExpandedCard = ({
   const { data: profiles } = useProfiles();
   const spaceColors = useSpaceColors();
   const { data: membership } = useProfileLinkMembership();
-  const addToSpace = useAddLinksToProfile();
-  const removeFromSpace = useRemoveLinkFromProfile();
+  // The shared filing hooks: same toasts, Undo and failure messages as everywhere else
+  const addToSpace = useAddToSpace(flash);
+  const removeFromSpace = useRemoveFromSpace(flash);
+  const itemKeys = [`link:${link.id}`];
 
   const host = getHostname(link.url);
   const title = getLinkTitle(link);
@@ -176,10 +180,26 @@ const LinkExpandedCard = ({
       return;
     }
     if (next !== link.url) {
-      await onUpdateUrl(next);
+      try {
+        await onUpdateUrl(next);
+      } catch {
+        // Keep the field open with what was typed, so Save can try again
+        cue('error');
+        flashStatus('Couldn’t save the URL. Try again.');
+        return;
+      }
       flashStatus('URL saved');
     }
     setEditingUrl(false);
+  };
+
+  const handleTogglePin = async () => {
+    try {
+      await onTogglePin(!isPinned);
+    } catch {
+      cue('error');
+      flashStatus(isPinned ? 'Couldn’t unpin. Try again.' : 'Couldn’t pin. Try again.');
+    }
   };
 
   const hasImage = variant === 'card' && Boolean(link.preview_image_url) && !imageFailed;
@@ -314,7 +334,7 @@ const LinkExpandedCard = ({
             <button
               type="button"
               className={`memex-pin-toggle${isPinned ? ' is-on' : ''}`}
-              onClick={() => void onTogglePin(!isPinned)}
+              onClick={() => void handleTogglePin()}
               aria-pressed={isPinned}
               title={isPinned ? 'Unpin from header' : 'Pin to header'}
             >
@@ -338,10 +358,7 @@ const LinkExpandedCard = ({
                 <button
                   type="button"
                   className="memex-space-chip-remove"
-                  onClick={() => {
-                    cue('move');
-                    void removeFromSpace.mutateAsync({ profileId: space.id, linkId: link.id });
-                  }}
+                  onClick={() => void removeFromSpace(space.id, itemKeys)}
                   aria-label={`Remove from “${space.name}”`}
                 >
                   <X aria-hidden="true" />
@@ -368,8 +385,7 @@ const LinkExpandedCard = ({
                         role="menuitem"
                         onClick={() => {
                           setAddOpen(false);
-                          cue('move');
-                          void addToSpace.mutateAsync({ profileId: space.id, linkIds: [link.id] });
+                          void addToSpace(space.id, itemKeys);
                         }}
                       >
                         <span

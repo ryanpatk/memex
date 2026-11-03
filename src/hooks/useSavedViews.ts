@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { SavedView, UpdateSavedViewData } from '@memex/core'
 import { repository } from '../data/repository'
+import { errorMeta, type MutationHookOptions } from '../utils/mutationErrors'
 
 /** Saved Library views (decision 15A, docs/library-views.md). */
 export const savedViewKeys = {
@@ -16,9 +17,10 @@ export const useSavedViews = () =>
     queryFn: savedViewsApi.getAll,
   })
 
-export const useCreateSavedView = () => {
+export const useCreateSavedView = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: savedViewsApi.create,
     onSuccess: (created) => {
       queryClient.setQueryData<SavedView[]>(savedViewKeys.list(), (prev) => [...(prev ?? []), created])
@@ -27,9 +29,10 @@ export const useCreateSavedView = () => {
   })
 }
 
-export const useUpdateSavedView = () => {
+export const useUpdateSavedView = (options?: MutationHookOptions) => {
   const queryClient = useQueryClient()
   return useMutation({
+    meta: errorMeta(options),
     mutationFn: ({ id, updates }: { id: string; updates: UpdateSavedViewData }) => savedViewsApi.update(id, updates),
     // Rename and update show at once; the server copy replaces it
     onMutate: ({ id, updates }) => {

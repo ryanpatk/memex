@@ -24,6 +24,7 @@ import JournalComposer, { type JournalComposerHandle } from './JournalComposer';
 import { PartView, type JournalHandlers } from './JournalParts';
 import { JOT_PARAM, LIBRARY_PATH, NOTE_PARAM } from '../../constants/modules';
 import { cue } from '../../utils/sound';
+import { HANDLES_ERRORS } from '../../utils/mutationErrors';
 
 /*
  * The Journal's feed and composer, with every write they make: the home
@@ -61,13 +62,15 @@ interface JournalFeedProps {
   scope?: JournalSpace;
   /** Shown when there's nothing yet. */
   empty: ReactNode;
+  /** Shown instead of the entries when they couldn't load (the composer stays). */
+  failure?: ReactNode;
   label: string;
   flash: (message: string, action?: ToastAction) => void;
   dismiss: () => void;
 }
 
 const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
-  ({ entries, spaces, filer, isLoading, scope, empty, label, flash, dismiss }, ref) => {
+  ({ entries, spaces, filer, isLoading, scope, empty, failure, label, flash, dismiss }, ref) => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const jotParam = searchParams.get(JOT_PARAM);
@@ -75,16 +78,18 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
     const addToSpace = useAddToSpace(flash);
     const removeFromSpace = useRemoveFromSpace(flash);
 
-    const createJot = useCreateSelfMessage();
+    // These report their own failures (composer, conversions, filing, jot
+    // edits); a failed tick or jot delete gets the shell's fallback toast
+    const createJot = useCreateSelfMessage(HANDLES_ERRORS);
     const deleteJot = useDeleteSelfMessage();
-    const updateJot = useUpdateSelfMessage();
-    const createLink = useCreateLink();
-    const createNote = useCreateNote();
-    const createTask = useCreateTask();
+    const updateJot = useUpdateSelfMessage(HANDLES_ERRORS);
+    const createLink = useCreateLink(HANDLES_ERRORS);
+    const createNote = useCreateNote(HANDLES_ERRORS);
+    const createTask = useCreateTask(HANDLES_ERRORS);
     const updateTask = useUpdateTask();
-    const addLinks = useAddLinksToProfile();
-    const addNotes = useAddNotesToProfile();
-    const addTasks = useAddTasksToProfile();
+    const addLinks = useAddLinksToProfile(HANDLES_ERRORS);
+    const addNotes = useAddNotesToProfile(HANDLES_ERRORS);
+    const addTasks = useAddTasksToProfile(HANDLES_ERRORS);
 
     const [limit, setLimit] = useState(PAGE);
     const [hidden, setHidden] = useState<Set<string>>(() => new Set());
@@ -195,19 +200,40 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
 
     /* ---------- Writes ---------- */
 
+    /** File a saved item in spaces. Never throws: resolves to false when a filing failed (the item stays saved). */
     const fileIn = useCallback(
-      async (kind: 'link' | 'note' | 'task', id: string, spaceIds: string[]) => {
-        await Promise.all(
-          spaceIds.map((profileId) =>
-            kind === 'link'
-              ? addLinks.mutateAsync({ profileId, linkIds: [id] })
-              : kind === 'note'
-                ? addNotes.mutateAsync({ profileId, noteIds: [id] })
-                : addTasks.mutateAsync({ profileId, taskIds: [id] }),
-          ),
-        );
+      async (kind: 'link' | 'note' | 'task', id: string, spaceIds: string[]): Promise<boolean> => {
+        try {
+          await Promise.all(
+            spaceIds.map((profileId) =>
+              kind === 'link'
+                ? addLinks.mutateAsync({ profileId, linkIds: [id] })
+                : kind === 'note'
+                  ? addNotes.mutateAsync({ profileId, noteIds: [id] })
+                  : addTasks.mutateAsync({ profileId, taskIds: [id] }),
+            ),
+          );
+          return true;
+        } catch (error) {
+          console.error('Failed to file a new save:', error);
+          return false;
+        }
       },
       [addLinks, addNotes, addTasks],
+    );
+
+    const spaceNames = useCallback(
+      (spaceIds: string[]) => spaces.filter((s) => spaceIds.includes(s.id)).map((s) => s.name).join(', ') || 'that space',
+      [spaces],
+    );
+
+    /** Saved, but a filing failed: say so (the text is saved, so it doesn't go back in the box). */
+    const reportUnfiled = useCallback(
+      (spaceIds: string[], open?: ToastAction) => {
+        cue('error');
+        flash(`Saved, but couldn’t file it in ${spaceNames(spaceIds)}.`, open);
+      },
+      [flash, spaceNames],
     );
 
     const openNote = useCallback((noteId: string) => navigate(`${LIBRARY_PATH}?${NOTE_PARAM}=${noteId}`), [navigate]);
@@ -222,47 +248,64 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
       [scope, spaces],
     );
 
+    // Two steps: save, then file. Only a failed save rejects (the composer
+    // puts the text back); once it's saved, a failed filing just says so, so
+    // sending again can't make a duplicate.
     const handleSubmit = useCallback(
       async (result: Exclude<ComposerResult, { kind: 'empty' }>) => {
         stickToBottom.current = true;
         const spaceIds = result.spaces.map((s) => s.id);
         const elsewhere = filedElsewhere(spaceIds);
-        try {
-          if (result.kind === 'jot') {
-            cue('confirm');
-            await createJot.mutateAsync({ profile_id: spaceIds[0] ?? null, body: result.body });
-            if (elsewhere) flash(`Jotted in ${elsewhere}.`);
-          } else if (result.kind === 'link') {
-            const existing = (allLinks ?? []).find((l) => l.url === result.url && !l.id.startsWith('temp-'));
-            if (existing) {
-              if (spaceIds.length) await fileIn('link', existing.id, spaceIds);
-              flash(spaceIds.length ? 'Already saved. Filed it.' : 'Already saved.');
+        const fileSaved = async (kind: 'link' | 'note' | 'task', id: string) =>
+          spaceIds.length === 0 || (await fileIn(kind, id, spaceIds));
+        if (result.kind === 'link') {
+          const existing = (allLinks ?? []).find((l) => l.url === result.url && !l.id.startsWith('temp-'));
+          if (existing) {
+            if (!(await fileSaved('link', existing.id))) {
+              cue('error');
+              flash(`Already saved, but couldn’t file it in ${spaceNames(spaceIds)}.`);
               return;
             }
-            cue('confirm');
-            const link = await createLink.mutateAsync({ url: result.url });
-            if (spaceIds.length) await fileIn('link', link.id, spaceIds);
-            if (elsewhere) flash(`Saved to ${elsewhere}.`);
-          } else if (result.kind === 'task') {
-            cue('confirm');
-            const task = await createTask.mutateAsync({ title: result.title });
-            if (spaceIds.length) await fileIn('task', task.id, spaceIds);
-            if (elsewhere) flash(`Added to ${elsewhere}.`);
-          } else {
-            cue('confirm');
-            const note = await createNote.mutateAsync({ title: result.title, body: result.body });
-            if (spaceIds.length) await fileIn('note', note.id, spaceIds);
-            flash(elsewhere ? `Note saved to ${elsewhere}.` : 'Note saved.', { label: 'Open', onClick: () => openNote(note.id) });
+            flash(spaceIds.length ? 'Already saved. Filed it.' : 'Already saved.');
+            return;
           }
-          requestAnimationFrame(() => scrollToBottom(true));
+        }
+        let saved: { kind: 'jot' } | { kind: 'link' | 'task' | 'note'; id: string };
+        try {
+          cue('confirm');
+          if (result.kind === 'jot') {
+            await createJot.mutateAsync({ profile_id: spaceIds[0] ?? null, body: result.body });
+            saved = { kind: 'jot' };
+          } else if (result.kind === 'link') {
+            saved = { kind: 'link', id: (await createLink.mutateAsync({ url: result.url })).id };
+          } else if (result.kind === 'task') {
+            saved = { kind: 'task', id: (await createTask.mutateAsync({ title: result.title })).id };
+          } else {
+            saved = { kind: 'note', id: (await createNote.mutateAsync({ title: result.title, body: result.body })).id };
+          }
         } catch (error) {
           console.error('Failed to save from the composer:', error);
           cue('error');
           flash('Couldn’t save that. Your text is back in the box.');
           throw error;
         }
+        requestAnimationFrame(() => scrollToBottom(true));
+        if (saved.kind === 'jot') {
+          // A jot is filed by the create itself
+          if (elsewhere) flash(`Jotted in ${elsewhere}.`);
+          return;
+        }
+        const { kind, id } = saved;
+        const open: ToastAction | undefined = kind === 'note' ? { label: 'Open', onClick: () => openNote(id) } : undefined;
+        if (!(await fileSaved(kind, id))) {
+          reportUnfiled(spaceIds, open);
+          return;
+        }
+        if (kind === 'link' && elsewhere) flash(`Saved to ${elsewhere}.`);
+        else if (kind === 'task' && elsewhere) flash(`Added to ${elsewhere}.`);
+        else if (kind === 'note') flash(elsewhere ? `Note saved to ${elsewhere}.` : 'Note saved.', open);
       },
-      [allLinks, createJot, createLink, createNote, createTask, fileIn, filedElsewhere, flash, openNote, scrollToBottom],
+      [allLinks, createJot, createLink, createNote, createTask, fileIn, filedElsewhere, flash, openNote, reportUnfiled, scrollToBottom, spaceNames],
     );
 
     const handleFile = useCallback(
@@ -307,29 +350,34 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
         const text = jot.body.trim();
         const firstLine = text.split('\n')[0].trim();
         const spaceIds = jot.profile_id ? [jot.profile_id] : [];
+        let id: string;
         try {
           if (kind === 'note') {
             const title = firstLine.length > 80 ? `${firstLine.slice(0, 80)}…` : firstLine;
             const body = text === firstLine && firstLine.length <= 80 ? '' : text;
-            const note = await createNote.mutateAsync({ title, body });
-            await fileIn('note', note.id, spaceIds);
-            deleteJot.mutate(jot.id);
-            cue('confirm');
-            flash('Turned into a note.', { label: 'Open', onClick: () => openNote(note.id) });
+            id = (await createNote.mutateAsync({ title, body })).id;
           } else {
-            const task = await createTask.mutateAsync({ title: text.replace(/\s+/g, ' ').slice(0, 200) });
-            await fileIn('task', task.id, spaceIds);
-            deleteJot.mutate(jot.id);
-            cue('confirm');
-            flash('Added to tasks.');
+            id = (await createTask.mutateAsync({ title: text.replace(/\s+/g, ' ').slice(0, 200) })).id;
           }
         } catch (error) {
           console.error('Failed to convert jot:', error);
           cue('error');
           flash('Couldn’t convert that jot.');
+          return;
         }
+        // The text lives in the new item now, so the jot goes even if filing fails
+        const filed = spaceIds.length === 0 || (await fileIn(kind, id, spaceIds));
+        deleteJot.mutate(jot.id);
+        const open: ToastAction | undefined = kind === 'note' ? { label: 'Open', onClick: () => openNote(id) } : undefined;
+        if (!filed) {
+          cue('error');
+          flash(`${kind === 'note' ? 'Turned into a note' : 'Added to tasks'}, but couldn’t file it in ${spaceNames(spaceIds)}.`, open);
+          return;
+        }
+        cue('confirm');
+        flash(kind === 'note' ? 'Turned into a note.' : 'Added to tasks.', open);
       },
-      [createNote, createTask, deleteJot, fileIn, flash, openNote],
+      [createNote, createTask, deleteJot, fileIn, flash, openNote, spaceNames],
     );
 
     const handleDeleteJot = useCallback(
@@ -407,13 +455,13 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
       <main className="jr-main" aria-label={label}>
         <div className="jr-scroll" ref={scrollRef} onScroll={onScroll}>
           <div className="jr-feed">
-            {hasEarlier && (
+            {hasEarlier && !failure && (
               <button type="button" className="jr-earlier" onClick={showEarlier}>
                 Show earlier
               </button>
             )}
-            {!isLoading && parts.length === 0 && empty}
-            {rows.map(({ part, cont, held }) => (
+            {failure ?? (!isLoading && parts.length === 0 && empty)}
+            {!failure && rows.map(({ part, cont, held }) => (
               <PartView
                 key={part.id}
                 part={part}

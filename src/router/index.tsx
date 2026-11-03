@@ -15,6 +15,7 @@ import LegacyModuleRedirect from "./LegacyModuleRedirect.tsx";
 import OAuthLanding from "./OAuthLanding.tsx";
 import MemexShell from "../components/MemexShell.tsx";
 import Providers from "../Providers.tsx";
+import RouteError from "./RouteError.tsx";
 import { LEGACY_HOME_PATH, LIBRARY_PATH, TASKS_PATH } from "../constants/modules.ts";
 
 const router = createBrowserRouter([
@@ -22,11 +23,14 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <Providers />,
+    // A render error anywhere shows a calm panel with Reload, not a blank page
+    errorElement: <RouteError />,
     children: [
       // `/`: the Journal when signed in (home), sign-in otherwise
       {
         path: "/",
         element: <RootRoute />,
+        errorElement: <RouteError />,
       },
       {
         path: "/auth/sign-in",
@@ -44,19 +48,26 @@ const router = createBrowserRouter([
           // memex shell: sidebar (Journal, Library, Tasks, spaces) around the page
           {
             element: <MemexShell />,
+            errorElement: <RouteError />,
             children: [
               {
-                path: LIBRARY_PATH,
-                element: <StreamPage />,
-              },
-              {
-                // A space: its scoped Journal + board column (decision 14B)
-                path: "/spaces/:spaceId",
-                element: <SpacePage />,
-              },
-              {
-                path: TASKS_PATH,
-                element: <TasksPage />,
+                // A page that fails keeps the sidebar: the panel fills the main column
+                errorElement: <RouteError variant="panel" />,
+                children: [
+                  {
+                    path: LIBRARY_PATH,
+                    element: <StreamPage />,
+                  },
+                  {
+                    // A space: its scoped Journal + board column (decision 14B)
+                    path: "/spaces/:spaceId",
+                    element: <SpacePage />,
+                  },
+                  {
+                    path: TASKS_PATH,
+                    element: <TasksPage />,
+                  },
+                ],
               },
             ],
           },
