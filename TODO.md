@@ -1,6 +1,6 @@
 # TODO
 
-Working checklist to keep memex moving. Updated 2026-11-02 — prune freely as things land.
+Working checklist to keep memex moving. Updated 2026-11-12 — prune freely as things land.
 
 ## 🚀 v1 (scope approved 2026-11-01)
 
@@ -8,6 +8,8 @@ v1 stays on Supabase + Cloudflare Workers. Details and phase mapping: `ROADMAP.m
 
 - [x] **M7: v1 hardening + sign-off** ✓ 2026-11-02 — `docs/v1-signoff.md` (what shipped, what was verified, known limits) and `docs/security-audit.md`. Same-owner checks in the database (migration `20261104120000_same_owner_checks.sql` after backup `~/memex-backups/2026-11-03T030204Z`; pgTAP via `scripts/test-db.sh`); memex-api per-IP limit + streamed 413 caps (`4ab2233c`); web/mobile error and offline states (web `7a137b2d`); production smoke `api/scripts/v1-smoke.ts` 33/33 with cleanup
   - [ ] **Ryan:** the “Needs Ryan” list in `docs/v1-signoff.md` §4 (TestFlight + Safari share + Airplane Mode tests, extension v0.3.0, revoke old `[test]` tokens, rotate the GitHub OAuth secret, dismiss the M1-B approval, design docs, optional backfill, mobile questions, and M7's new ones: open sign-ups, `.env.migrate`, a signed-in pass of the error states)
+- [x] **Smooth Library grid** ✓ 2026-11-12 — the grid is virtualized and never shifts as pictures load: 5–10fps → 60fps with 0 dropped frames and 0 long tasks while scrolling 2,435 cards, DOM 40.5k → ~1k nodes, filter toggles and typing without long tasks. Causes, design, numbers and how to re-measure: `docs/library-grid-performance.md`
+  - [ ] **Ryan:** decide on storing picture dimensions at capture (additive `links` columns + memex-scraper; makes every picture's box exact from the first frame) and on paging `getAll` past Supabase's 1,000-row cap before the Library passes 1,000 links (`docs/library-grid-performance.md` → Next)
 - [x] **Safety rails** ✓ 2026-11-01 — `scripts/backup-supabase.sh` (first backup in `~/memex-backups/`, restore tested locally, `docs/backups.md`); gitleaks on every push/PR + local command (`SETUP.md`); “Safety rules for agents” in `CLAUDE.md`; signed-out app routes go to sign-in and come back
 - [ ] **Hosted MCP on memex-api** (headline) — Grok Bots read and store project context; token auth first (ROADMAP Phase 7a, 7d)
   - [x] **M3-A read tools** ✓ 2026-11-02: `/mcp` on memex-api (Streamable HTTP, stateless, MCP 2026-07-28 + 2025-era clients), agent tokens (`agent_tokens`: scope, expiry, revocation; `scripts/agent-token.mjs` create/list/revoke/revoke-all), per-token rate limit, `mcp_audit_log`, read tools `search` · `get_item` · `get_journal` · `list_spaces` · `space_overview` · `timeline_stats`. Migration applied after backup `~/memex-backups/2026-11-02T005325Z`; memex-api `b45b765b` deployed and smoke-tested (every tool in both protocol eras, revoke and expiry refused at once, rate limit engages, audit rows written). Docs: `docs/mcp.md`, `docs/mcp-auth.md`
