@@ -3546,9 +3546,12 @@ textarea,
   text-wrap: pretty;
 }
 
-/* Scroll containment: overlays and module lists don't chain-scroll the page */
+/* Scroll containment: overlays and module lists don't chain-scroll the page.
+   The gutter stays reserved so the grid's width never flips when results
+   get short enough to drop the scrollbar (every card would reflow) */
 .memex-grid-view {
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 .app-modal,
 .bookmark-account-menu {

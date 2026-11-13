@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { LinkWithTag, getTagsForLink, getHostname, getLinkTitle, itemKey } from '@memex/core';
 import StreamCard from './StreamCard';
 import { getInitials } from '../utils/streamCardFormat';
@@ -8,7 +8,7 @@ import { ExternalLink } from 'lucide-react';
 interface LinkGridCardProps {
   link: LinkWithTag;
   /** Card body: expand details, or toggle selection in selection mode. */
-  onActivate: () => void;
+  onActivate: (link: LinkWithTag) => void;
   isDetailsActive?: boolean;
   isSelected?: boolean;
   selectionMode?: boolean;
@@ -28,7 +28,7 @@ const LinkGridCard = ({
 
   const tags = useMemo(() => getTagsForLink(link), [link]);
   const faviconUrl = link.favicon_url;
-  const host = getHostname(link.url);
+  const host = useMemo(() => getHostname(link.url), [link.url]);
   const title = getLinkTitle(link);
 
   return (
@@ -38,7 +38,7 @@ const LinkGridCard = ({
       isNew={link.id.startsWith('temp-')}
       leading={
         faviconUrl && !imageFailed ? (
-          <img src={faviconUrl} alt="" onError={() => setImageFailed(true)} />
+          <img src={faviconUrl} alt="" width={16} height={16} decoding="async" onError={() => setImageFailed(true)} />
         ) : (
           <span className="memex-card-favicon-initials">{getInitials(host)}</span>
         )
@@ -47,7 +47,7 @@ const LinkGridCard = ({
       metaTitle={host}
       title={title}
       tags={tags}
-      onActivate={onActivate}
+      onActivate={() => onActivate(link)}
       isSelected={isSelected}
       selectionMode={selectionMode}
       isDetailsActive={isDetailsActive}
@@ -70,4 +70,4 @@ const LinkGridCard = ({
   );
 };
 
-export default LinkGridCard;
+export default memo(LinkGridCard);

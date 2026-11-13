@@ -712,12 +712,37 @@
   position: relative;
   column-gap: var(--space-s);
   row-gap: var(--space-s);
+  /* The grid anchors its own scroll (MasonryLayout): cards move by
+     transform, which the browser's anchoring can't see */
+  overflow-anchor: none;
+  transition: opacity 200ms ease-out;
+}
+
+/* The first screen waits (≤450ms) for its pictures to report their size,
+   then fades in settled instead of shuffling */
+.memex-masonry.is-settling {
+  opacity: 0;
 }
 
 .memex-masonry-cell {
   position: absolute;
   top: 0;
   left: 0;
+}
+
+/* Placeholder grid while the Library loads with nothing cached */
+.memex-grid-skeleton {
+  columns: 232px;
+  column-gap: var(--space-s);
+}
+
+.memex-grid-skeleton-card {
+  display: block;
+  margin-bottom: var(--space-s);
+  break-inside: avoid;
+  border-radius: var(--radius-m);
+  background: var(--neutral-2);
+  box-shadow: 0 0 0 var(--border-s) var(--border-default-color);
 }
 
 .memex-masonry.is-animating .memex-masonry-cell {
@@ -756,6 +781,14 @@
   min-height: 72px;
   max-height: 520px;
   object-fit: cover;
+  /* The box is sized up front (aspect-ratio from LinkPreviewCard); the
+     picture fades in over the neutral fill once it has loaded */
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+
+.memex-pv-image.is-loaded {
+  opacity: 1;
 }
 
 .memex-pv-favicon {
@@ -1301,6 +1334,8 @@ html[data-link-captions='inset'] .memex-pv-title {
   }
 
   .memex-masonry.is-animating .memex-masonry-cell,
+  .memex-masonry,
+  .memex-pv-image,
   html[data-link-captions='hover'] .memex-pv-caption,
   html[data-link-captions='hover'] .memex-pv-caption::before,
   html[data-link-captions='hover'] .memex-pv-caption > * {

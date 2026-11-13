@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import {
   NoteWithTags,
   markdownExcerpt,
@@ -39,6 +39,7 @@ const NoteGridCard = ({
   const title = noteDisplayTitle(note);
   const excerpt = useMemo(() => markdownExcerpt(note.body, 420), [note.body]);
   const convertibleUrl = useMemo(() => noteAsUrl(note), [note]);
+  const updatedLabel = useMemo(() => new Date(note.updated_at).toLocaleString(), [note.updated_at]);
   const showConvert =
     !hideActions && Boolean(onConvertToLink) && convertibleUrl !== '' && !note.id.startsWith('temp-');
 
@@ -57,7 +58,7 @@ const NoteGridCard = ({
       isNew={note.id.startsWith('temp-')}
       leading={<NoteGlyph />}
       meta={relativeTime(note.updated_at)}
-      metaTitle={new Date(note.updated_at).toLocaleString()}
+      metaTitle={updatedLabel}
       title={title}
       excerpt={excerpt || undefined}
       tags={tags}
@@ -102,4 +103,4 @@ const NoteGridCard = ({
   );
 };
 
-export default NoteGridCard;
+export default memo(NoteGridCard);

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useNavigationType, useSearchParams } from 'react-router-dom';
 import LibraryTable, { type TableSpace } from '../components/library/LibraryTable';
 import LibraryViewTabs, { type ViewTab } from '../components/library/LibraryViewTabs';
 import MenuButton, { type MenuEntry } from '../components/library/MenuButton';
@@ -12,6 +12,7 @@ import CommandBar, {
 import LinkExpandedCard from '../components/stream/LinkExpandedCard';
 import LinkPreviewCard from '../components/stream/LinkPreviewCard';
 import MasonryLayout, { type MasonryItem } from '../components/stream/MasonryLayout';
+import GridSkeleton from '../components/stream/GridSkeleton';
 import StreamRow from '../components/stream/StreamRow';
 import TaskBand from '../components/stream/TaskBand';
 import SelectionBar from '../components/stream/SelectionBar';
@@ -124,6 +125,10 @@ import { HANDLES_ERRORS } from '../utils/mutationErrors';
 import { loadStateOf } from '../utils/loadState';
 import LoadErrorState from '../components/LoadErrorState';
 import { useSpaceColors } from '../hooks/useSpaceColors';
+import { useStableCallback } from '../hooks/useStableCallback';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { getImageRatio, getShownRatio, layoutRatio, prefetchImageRatios, subscribeImageRatios } from '../utils/imageRatios';
+import { estimatedLines, pictureHeight, textCardHeight } from '../utils/cardEstimates';
 import type { RescrapeResult } from '../components/stream/LinkExpandedCard';
 import {
   ArrowUpDown,
@@ -180,6 +185,19 @@ const storeView = (next: StreamView) => {
   }
 };
 
+const HAD_PINNED_KEY = 'memex.library.hadPinned';
+
+/** A note's grid excerpt length, worked out once per note version (estimates run on every layout). */
+const excerptLengths = new WeakMap<NoteWithTags, number>();
+const noteExcerptLength = (note: NoteWithTags) => {
+  let length = excerptLengths.get(note);
+  if (length === undefined) {
+    length = markdownExcerpt(note.body, 420).length;
+    excerptLengths.set(note, length);
+  }
+  return length;
+};
+
 /** The URL params a Library filter set writes (the app's names for core's FilterParams). */
 const FILTER_PARAM_NAMES = {
   type: TYPE_PARAM,
@@ -200,6 +218,12 @@ const StreamPage = () => {
   const { session } = useSession();
 
   const [searchQuery, setSearchQuery] = useState('');
+  // The input stays instant; the grid follows once typing pauses, rendered
+  // at low priority so a keystroke never waits on it
+  const gridSearch = useDeferredValue(useDebouncedValue(searchQuery, 120));
+  // The palette under the input follows every keystroke, also at low priority
+  const paletteSearch = useDeferredValue(searchQuery);
+  const navigationType = useNavigationType();
   const [hiddenKeys, setHiddenKeys] = useState<Set<string>>(() => new Set());
   const [brokenPreviews, setBrokenPreviews] = useState<Set<string>>(() => new Set());
   const [pendingAdd, setPendingAdd] = useState<PendingAdd | null>(null);
@@ -229,6 +253,8 @@ const StreamPage = () => {
   const allNotes = notesQuery.data;
   const allTasks = tasksQuery.data;
   const loadState = loadStateOf([linksQuery, notesQuery, tasksQuery]);
+  /** First load with nothing cached yet: the grid shows its skeleton, never the empty state. */
+  const itemsPending = loadState === 'loading';
   const { refetch: refetchLinks } = linksQuery;
   const { refetch: refetchNotes } = notesQuery;
   const { refetch: refetchTasks } = tasksQuery;
@@ -541,8 +567,8 @@ const StreamPage = () => {
   );
 
   const matchesSearch = useCallback(
-    (item: StreamItem) => itemMatchesSearch(item, searchQuery),
-    [searchQuery],
+    (item: StreamItem) => itemMatchesSearch(item, gridSearch),
+    [gridSearch],
   );
 
   const spacesOf = useCallback(
@@ -622,6 +648,24 @@ const StreamPage = () => {
     () => pinnedLinks(allItems, linkMembership ?? [], undefined),
     [allItems, linkMembership],
   );
+
+  // Whether the last visit had pinned sites: their row's height is held
+  // while the Library loads, so the page doesn't drop when they arrive
+  const [hadPinned] = useState(() => {
+    try {
+      return window.localStorage.getItem(HAD_PINNED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    if (itemsPending) return;
+    try {
+      window.localStorage.setItem(HAD_PINNED_KEY, superFavoriteLinks.length > 0 ? '1' : '0');
+    } catch {
+      /* storage unavailable — skip */
+    }
+  }, [itemsPending, superFavoriteLinks.length]);
 
   /* ---------- Selection ---------- */
 
@@ -919,8 +963,10 @@ const StreamPage = () => {
   // Palette matches span every type (ignoring the type chips), so a search
   // never dead-ends behind a filter
   const paletteGroups = useMemo<CommandResultGroup[]>(() => {
-    if (!rawInput) return [];
-    const matches = allItems.filter((item) => matchesTags(item) && matchesSearch(item)).sort(byUpdatedDesc);
+    if (!paletteSearch.trim()) return [];
+    const matches = allItems
+      .filter((item) => matchesTags(item) && itemMatchesSearch(item, paletteSearch))
+      .sort(byUpdatedDesc);
     const order: ItemType[] = ['note', 'link', 'task'];
     return order.map((type) => {
       const ofType = matches.filter((item) => item.type === type);
@@ -958,7 +1004,7 @@ const StreamPage = () => {
         }),
       };
     });
-  }, [matchesSearch, matchesTags, openNote, rawInput, allItems, setListParam, updateParams]);
+  }, [matchesTags, openNote, paletteSearch, allItems, setListParam, updateParams]);
 
   /* ---------- Item behaviors ---------- */
 
@@ -1301,16 +1347,22 @@ const StreamPage = () => {
     selectionAnchorRef.current = null;
   }, [clearItemSelection, setSelectionMode]);
 
+  /** Grid card keys in display order: the grid mounts only the cards near the viewport. */
+  const gridKeysRef = useRef<string[]>([]);
+
   /** Keys of the selectable items on screen, in display order. */
-  const renderedKeys = useCallback(
-    () =>
-      Array.from(
-        pageRef.current?.querySelectorAll<HTMLElement>('.memex-stream-body [data-item-key]') ?? [],
-      )
-        .map((el) => el.dataset.itemKey as string)
-        .filter((key) => !key.includes(':temp-')),
-    [],
-  );
+  const renderedKeys = useCallback(() => {
+    const keys: string[] = [];
+    let gridAdded = false;
+    pageRef.current?.querySelectorAll<HTMLElement>('.memex-stream-body [data-item-key]').forEach((el) => {
+      if (el.closest('.memex-masonry')) {
+        // Every card in the grid, mounted or not, in place of the mounted few
+        if (!gridAdded) keys.push(...gridKeysRef.current);
+        gridAdded = true;
+      } else keys.push(el.dataset.itemKey as string);
+    });
+    return keys.filter((key) => !key.includes(':temp-'));
+  }, []);
 
   const handleBulkDelete = useCallback(() => {
     const items = selectedItemKeys
@@ -1819,20 +1871,39 @@ const StreamPage = () => {
     />
   );
 
-  const renderCard = (item: StreamItem) => {
-    const isSelected = selectedItemKeys.includes(item.key);
+  const selectedKeySet = useMemo(() => new Set(selectedItemKeys), [selectedItemKeys]);
+
+  // Stable handlers for the memoized cards: a page re-render (a keystroke,
+  // a toast) leaves every card on screen alone
+  const activateLink = useStableCallback((link: LinkWithTag) => {
+    const item = itemsByKey.get(itemKey('link', link.id));
+    if (selectionMode) {
+      if (item) handleToggleSelect(item);
+    } else handleOpenLinkDetails(link);
+  });
+  const toggleSelectNote = useStableCallback((noteId: string) => {
+    const item = itemsByKey.get(itemKey('note', noteId));
+    if (item) handleToggleSelect(item);
+  });
+  const openNoteCard = useStableCallback(handleOpenNote);
+  const deleteNoteCard = useStableCallback(handleDeleteNote);
+  const convertNoteCard = useStableCallback(handleConvertNoteToLink);
+  const previewBroken = useStableCallback(markPreviewBroken);
+
+  const renderCard = (key: string) => {
+    const item = itemsByKey.get(key);
+    if (!item) return null;
+    const isSelected = selectedKeySet.has(item.key);
     if (item.type === 'link') {
       if (expandedLinkId === item.id) return renderExpanded(item.link, 'card');
-      const activate = () =>
-        selectionMode ? handleToggleSelect(item) : handleOpenLinkDetails(item.link);
       if (item.link.preview_image_url && !brokenPreviews.has(item.id)) {
         return (
           <LinkPreviewCard
             link={item.link}
             isSelected={isSelected}
             selectionMode={selectionMode}
-            onActivate={activate}
-            onImageError={() => markPreviewBroken(item.id)}
+            onActivate={activateLink}
+            onImageError={previewBroken}
           />
         );
       }
@@ -1841,7 +1912,7 @@ const StreamPage = () => {
           link={item.link}
           isSelected={isSelected}
           selectionMode={selectionMode}
-          onActivate={activate}
+          onActivate={activateLink}
         />
       );
     }
@@ -1849,23 +1920,116 @@ const StreamPage = () => {
       return (
         <NoteGridCard
           note={item.note}
-          onOpen={handleOpenNote}
-          onDelete={handleDeleteNote}
-          onConvertToLink={handleConvertNoteToLink}
+          onOpen={openNoteCard}
+          onDelete={deleteNoteCard}
+          onConvertToLink={convertNoteCard}
           selectionMode={selectionMode}
           isSelected={isSelected}
-          onToggleSelect={() => handleToggleSelect(item)}
+          onToggleSelect={toggleSelectNote}
         />
       );
     }
     return null;
   };
 
-  const masonryItems: MasonryItem[] = gridItems.map((item) => ({
-    key: item.key,
-    span: item.type === 'link' && expandedLinkId === item.id ? 2 : 1,
-    node: renderCard(item),
-  }));
+  const masonryItems = useMemo<MasonryItem[]>(
+    () =>
+      gridItems.map((item) => ({
+        key: item.key,
+        span: item.type === 'link' && expandedLinkId === item.id ? 2 : 1,
+      })),
+    [expandedLinkId, gridItems],
+  );
+
+  useLayoutEffect(() => {
+    gridKeysRef.current = masonryItems.map((item) => item.key);
+  }, [masonryItems]);
+
+  /** What the stream shows: a new value is a new query (scroll to top, crossfade). */
+  const gridQueryKey = useMemo(
+    () => JSON.stringify([activeFilters, gridSearch.trim().toLowerCase(), sort]),
+    [activeFilters, gridSearch, sort],
+  );
+
+  // A new set of results fades in over the old (opacity only, ≤300ms) rather
+  // than snapping; the old results stay up until the new ones are ready
+  const streamBodyRef = useRef<HTMLDivElement>(null);
+  const shownQueryKey = useRef(gridQueryKey);
+  useLayoutEffect(() => {
+    if (shownQueryKey.current === gridQueryKey) return;
+    shownQueryKey.current = gridQueryKey;
+    const body = streamBodyRef.current;
+    if (!body) return;
+    if (view !== 'grid') body.scrollTop = 0; // the grid keeps its own scroll memory
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    body.animate([{ opacity: 0.35 }, { opacity: 1 }], { duration: 220, easing: 'cubic-bezier(0.2, 0, 0, 1)' });
+  }, [gridQueryKey, view]);
+
+  /** Whether a link card is image-first (a preview that hasn't failed). */
+  const previewUrlOf = useCallback(
+    (item: StreamItem | undefined) =>
+      item?.type === 'link' && item.link.preview_image_url && !brokenPreviews.has(item.id)
+        ? item.link.preview_image_url
+        : null,
+    [brokenPreviews],
+  );
+
+  // Heights for cards that haven't mounted yet: a picture's box from its
+  // known (or guessed) ratio, text cards from their text. Measured cards
+  // replace these, off-screen, before they scroll into view.
+  const estimateCardHeight = useCallback(
+    (key: string, width: number) => {
+      const item = itemsByKey.get(key);
+      if (!item || item.type === 'task') return 0;
+      if (item.type === 'link' && expandedLinkId === item.id) return 440;
+      const url = previewUrlOf(item);
+      if (url && item.type === 'link') {
+        const ratio = layoutRatio(url, item.link.url, item.link.source);
+        if (document.documentElement.dataset.linkCaptions !== 'inset') return pictureHeight(width, ratio);
+        // Inset print: padding, the picture, then host + title beneath it
+        return 16 + pictureHeight(width - 16, ratio) + 32 + 20 * estimatedLines(getLinkTitle(item.link).length, width, 3);
+      }
+      if (item.type === 'note') {
+        return textCardHeight(width, noteDisplayTitle(item.note).length, noteExcerptLength(item.note));
+      }
+      return textCardHeight(width, getLinkTitle(item.link).length);
+    },
+    [expandedLinkId, itemsByKey, previewUrlOf],
+  );
+
+  /** What a card's measured height depends on: a new token means measure again. */
+  const cardSizeToken = useCallback(
+    (key: string) => {
+      const item = itemsByKey.get(key);
+      if (!item || item.type === 'task') return '';
+      if (item.type === 'note') return `n|${item.note.updated_at}`;
+      if (expandedLinkId === item.id) return `x|${item.link.updated_at}`;
+      const url = previewUrlOf(item);
+      if (!url) return `t|${item.link.updated_at}`;
+      return `p|${item.link.updated_at}|${getShownRatio(url) ?? getImageRatio(url) ?? '?'}|${document.documentElement.dataset.linkCaptions ?? ''}`;
+    },
+    [expandedLinkId, itemsByKey, previewUrlOf],
+  );
+
+  const isCardPending = useCallback(
+    (key: string) => {
+      const url = previewUrlOf(itemsByKey.get(key));
+      return Boolean(url) && getImageRatio(url) === undefined;
+    },
+    [itemsByKey, previewUrlOf],
+  );
+
+  const prefetchCards = useCallback(
+    (keys: string[]) => {
+      const urls: string[] = [];
+      for (const key of keys) {
+        const url = previewUrlOf(itemsByKey.get(key));
+        if (url) urls.push(url);
+      }
+      prefetchImageRatios(urls);
+    },
+    [itemsByKey, previewUrlOf],
+  );
 
   const renderRow = (item: StreamItem) => {
     const isSelected = selectedItemKeys.includes(item.key);
@@ -2002,7 +2166,6 @@ const StreamPage = () => {
   /* ---------- Table ---------- */
 
   const columns = useMemo(() => tableColumns({ showTags: SHOW_TAGS_UI }), []);
-  const selectedKeySet = useMemo(() => new Set(selectedItemKeys), [selectedItemKeys]);
 
   const tableSpacesOf = useCallback(
     (key: string): TableSpace[] =>
@@ -2104,6 +2267,7 @@ const StreamPage = () => {
               : '\u00a0'
         }
         pinnedLinks={superFavoriteLinks}
+        reserveLauncher={itemsPending && hadPinned}
         onPinnedOpen={handleOpenLink}
         actions={
           <button
@@ -2218,11 +2382,11 @@ const StreamPage = () => {
                   />
 
                   <div className="bookmark-list-panel-stack">
-                    <div key={view} className={`memex-grid-view memex-stream-body is-${view}`}>
+                    <div key={view} ref={streamBodyRef} className={`memex-grid-view memex-stream-body is-${view}`}>
                       {loadState === 'failed' ? (
                         <LoadErrorState what="your Library" onRetry={refetchLibrary} />
-                      ) : loadState === 'loading' && nothingToShow ? (
-                        <EmptyState title="Loading your Library…" role="status" />
+                      ) : itemsPending && nothingToShow ? (
+                        <GridSkeleton />
                       ) : nothingToShow ? (
                         <EmptyState title={emptyTitle} subtitle={emptySubtitle} />
                       ) : view === 'table' ? (
@@ -2261,7 +2425,18 @@ const StreamPage = () => {
                             />
                           )}
                           {masonryItems.length > 0 ? (
-                            <MasonryLayout items={masonryItems} animateKey={expandedLinkId} />
+                            <MasonryLayout
+                              items={masonryItems}
+                              renderItem={renderCard}
+                              estimateHeight={estimateCardHeight}
+                              sizeToken={cardSizeToken}
+                              isPending={isCardPending}
+                              subscribeEstimates={subscribeImageRatios}
+                              onPrefetch={prefetchCards}
+                              scrollKey={gridQueryKey}
+                              restoreOnKeyChange={navigationType === 'POP'}
+                              animateKey={expandedLinkId}
+                            />
                           ) : (
                             openTasks.length === 0 && (
                               <EmptyState

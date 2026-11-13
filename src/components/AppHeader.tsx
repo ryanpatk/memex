@@ -21,6 +21,8 @@ interface AppHeaderProps {
   subtitle?: string;
   /** Pinned sites, shown as a labelled launcher row under the heading. */
   pinnedLinks?: LinkWithTag[];
+  /** Hold the launcher row's height while pinned sites are still loading, so the page doesn't shift when they arrive. */
+  reserveLauncher?: boolean;
   onPinnedOpen?: (link: LinkWithTag) => void;
   /** Heading-row actions (space edit, Notes to Self toggle). */
   actions?: ReactNode;
@@ -61,6 +63,7 @@ const AppHeader = ({
   titleColor,
   subtitle,
   pinnedLinks = [],
+  reserveLauncher = false,
   onPinnedOpen,
   actions,
 }: AppHeaderProps) => {
@@ -137,12 +140,20 @@ const AppHeader = ({
         <div className="memex-page-actions">{actions}</div>
       </div>
 
-      {pinnedLinks.length > 0 && onPinnedOpen && (
+      {pinnedLinks.length > 0 && onPinnedOpen ? (
         <nav className="memex-launcher" aria-label="Pinned sites">
           {pinnedLinks.map((link) => (
             <PinnedLink key={link.id} link={link} onOpen={onPinnedOpen} />
           ))}
         </nav>
+      ) : (
+        reserveLauncher && (
+          <div className="memex-launcher" aria-hidden="true">
+            <span className="memex-launch-chip" style={{ visibility: 'hidden' }}>
+              &nbsp;
+            </span>
+          </div>
+        )
       )}
 
       {/* Phone settings drawer — portaled to <body> so it sits above the
