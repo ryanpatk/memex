@@ -6,3 +6,4 @@
 export { createMemoryRepository } from './repository';
 export type { MemoryData, MemoryRepositoryOptions } from './repository';
 export { createDemoData } from './demoData';
+export { withBulkItems, bulkCountFor } from './bulkData';

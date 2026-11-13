@@ -1,6 +1,6 @@
 import type { Repository } from '@memex/core';
 import { createMemexClient, createSupabaseRepository } from '@memex/core/supabase';
-import { createDemoData, createMemoryRepository } from '@memex/core/memory';
+import { bulkCountFor, createDemoData, createMemoryRepository, withBulkItems } from '@memex/core/memory';
 import { MissingEnvError, readSupabaseConfig } from '../config';
 
 type EnvLike = Partial<Record<string, string | boolean | undefined>>;
@@ -17,7 +17,10 @@ export type AppRepositoryResult =
  */
 export const createAppRepository = ({ fixtures, env }: { fixtures: string | undefined; env: EnvLike }): AppRepositoryResult => {
   if (fixtures) {
-    return { repository: createMemoryRepository(createDemoData(), { signedOut: fixtures === 'signed-out' }), configError: null };
+    // `large` / `large:<n>` pads the demo data with generated items for performance checks
+    const bulk = bulkCountFor(fixtures);
+    const data = bulk > 0 ? withBulkItems(createDemoData(), bulk) : createDemoData();
+    return { repository: createMemoryRepository(data, { signedOut: fixtures === 'signed-out' }), configError: null };
   }
   try {
     const { url, anonKey } = readSupabaseConfig(env);
