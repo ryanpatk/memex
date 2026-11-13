@@ -47,6 +47,20 @@ const LinkPreviewCard = ({
 
   // Already decoded (a remount while scrolling back): no fade, no flash
   const [loaded, setLoaded] = useState(false);
+  // Fade in only once the picture is decoded: with `decoding="async"` the
+  // load event can come first, and a fade over undecoded pixels shows
+  // nothing for its first half, then pops
+  const reveal = useCallback((img: HTMLImageElement) => {
+    if (typeof img.decode !== 'function') {
+      setLoaded(true);
+      return;
+    }
+    img.decode().then(
+      () => setLoaded(true),
+      () => setLoaded(true),
+    );
+  }, []);
+
   const setImage = useCallback(
     (node: HTMLImageElement | null) => {
       imageRef(node);
@@ -100,7 +114,7 @@ const LinkPreviewCard = ({
         alt=""
         decoding="async"
         style={{ aspectRatio: `1 / ${shownRatio}` } as CSSProperties}
-        onLoad={() => setLoaded(true)}
+        onLoad={(event) => reveal(event.currentTarget)}
         onError={() => onImageError(link.id)}
       />
 

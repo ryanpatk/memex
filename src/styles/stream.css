@@ -782,9 +782,10 @@
   max-height: 520px;
   object-fit: cover;
   /* The box is sized up front (aspect-ratio from LinkPreviewCard); the
-     picture fades in over the neutral fill once it has loaded */
+     picture fades in over the neutral fill once it is decoded. A slow start
+     and a long, soft landing read as the picture developing, not popping */
   opacity: 0;
-  transition: opacity 160ms ease-out;
+  transition: opacity 450ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .memex-pv-image.is-loaded {
