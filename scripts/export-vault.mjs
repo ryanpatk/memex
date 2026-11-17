@@ -367,7 +367,8 @@ function buildModel(data, opts, spaceColors) {
       slug,
       path: `spaces/${slug}.md`,
       boardPath: `spaces/${slug}.board.json`,
-      color: spaceColors[index % spaceColors.length],
+      // A chosen colour (profiles.color, #rrggbb) wins over the automatic one
+      color: /^#[0-9a-f]{6}$/i.test(space.color ?? '') ? space.color.toLowerCase() : spaceColors[index % spaceColors.length],
       members: [],
     });
   });
