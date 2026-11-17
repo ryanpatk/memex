@@ -1,6 +1,6 @@
 # TODO
 
-Working checklist to keep memex moving. Updated 2026-11-12 — prune freely as things land.
+Working checklist to keep memex moving. Updated 2026-11-17 — prune freely as things land.
 
 ## 🚀 v1 (scope approved 2026-11-01)
 
@@ -8,6 +8,9 @@ v1 stays on Supabase + Cloudflare Workers. Details and phase mapping: `ROADMAP.m
 
 - [x] **M7: v1 hardening + sign-off** ✓ 2026-11-02 — `docs/v1-signoff.md` (what shipped, what was verified, known limits) and `docs/security-audit.md`. Same-owner checks in the database (migration `20261104120000_same_owner_checks.sql` after backup `~/memex-backups/2026-11-03T030204Z`; pgTAP via `scripts/test-db.sh`); memex-api per-IP limit + streamed 413 caps (`4ab2233c`); web/mobile error and offline states (web `7a137b2d`); production smoke `api/scripts/v1-smoke.ts` 33/33 with cleanup
   - [ ] **Ryan:** the “Needs Ryan” list in `docs/v1-signoff.md` §4 (TestFlight + Safari share + Airplane Mode tests, extension v0.3.0, revoke old `[test]` tokens, rotate the GitHub OAuth secret, dismiss the M1-B approval, design docs, optional backfill, mobile questions, and M7's new ones: open sign-ups, `.env.migrate`, a signed-in pass of the error states)
+- [x] **Memory Cards is the default look** ✓ 2026-11-17 — the redesign from `design/memory-cards/` (tokens, kit, every screen, `/styleguide` kit page) is the web default; `?look=classic` or Settings → Look keeps the old Pastel Sky look, and the last classic-only build is tag `classic-design-final` / branch `archive/classic-design` (`9d2ccdb`). Space colours: migration `20261116120000_add_space_color.sql` (additive `profiles.color`) applied after backup `~/memex-backups/2026-11-17T124353Z`; web version `40eb7aba` deployed. Grid still 60fps / 0 dropped on 2,400 cards. Notes: `design/memory-cards/SHIPPED.md`
+  - [ ] **Ryan:** signed in on production, pick a colour for a space (Space page → ••• → Space details), reload and check it stays; set it back to Automatic if you don't want it
+  - [ ] **Mobile:** the phone app has the look behind a flag (classic default); m03–m09 still to build, then a TestFlight build (nothing builds automatically)
 - [x] **Smooth Library grid** ✓ 2026-11-12 — the grid is virtualized and never shifts as pictures load: 5–10fps → 60fps with 0 dropped frames and 0 long tasks while scrolling 2,435 cards, DOM 40.5k → ~1k nodes, filter toggles and typing without long tasks. Causes, design, numbers and how to re-measure: `docs/library-grid-performance.md`
   - [ ] **Ryan:** decide on storing picture dimensions at capture (additive `links` columns + memex-scraper; makes every picture's box exact from the first frame) and on paging `getAll` past Supabase's 1,000-row cap before the Library passes 1,000 links (`docs/library-grid-performance.md` → Next)
 - [x] **Safety rails** ✓ 2026-11-01 — `scripts/backup-supabase.sh` (first backup in `~/memex-backups/`, restore tested locally, `docs/backups.md`); gitleaks on every push/PR + local command (`SETUP.md`); “Safety rules for agents” in `CLAUDE.md`; signed-out app routes go to sign-in and come back
@@ -80,7 +83,7 @@ These unlock everything built this session. Roughly 10 minutes total, in order:
 - [x] **Note editor** — 5A document column, large title, metadata line, “Saved” as text, ··· menu
 - [x] **Spaces** — 6A colour dot (swatch palette, creation order) + space heading with count and Edit space
 - [x] **Undo** — deletes hide immediately and commit after 6s unless undone (no confirm dialogs)
-- [ ] **Per-space colour picker / description** — needs `profiles.color` / `profiles.description` columns (migration)
+- [ ] **Per-space description** — needs a `profiles.description` column (migration). The colour picker shipped 2026-11-17 (`profiles.color`)
 - [ ] **“Why I saved this” note on links** — needs a `links.note` column (migration)
 - [x] **Retire** `LinkDetailsPanel`, `Omnibar`, `TaskGridCard`, the old `.memex-grid` CSS ✓ 2026-10-16 — `/mocks` still to go once the new surfaces settle
 - [x] **Notes to Self → Journal** (10B: continuous jot list by day with each day's activity folded; jot → note/task; 9A labelled header button, shortcut J) ✓ 2026-10-15; replaced the short-lived 8D Today column; `NotesToSelfPanel` / `TodayPanel` removed

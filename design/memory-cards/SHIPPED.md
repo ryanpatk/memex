@@ -2,6 +2,16 @@
 
 Memory Cards is memex's default look as of **2026-11-17** (web). It was built on `feat/memory-cards-ui` and merged into `main`. The design work it came from is in this folder: `README.md` (brief and coverage table), `REFINEMENT-NOTES.md` (pass 2), the mockups and `app-shots/`, which shows the running app on demo data.
 
+## Release record (2026-11-17)
+
+| Step | Result |
+|---|---|
+| Classic design archived | tag `classic-design-final` and branch `archive/classic-design` at `9d2ccdb` |
+| Backup before the migration | `~/memex-backups/2026-11-17T124353Z` (3.1 MB, checksums OK) |
+| Migration `20261116120000_add_space_color.sql` | Applied with `supabase db push`. All 50 tables have the same row counts before and after. The 11 `profiles` rows are unchanged, with `color` NULL. A second dump: `~/memex-backups/2026-11-17T124510Z` |
+| Web deploy | Cloudflare Workers version `40eb7aba-5b5c-49e9-9cb7-642a4b2f4d6a`, https://memex.joyfulsystems.workers.dev |
+| Checked after deploy | Memory Cards by default, `?look=classic` shows the old look, no console errors (signed out) |
+
 ## The classic design is kept
 
 | What | Where |
