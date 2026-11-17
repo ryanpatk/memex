@@ -138,6 +138,7 @@ Planned (per `VISION.md`): **notes** (markdown body), **tasks**, and per-primiti
 - New surfaces use theme tokens and the shared treatments in `src/styles/components.css` (Button, ghost icon button `.memex-icon-button`, Toggle chips, Navigation sidebar, Text field, Checkbox, Switch, Dialog, Drawer, Menu, Toast, stream cards); don't re-declare their appearance in `index.css` or per surface
 - Text rules set the full type role together: `font-size: var(--size-X)` with `line-height: var(--line-X)` and `letter-spacing: var(--letter-spacing-X)`
 - Honor `prefers-reduced-motion` and `prefers-reduced-transparency`
+- **Memory Cards look (2026-11-16, local build, behind a flag):** `html[data-look="cards"]` (`src/look/look.ts`: `?look=cards|classic`, remembered per browser; `VITE_MEMEX_LOOK=cards` sets the default; classic stays the default). Tokens in `src/styles/cards/tokens.css` (`--mc-*`, mirrored by core `tokens/memoryCards.ts`), the kit in `src/styles/cards/kit.css` (`.mc-*`), components in `src/components/cards/` (MemoryCard and its link/note/task/jot wrappers, LabelStrip, SpacePill(Row), Sheet, Menu, Controls, CaptureSheet, OpenCardSheet, ViewPanel, MoveSheet, top bar…); pages branch on `useCardsLook()`. The stylesheet loads as its own chunk only when the look is on. Run and flip: `design/memory-cards/LOCAL-BUILD.md`. Space colours: additive `profiles.color` migration `20261116120000_add_space_color.sql`, **not applied**; without it chosen colours stay in the browser (`utils/spaceColorFallback.ts`)
 
 ## Development Notes
 
