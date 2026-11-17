@@ -12,7 +12,9 @@ import {
   type TaskGrouping,
   type TaskWithTags,
 } from '@memex/core';
-import { dueOptions, taskTotals, toTasksView } from '../data/tasks';
+import { dueOptions, taskTotals, toTasksView, type DueOption } from '../data/tasks';
+import { SpacePills } from '../cards/SpacePills';
+import { DueSheet } from '../tasks/DueSheet';
 import { useJournal } from '../data/useJournal';
 import { useEntryActions, entryLabel } from '../journal/useEntryActions';
 import { showMenu } from '../journal/entryMenu';
@@ -44,6 +46,8 @@ import { useToast } from '../ui/Toast';
  */
 
 const DONE_PAGE = 50;
+/** How long a sheet takes to slide away before the next one opens (iOS presents one modal at a time). */
+const SHEET_GAP_MS = 350;
 const countFmt = new Intl.NumberFormat();
 
 type Item = { kind: 'group'; group: TaskGroup<TaskWithTags, JournalSpace> } | { kind: 'empty' } | { kind: 'done' };
@@ -63,6 +67,8 @@ export default function TasksScreen() {
   const [showDone, setShowDone] = useState(params.done === '1');
   const [donePage, setDonePage] = useState(1);
   const [picking, setPicking] = useState<TaskWithTags | null>(null);
+  // Memory Cards (m03): the Due sheet
+  const [dueFor, setDueFor] = useState<TaskWithTags | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -95,14 +101,24 @@ export default function TasksScreen() {
   const totals = journal ? taskTotals(journal.tasks) : null;
 
   const openDue = (task: TaskWithTags) =>
-    showDueMenu(task.title, dueOptions(task), (option) => {
-      if (option.value === 'pick') setPicking(task);
-      else void taskActions.setDue(task, option.value);
-    });
+    t.cards
+      ? setDueFor(task)
+      : showDueMenu(task.title, dueOptions(task), (option) => {
+          if (option.value === 'pick') setPicking(task);
+          else void taskActions.setDue(task, option.value);
+        });
+
+  const chooseDue = (task: TaskWithTags, option: DueOption) => {
+    setDueFor(null);
+    // One sheet at a time: the calendar opens once the Due sheet has slid away.
+    if (option.value === 'pick') setTimeout(() => setPicking(task), SHEET_GAP_MS);
+    else void taskActions.setDue(task, option.value);
+  };
 
   const menuFor = (task: TaskWithTags) => {
     const entry = entries.get(task.id);
-    return entry ? taskMenuItems(entry, spaces, entryActions, taskActions, () => openDue(task)) : [];
+    // From the long-press menu, the Due sheet waits for the menu to close.
+    return entry ? taskMenuItems(entry, spaces, entryActions, taskActions, () => setTimeout(() => openDue(task), SHEET_GAP_MS)) : [];
   };
 
   const rows = (tasks: TaskWithTags[], groupSpace?: string) =>
@@ -159,9 +175,13 @@ export default function TasksScreen() {
           </Pressable>
           {showDone && (
             <>
-              <Paper radius={t.radius.l} style={styles.card}>
-                {rows(shown)}
-              </Paper>
+              {t.cards ? (
+                <View style={styles.cardsRows}>{rows(shown)}</View>
+              ) : (
+                <Paper radius={t.radius.l} style={styles.card}>
+                  {rows(shown)}
+                </Paper>
+              )}
               {done.length > shown.length && (
                 <Button label={`Show ${Math.min(DONE_PAGE, done.length - shown.length)} more`} variant="ghost" onPress={() => setDonePage((p) => p + 1)} />
               )}
@@ -210,27 +230,63 @@ export default function TasksScreen() {
           </Text>
         </View>
         )}
-        <Paper radius={t.radius.l} style={styles.card}>
-          {rows(group.tasks, group.space?.id)}
-        </Paper>
+        {t.cards ? (
+          <View style={styles.cardsRows}>{rows(group.tasks, group.space?.id)}</View>
+        ) : (
+          <Paper radius={t.radius.l} style={styles.card}>
+            {rows(group.tasks, group.space?.id)}
+          </Paper>
+        )}
       </View>
     );
   };
 
-  const filters = !journal || !view ? undefined : (
+  const grouping = (
+    <Segmented
+      label="Group tasks"
+      options={
+        t.cards
+          ? [
+              { value: 'space', label: 'Space', a11y: 'By space' },
+              { value: 'date', label: 'Date', a11y: 'By due date' },
+            ]
+          : [
+              { value: 'space', label: 'By space' },
+              { value: 'date', label: 'By due date' },
+            ]
+      }
+      value={by}
+      onChange={(next) => {
+        setBy(next);
+        sync({ group: next });
+      }}
+    />
+  );
+
+  const pickSpace = (next: string | null) => {
+    setSpace(next);
+    sync({ space: next });
+  };
+
+  const filters = !journal || !view ? undefined : t.cards ? (
+    // Memory Cards: the space pills (with open counts) filter; the add field under them
     <View style={styles.controls}>
-      <Segmented
-        label="Group tasks"
-        options={[
-          { value: 'space', label: 'By space' },
-          { value: 'date', label: 'By due date' },
-        ]}
-        value={by}
-        onChange={(next) => {
-          setBy(next);
-          sync({ group: next });
-        }}
-      />
+      <View style={styles.cardsPills}>
+        <SpacePills
+          label="Filter by space"
+          spaces={spaces.filter((s) => (view.counts.get(s.id) ?? 0) > 0 || s.id === space)}
+          selected={space}
+          onSelect={pickSpace}
+          allCount={totals?.open}
+          counts={view.counts}
+          extra={(view.counts.get(UNFILED_TASKS) ?? 0) > 0 || space === UNFILED_TASKS ? [{ id: UNFILED_TASKS, name: 'Unfiled' }] : []}
+        />
+      </View>
+      <TaskAdd spaces={spaces} defaultSpace={filterSpace} onAdd={taskActions.add} />
+    </View>
+  ) : (
+    <View style={styles.controls}>
+      {grouping}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.chipScroll} accessibilityLabel="Filter by space">
         <FilterChip label="Every space" count={totals?.open} on={!space} onPress={() => (setSpace(null), sync({ space: null }))} />
         {spaces
@@ -275,7 +331,12 @@ export default function TasksScreen() {
 
   return (
     <Canvas>
-      <StackHeader title="Tasks" subtitle={t.cards ? undefined : subtitle} count={t.cards && totals && !unavailable ? totals.open : undefined} />
+      <StackHeader
+        title="Tasks"
+        subtitle={t.cards ? undefined : subtitle}
+        count={t.cards && totals && !unavailable ? totals.open : undefined}
+        trailing={t.cards && journal && view ? grouping : undefined}
+      />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.fill}>
         {isLoading ? (
           <FeedSkeleton />
@@ -287,7 +348,7 @@ export default function TasksScreen() {
             keyExtractor={(item) => (item.kind === 'group' ? `group:${item.group.key}` : item.kind)}
             renderItem={renderItem}
             ListHeaderComponent={filters}
-            contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 33 }]}
+            contentContainerStyle={[styles.list, t.cards && styles.cardsList, { paddingBottom: insets.bottom + 33 }]}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={palette.muted} />}
@@ -296,6 +357,7 @@ export default function TasksScreen() {
           />
         )}
       </KeyboardAvoidingView>
+      {t.cards && <DueSheet task={dueFor} onChoose={chooseDue} onClose={() => setDueFor(null)} />}
       {picking && (
         <DueDateSheet
           title={picking.title}
@@ -339,6 +401,9 @@ const styles = StyleSheet.create({
   chipScroll: { marginHorizontal: -17 },
   chips: { gap: 8, paddingHorizontal: 17, paddingVertical: 2 },
   group: { gap: 8 },
+  cardsRows: { gap: 12 },
+  cardsList: { paddingHorizontal: 20, gap: 20 },
+  cardsPills: { marginHorizontal: -20 },
   cardsBand: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 56, borderRadius: 24, paddingHorizontal: 20 },
   groupHead: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 4, minHeight: 24 },
   dot: { width: 9, height: 9, borderRadius: 5 },

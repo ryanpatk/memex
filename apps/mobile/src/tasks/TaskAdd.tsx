@@ -69,16 +69,26 @@ export const TaskAdd = ({
           accessibilityLabel="Add a task"
           accessibilityHint="Type @ and a space's name to file it there"
           style={[
-            typeRole('m'),
+            t.cards ? t.cards.type.body : typeRole('m'),
             styles.input,
-            {
+            t.cards
+              ? {
+                  // Memory Cards (s04): the field is a paper pill, ring on focus
+                  minHeight: 56,
+                  borderRadius: 28,
+                  paddingHorizontal: 22,
+                  color: t.cards.colors.ink,
+                  backgroundColor: t.cards.colors.paper,
+                  boxShadow: focused ? `0 0 0 4px ${t.cards.colors.ring}, ${t.cards.softShadow}` : t.cards.softShadow,
+                }
+              : {
               color: palette.ink,
               backgroundColor: palette.well,
               borderRadius: t.radius.m,
               boxShadow: palette.dark
                 ? `inset 0 1px 2px 0 #13171d33, inset 0 -1px 0 0 #f9fafb1f, 0 0 0 2px ${focused ? alpha(palette.accent, 0.55) : 'transparent'}`
                 : `inset 0 1px 2px 0 #1d212714, inset 0 -1px 0 0 #ffffff59, 0 0 0 2px ${focused ? alpha(palette.accent, 0.45) : 'transparent'}`,
-            },
+                },
           ]}
         />
         <Pressable
@@ -93,11 +103,13 @@ export const TaskAdd = ({
           <Animated.View
             style={[
               styles.add,
-              { backgroundColor: parsed ? palette.accent : palette.well, boxShadow: parsed ? `${t.objectShadow}, ${t.glow(palette.accent)}` : undefined },
+              t.cards
+                ? { width: 56, height: 56, borderRadius: 28, backgroundColor: parsed ? t.cards.colors.primary : t.cards.colors.well, boxShadow: parsed ? t.cards.molded() : undefined }
+                : { backgroundColor: parsed ? palette.accent : palette.well, boxShadow: parsed ? `${t.objectShadow}, ${t.glow(palette.accent)}` : undefined },
               settle.style,
             ]}
           >
-            <Plus size={20} color={parsed ? palette.onAccent : palette.faint} strokeWidth={2.5} />
+            <Plus size={t.cards ? 26 : 20} color={parsed ? palette.onAccent : palette.faint} strokeWidth={t.cards ? 3 : 2.5} />
           </Animated.View>
         </Pressable>
       </View>
@@ -114,9 +126,14 @@ export const TaskAdd = ({
                 setText(next.text);
                 setCaret(next.caret);
               }}
-              style={[styles.pick, { backgroundColor: palette.paper, boxShadow: t.objectShadow }]}
+              style={[
+                styles.pick,
+                t.cards
+                  ? { minHeight: 44, paddingLeft: 6, paddingRight: 16, backgroundColor: t.cards.colors.paper, boxShadow: t.cards.softShadow }
+                  : { backgroundColor: palette.paper, boxShadow: t.objectShadow },
+              ]}
             >
-              <View style={[styles.dot, { backgroundColor: space.color }]} />
+              <View style={[styles.dot, t.cards && styles.cardsDot, { backgroundColor: space.color }]} />
               <Text size="xs" weight="medium" numberOfLines={1}>
                 {space.name}
               </Text>
@@ -140,5 +157,6 @@ const styles = StyleSheet.create({
   picker: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   pick: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 30, paddingHorizontal: 10, borderRadius: 9999 },
   dot: { width: 8, height: 8, borderRadius: 4 },
+  cardsDot: { width: 30, height: 30, borderRadius: 15 },
   hint: { paddingHorizontal: 4 },
 });

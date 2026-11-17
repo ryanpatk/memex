@@ -1,9 +1,10 @@
+import { useMemo } from 'react';
 import { useTheme } from '../theme/theme';
-import type { CardsTheme } from '../theme/cards';
+import { buildCardsTheme, type CardsTheme } from '../theme/cards';
 
-/** The Memory Cards tokens; only call inside components that render in the cards look. */
+/** The Memory Cards tokens (shared pieces like the menu use them in either look). */
 export const useCards = (): CardsTheme => {
-  const { cards } = useTheme();
-  if (!cards) throw new Error('useCards outside the Memory Cards look');
-  return cards;
+  const { cards, palette } = useTheme();
+  const fallback = useMemo(() => buildCardsTheme(palette.dark), [palette.dark]);
+  return cards ?? fallback;
 };

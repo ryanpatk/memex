@@ -63,13 +63,14 @@ export default function InboxScreen() {
     ...(proposalsFailed ? [{ kind: 'proposalsFailed' as const, id: 'proposals-failed' }] : []),
     ...(proposals.length
       ? [
-          { kind: 'head' as const, id: 'head:agents', title: 'From agents', lede: 'Changes an agent asked to make. Nothing changes until you approve; rejected ones are kept as a record.' },
+          // Memory Cards (m03): the cards speak for themselves, no section heads
+          ...(t.cards ? [] : [{ kind: 'head' as const, id: 'head:agents', title: 'From agents', lede: 'Changes an agent asked to make. Nothing changes until you approve; rejected ones are kept as a record.' }]),
           ...proposals.map((view) => ({ kind: 'proposal' as const, id: `proposal:${view.proposal.id}`, view })),
         ]
       : []),
     ...(suggestions.length
       ? [
-          { kind: 'head' as const, id: 'head:filing', title: 'Filing suggestions', lede: 'Recent saves with a likely space. File them, or leave them be: unfiled is fine.' },
+          ...(t.cards ? [] : [{ kind: 'head' as const, id: 'head:filing', title: 'Filing suggestions', lede: 'Recent saves with a likely space. File them, or leave them be: unfiled is fine.' }]),
           ...suggestions.map(({ entry, suggestion }) => ({ kind: 'suggestion' as const, id: entry.id, entry, suggestion })),
         ]
       : []),
@@ -135,7 +136,7 @@ export default function InboxScreen() {
           data={items}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          contentContainerStyle={[styles.list, !items.length && styles.emptyList]}
+          contentContainerStyle={[styles.list, t.cards && styles.cardsList, !items.length && styles.emptyList]}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={t.palette.muted} />}
           ListEmptyComponent={
             <Placeholder
@@ -154,6 +155,7 @@ export default function InboxScreen() {
 
 const styles = StyleSheet.create({
   list: { paddingTop: 4, paddingBottom: 33, paddingHorizontal: 17, gap: 10 },
+  cardsList: { paddingTop: 8, paddingBottom: 40, paddingHorizontal: 20, gap: 16 },
   emptyList: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 0 },
   head: { gap: 2, paddingHorizontal: 4, paddingTop: 6 },
   failed: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 14, paddingRight: 8, paddingVertical: 8 },

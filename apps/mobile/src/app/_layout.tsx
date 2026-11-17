@@ -26,6 +26,7 @@ import { scrapeLink, scraperEnabled } from '../data/scraper';
 import { useOutboxSync } from '../data/useOutboxSync';
 import { shareDraft } from '../share/shareDraft';
 import { ThemeProvider, useLook, useTheme } from '../theme/theme';
+import { MenuHost } from '../cards/MenuHost';
 import { SetupNeeded } from '../ui/SetupNeeded';
 import { ToastProvider } from '../ui/Toast';
 
@@ -66,6 +67,7 @@ export default function RootLayout() {
                 <SessionProvider>
                   <Root fontsReady={fontsLoaded || Boolean(fontError)} />
                 </SessionProvider>
+                <MenuHost />
               </DataProvider>
             </ToastProvider>
           </QueryClientProvider>

@@ -10,6 +10,7 @@ import { Paper } from '../ui/Paper';
 import { Button } from '../ui/Pressable';
 import { SpaceChip } from '../ui/SpaceChip';
 import { Text } from '../ui/Text';
+import { CardsProposalCard } from '../cards/InboxCards';
 
 /*
  * One agent proposal (web: ProposalRow): which agent, what it wants to do,
@@ -75,6 +76,7 @@ export const ProposalCard = ({
   const t = useTheme();
   const { palette } = t;
   const { proposal, title, space, fields, stale, what, canApply } = view;
+  if (t.cards) return <CardsProposalCard view={view} busy={busy} onDecide={onDecide} now={now} />;
   return (
     <Paper level="s" radius={t.radius.l} style={styles.card} testID={`proposal-${proposal.id}`}>
       <View style={styles.who}>

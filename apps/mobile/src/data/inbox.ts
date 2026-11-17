@@ -34,6 +34,8 @@ export interface ProposalView {
   title: string | null;
   /** For `file`: the space it'd go in (undefined if that space is gone). */
   space?: JournalSpace;
+  /** The spaces the item is in now (its card's label strip). */
+  spaces: JournalSpace[];
   fields: ProposalField[];
   /** The item changed after the agent proposed this. */
   stale: boolean;
@@ -50,6 +52,7 @@ export const toProposalView = (
   spaces: readonly JournalSpace[],
 ): ProposalView => {
   const target = proposalTarget(proposal, byKey);
+  const entry = byKey.get(`${proposal.item_type}:${proposal.item_id}`);
   const space = proposal.space_id ? spaces.find((s) => s.id === proposal.space_id) : undefined;
   const what =
     proposal.kind === 'file'
@@ -63,6 +66,7 @@ export const toProposalView = (
     what,
     title: target ? targetTitle(target) : null,
     space,
+    spaces: entry?.spaces ?? [],
     fields: target ? proposalFields(proposal, target) : [],
     stale: target ? changedSinceProposed(proposal, target) : false,
     canApply: Boolean(target) && (proposal.kind !== 'file' || Boolean(space)),

@@ -108,7 +108,7 @@ export const Button = ({ label, variant = 'secondary', icon, loading, compact, d
         )}
         <View style={[styles.content, compact && styles.compactContent]}>
           {loading ? <ActivityIndicator size="small" color={primary ? palette.onAccent : palette.ink} /> : icon}
-          <Text size={compact ? 's' : 'm'} weight="heavy" tone={primary ? 'onAccent' : 'ink'}>
+          <Text size={compact ? 's' : 'm'} weight="heavy" tone={primary ? 'onAccent' : ghost && t.cards ? 'muted' : 'ink'}>
             {label}
           </Text>
         </View>

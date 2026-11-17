@@ -57,7 +57,52 @@ export interface CardsTheme {
   cardShadow: string;
   /** Small elevation (`--mc-sh1`). */
   softShadow: string;
+  /** Floating menus and toasts (`--mc-sh3`). */
+  menuShadow: string;
+  /** Colours mc_css.ts uses that core's token set doesn't carry (scrim, diff marks, the due chip). */
+  extra: CardsExtraColors;
 }
+
+export interface CardsExtraColors {
+  /** Behind sheets and menus (`.dim`). */
+  scrim: string;
+  /** A lighter scrim for menus over the page (m08). */
+  scrimLight: string;
+  /** Inserted / removed text in a proposal's diff (`.ins`, `.del`). */
+  insBg: string;
+  insInk: string;
+  delBg: string;
+  delInk: string;
+  /** The due chip for today (`.due.today`). */
+  todayBg: string;
+  todayInk: string;
+  /** “Not sent yet” (m06): the label strip of a save waiting on the phone. */
+  waiting: string;
+}
+
+const EXTRA_LIGHT: CardsExtraColors = {
+  scrim: '#1e24346b',
+  scrimLight: '#1e243440',
+  insBg: '#cdeedb',
+  insInk: '#135d33',
+  delBg: '#fbd5d7',
+  delInk: '#8a1f25',
+  todayBg: '#fff1c7',
+  todayInk: '#7a5400',
+  waiting: '#ff9f2e',
+};
+
+const EXTRA_DARK: CardsExtraColors = {
+  ...EXTRA_LIGHT,
+  scrim: '#000000a0',
+  scrimLight: '#00000066',
+  insBg: '#1f4a32',
+  insInk: '#b7f0cf',
+  delBg: '#5a2328',
+  delInk: '#ffc2c6',
+  todayBg: '#4a3d16',
+  todayInk: '#ffd970',
+};
 
 export const buildCardsTheme = (dark: boolean): CardsTheme => {
   const colors = dark ? MC_COLORS_DARK : MC_COLORS_LIGHT;
@@ -76,6 +121,8 @@ export const buildCardsTheme = (dark: boolean): CardsTheme => {
       ? `${lit}, 0 2px 0 0 #0000004d, 0 18px 36px -18px #000000b3`
       : `${lit}, 0 2px 0 0 #1d21270d, 0 18px 36px -18px #1d212752`,
     softShadow: dark ? '0 2px 0 0 #0000004d, 0 8px 18px -10px #00000099' : '0 2px 0 0 #1d21270d, 0 8px 18px -10px #1d212740',
+    menuShadow: dark ? '0 0 0 1px #ffffff14, 0 40px 80px -30px #000000cc' : '0 2px 0 0 #1d21270d, 0 40px 80px -30px #00000080',
+    extra: dark ? EXTRA_DARK : EXTRA_LIGHT,
   };
 };
 

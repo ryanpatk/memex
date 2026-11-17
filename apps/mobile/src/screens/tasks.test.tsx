@@ -133,8 +133,9 @@ describe('Tasks', () => {
     const { repository } = await mount();
     const title = screen.getByLabelText('Task: Renew passport photos');
     expect(title.props.accessibilityActions.map((a: { name: string }) => a.name)).toEqual(['toggle', 'due', 'rename', 'spaces', 'delete']);
-    choose('Studio');
     await fireEvent(title, 'accessibilityAction', { nativeEvent: { actionName: 'spaces' } });
+    expect(screen.getByRole('menuitem', { name: 'Kyoto trip' }).props.accessibilityState.checked).toBe(true);
+    await fireEvent.press(screen.getByRole('menuitem', { name: 'Studio' }));
     await flush();
     expect((await repository.spaceTasks.listMembership()).filter((r) => r.task_id === 't3').map((r) => r.profile_id).sort()).toEqual(['kyoto', 'studio']);
     await fireEvent(screen.getByLabelText('Task: Renew passport photos'), 'accessibilityAction', { nativeEvent: { actionName: 'delete' } });

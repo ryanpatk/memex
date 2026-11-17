@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { MoldedButton } from '../cards/Molded';
+import { Sheet } from '../cards/Sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { dueDayKey, fromDayKey, toDayKey } from '@memex/core';
@@ -29,6 +31,27 @@ export const DueDateSheet = ({
   const { palette } = t;
   const insets = useSafeAreaInsets();
   const [day, setDay] = useState(() => dueDayKey(due) ?? toDayKey(new Date()));
+  if (t.cards)
+    return (
+      <Sheet open onClose={onClose} title="Pick a date">
+        <RNText style={[t.cards.type.labelUi, { color: t.cards.colors.muted }]} numberOfLines={2}>
+          {title}
+        </RNText>
+        <DateTimePicker
+          value={fromDayKey(day)}
+          mode="date"
+          display="inline"
+          accentColor={t.cards.colors.primary}
+          themeVariant={palette.dark ? 'dark' : 'light'}
+          onValueChange={(_event, date) => setDay(toDayKey(date))}
+          testID="due-date-picker"
+        />
+        <View style={styles.actions}>
+          <MoldedButton label="Cancel" variant="quiet" onPress={onClose} style={styles.flex} />
+          <MoldedButton label="Set due date" variant="primary" onPress={() => onSet(day)} style={styles.flex} />
+        </View>
+      </Sheet>
+    );
   return (
     <Modal transparent animationType="slide" onRequestClose={onClose} visible>
       <View style={styles.root}>

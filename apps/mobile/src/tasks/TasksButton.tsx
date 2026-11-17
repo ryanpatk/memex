@@ -35,8 +35,17 @@ export const TasksButton = ({ tasks, space }: { tasks: readonly TaskWithTags[]; 
       hitSlop={6}
       testID="tasks-button"
     >
-      <Animated.View style={[styles.pill, { backgroundColor: palette.paper, boxShadow: t.objectShadow }, settle.style]}>
-        <ListChecks size={17} color={palette.ink} strokeWidth={2} />
+      <Animated.View
+        style={[
+          styles.pill,
+          t.cards
+            ? // Memory Cards: a molded paper pill like the round buttons beside it
+              { height: 44, borderRadius: 22, paddingHorizontal: 14, backgroundColor: t.cards.colors.paper, boxShadow: `inset 0 0 0 2px ${t.cards.colors.line}, inset 0 -4px 0 0 ${t.cards.colors.line}` }
+            : { backgroundColor: palette.paper, boxShadow: t.objectShadow },
+          settle.style,
+        ]}
+      >
+        <ListChecks size={t.cards ? 20 : 17} color={palette.ink} strokeWidth={t.cards ? 2.5 : 2} />
         <Text size="xs" weight="heavy" numeric>
           {countFmt.format(open)}
         </Text>

@@ -7,6 +7,7 @@ import { useTheme } from '../theme/theme';
 import { Paper } from '../ui/Paper';
 import { Button } from '../ui/Pressable';
 import { Text } from '../ui/Text';
+import { CardsSuggestionCard } from '../cards/InboxCards';
 
 /*
  * A filing suggestion in the Inbox (decision 13, web: the tray's InboxRow):
@@ -33,6 +34,7 @@ export const SuggestionCard = ({
   const t = useTheme();
   const { palette } = t;
   const { space, reason } = suggestion;
+  if (t.cards) return <CardsSuggestionCard entry={entry} suggestion={suggestion} onFile={onFile} onDismiss={onDismiss} onOpen={onOpen} />;
   const title = entryTitle(entry);
   const where = entry.kind === 'link' ? getHostname(entry.link.url).replace(/^www\./, '') : KIND[entry.kind];
   const Icon = entry.kind === 'link' ? Link2 : entry.kind === 'note' ? FileText : Square;

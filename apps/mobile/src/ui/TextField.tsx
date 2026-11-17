@@ -1,5 +1,5 @@
 import { forwardRef, useState, type ComponentRef } from 'react';
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { StyleSheet, Text as RNText, TextInput, View, type TextInputProps } from 'react-native';
 import { typeRole, useTheme } from '../theme/theme';
 import { Text } from './Text';
 
@@ -14,6 +14,45 @@ export const TextField = forwardRef<ComponentRef<typeof TextInput>, Props>(funct
   const { palette } = t;
   const [focused, setFocused] = useState(false);
   const ring = error ? palette.error : focused ? palette.accent : 'transparent';
+  if (t.cards) {
+    // Memory Cards (s07, m07): a quiet label over a 64px well; a 4px ring on focus, red on error
+    const c = t.cards;
+    return (
+      <View style={styles.cardsRoot}>
+        <RNText style={[c.type.labelUi, { fontFamily: 'Inter_600SemiBold', fontSize: 17, color: c.colors.muted }]}>{label}</RNText>
+        <TextInput
+          ref={ref}
+          {...rest}
+          accessibilityLabel={label}
+          placeholderTextColor={c.colors.faint}
+          selectionColor={c.colors.primary}
+          onFocus={(e) => {
+            setFocused(true);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            onBlur?.(e);
+          }}
+          style={[
+            c.type.body,
+            styles.cardsInput,
+            {
+              color: c.colors.ink,
+              backgroundColor: c.colors.well,
+              boxShadow: error ? `0 0 0 3px ${c.colors.error}` : focused ? `0 0 0 4px ${c.colors.ring}` : undefined,
+            },
+            style,
+          ]}
+        />
+        {error ? (
+          <RNText style={[c.type.labelUi, { color: c.colors.error }]} accessibilityLiveRegion="polite">
+            {error}
+          </RNText>
+        ) : null}
+      </View>
+    );
+  }
   return (
     <View style={styles.root}>
       <Text size="xs" weight="heavy" tone="soft">
@@ -57,6 +96,8 @@ export const TextField = forwardRef<ComponentRef<typeof TextInput>, Props>(funct
 });
 
 const styles = StyleSheet.create({
+  cardsRoot: { gap: 10 },
+  cardsInput: { minHeight: 64, borderRadius: 20, paddingHorizontal: 20, paddingVertical: 16, lineHeight: 24 },
   root: { gap: 6 },
   input: { minHeight: 48, paddingHorizontal: 12, paddingVertical: 12 },
 });

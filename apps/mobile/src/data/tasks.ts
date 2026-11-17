@@ -105,4 +105,28 @@ export const dueOptions = (task: Pick<TaskWithTags, 'due_date'>, now = new Date(
   return options;
 };
 
+export interface DueChoice extends DueOption {
+  /** The day the task is already due. */
+  current?: boolean;
+}
+
+/**
+ * The Due sheet (m03): Today, Tomorrow, Next week (the one it's due on
+ * marked current), Pick a date…, and No due date when one is set. Next week
+ * is left out when it's tomorrow (on a Sunday).
+ */
+export const dueChoices = (task: Pick<TaskWithTags, 'due_date'>, now = new Date()): DueChoice[] => {
+  const { today, tomorrow, nextWeek } = dueShortcuts(now);
+  const current = dueDayKey(task.due_date);
+  const days = [
+    { label: 'Today', value: today },
+    { label: 'Tomorrow', value: tomorrow },
+    { label: 'Next week', value: nextWeek },
+  ].filter((o, i, all) => all.findIndex((x) => x.value === o.value) === i);
+  const choices: DueChoice[] = days.map((o) => ({ ...o, current: o.value === current }));
+  choices.push({ label: 'Pick a date…', value: 'pick' });
+  if (current) choices.push({ label: 'No due date', value: null });
+  return choices;
+};
+
 export { UNFILED_TASKS };
