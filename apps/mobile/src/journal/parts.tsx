@@ -23,6 +23,8 @@ import { usePressSettle } from '../ui/Pressable';
 import { SpaceChip } from '../ui/SpaceChip';
 import { Text } from '../ui/Text';
 import { entryLabel, type EntryActions } from './useEntryActions';
+import { MemoryCard, type CardLabel } from '../cards/MemoryCard';
+import { pictureRatio } from '../data/library';
 import { entryMenuItems, showEntryMenu } from './entryMenu';
 
 /*
@@ -54,6 +56,10 @@ const time = (iso: string) => timeFmt.format(new Date(iso));
 
 const initials = (host: string) => host.replace(/^www\./, '').slice(0, 2).toUpperCase();
 
+/** Memory Cards: what an entry's label strip says (its first space, plus how many more). */
+const labelOf = (entry: Entry): CardLabel =>
+  entry.spaces.length ? { name: entry.spaces[0].name, color: entry.spaces[0].color, extra: entry.spaces.length - 1 } : { name: null, color: null };
+
 /** Long-press menu + VoiceOver actions for an entry. */
 const useEntryMenu = (entry: Entry) => {
   const { actions, spaces } = useFeed();
@@ -76,6 +82,28 @@ const SuggestionChip = ({ entry }: { entry: Exclude<Entry, { kind: 'jot' }> }) =
   const suggestion = filer?.suggest(entry);
   if (!suggestion || entry.id.includes(':temp-')) return null;
   const { space, reason } = suggestion;
+  if (t.cards) {
+    // Memory Cards (d23, m01): a 44px dashed strip asking “File in Kyoto trip?”
+    const c = t.cards;
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`File in ${space.name}`}
+        accessibilityHint={reason}
+        onPress={() => void actions.file(entry, space)}
+        hitSlop={4}
+      >
+        {({ pressed }) => (
+          <View style={[styles.cardsSuggest, { borderColor: space.color, transform: pressed ? [{ scale: 0.96 }] : undefined }]}>
+            <View style={[styles.cardsStripDot, { backgroundColor: space.color }]} />
+            <Text size="s" weight="heavy" numberOfLines={1} style={{ color: c.colors.ink, flexShrink: 1 }}>
+              File in {space.name}?
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    );
+  }
   return (
     <Pressable
       accessibilityRole="button"
@@ -151,7 +179,14 @@ const PaperRow = ({ entry, onPress, label, children }: { entry: Entry; onPress?:
 /* ------------------------------------------------------------------ */
 
 const DaySeparator = ({ label }: { label: string }) => {
-  const { palette } = useTheme();
+  const { palette, cards } = useTheme();
+  if (cards) {
+    return (
+      <Text size="xl" weight="heavy" accessibilityRole="header" style={[styles.cardsDay, { color: cards.colors.muted, fontSize: 24, lineHeight: 30 }]}>
+        {label}
+      </Text>
+    );
+  }
   return (
     <View style={styles.day} accessibilityRole="header">
       <View style={[styles.rule, { backgroundColor: palette.hairline }]} />
@@ -164,9 +199,40 @@ const DaySeparator = ({ label }: { label: string }) => {
 };
 
 const Jot = ({ entry }: { entry: Extract<Entry, { kind: 'jot' }> }) => {
-  const { palette } = useTheme();
+  const { palette, cards } = useTheme();
   const menu = useEntryMenu(entry);
   const pending = entry.jot.id.startsWith('temp-');
+  if (cards) {
+    // Memory Cards (d23, m01): a big paper bubble, the time inline
+    return (
+      <View style={styles.block}>
+        <Pressable {...menu} accessibilityLabel={`Jot at ${time(entry.at)}: ${entry.jot.body}`} style={styles.cardsBubbleHit}>
+          {({ pressed }) => (
+            <View
+              style={[
+                styles.cardsBubble,
+                {
+                  backgroundColor: cards.colors.paper,
+                  boxShadow: pressed ? cards.softShadow : cards.cardShadow,
+                  opacity: pending ? 0.7 : 1,
+                  transform: pressed ? [{ scale: 0.98 }] : undefined,
+                },
+              ]}
+            >
+              <Text size="m" weight="medium" style={{ fontSize: 20, lineHeight: 28, fontFamily: 'Inter_600SemiBold' }}>
+                {entry.jot.body}
+                <Text size="xs" tone="faint" numeric>
+                  {'  '}
+                  {pending ? 'Sending…' : time(entry.at)}
+                </Text>
+              </Text>
+            </View>
+          )}
+        </Pressable>
+        <Filing entry={entry} />
+      </View>
+    );
+  }
   return (
     <View style={styles.block}>
       <Pressable {...menu} accessibilityLabel={`Jot at ${time(entry.at)}: ${entry.jot.body}`} style={styles.bubbleHit}>
@@ -189,6 +255,36 @@ const Jot = ({ entry }: { entry: Extract<Entry, { kind: 'jot' }> }) => {
         )}
       </Pressable>
       <Filing entry={entry} />
+    </View>
+  );
+};
+
+/** Memory Cards: a link entry as a memory card (picture or favicon), its label naming the space. */
+const LinkCard = ({ entry }: { entry: Extract<Entry, { kind: 'link' }> }) => {
+  const { actions } = useFeed();
+  const menu = useEntryMenu(entry);
+  const [failed, setFailed] = useState(false);
+  const link = entry.link;
+  const title = getLinkTitle(link);
+  const host = getHostname(link.url).replace(/^www\./, '');
+  const ratio = failed ? null : pictureRatio(link);
+  return (
+    <View style={[styles.block, styles.cardsCardWrap]}>
+      <View style={styles.fill}>
+        <MemoryCard
+          kind={ratio ? 'picture' : 'link'}
+          title={title}
+          label={labelOf(entry)}
+          meta={entry.source.key === 'web' ? host : entry.source.key === 'pinterest' ? 'pinterest' : entry.source.label}
+          picture={ratio && link.preview_image_url ? { uri: link.preview_image_url, ratio: Math.min(ratio, 0.75), key: link.id } : undefined}
+          favicon={{ uri: link.favicon_url, letter: host.slice(0, 1).toUpperCase() }}
+          onPress={() => actions.openLink(link.id)}
+          onLongPress={menu.onLongPress}
+          onPictureError={() => setFailed(true)}
+          accessibilityLabel={`${title}, ${host}`}
+        />
+      </View>
+      {!entry.spaces.length && <Filing entry={entry} />}
     </View>
   );
 };
@@ -277,10 +373,30 @@ const Gallery = ({ run }: { run: Run }) => {
 };
 
 const NoteRow = ({ entry }: { entry: Extract<Entry, { kind: 'note' }> }) => {
-  const { palette } = useTheme();
+  const { palette, cards } = useTheme();
   const { actions } = useFeed();
+  const menu = useEntryMenu(entry);
   const title = noteDisplayTitle(entry.note);
   const excerpt = markdownExcerpt(entry.note.body ?? '', 120);
+  if (cards) {
+    return (
+      <View style={[styles.block, styles.cardsCardWrap]}>
+        <View style={styles.fill}>
+          <MemoryCard
+            kind="note"
+            title={title}
+            excerpt={excerpt && excerpt !== title ? excerpt : undefined}
+            label={labelOf(entry)}
+            meta="note"
+            onPress={() => actions.openNote(entry.note.id)}
+            onLongPress={menu.onLongPress}
+            accessibilityLabel={`Note: ${title}`}
+          />
+        </View>
+        {!entry.spaces.length && <Filing entry={entry} />}
+      </View>
+    );
+  }
   return (
     <View style={styles.block}>
       <PaperRow entry={entry} onPress={() => actions.openNote(entry.note.id)} label={`Note: ${title}`}>
@@ -324,13 +440,17 @@ export const TaskCheck = ({ done, onPress, label }: { done: boolean; onPress: ()
       <Animated.View
         style={[
           styles.check,
-          done
-            ? { backgroundColor: palette.success, boxShadow: `${t.objectShadow}, ${t.glow(palette.success)}` }
-            : { backgroundColor: palette.paper, boxShadow: t.objectShadow },
+          t.cards
+            ? done
+              ? { width: 40, height: 40, borderRadius: 12, backgroundColor: t.cards.colors.ok, boxShadow: t.cards.molded() }
+              : { width: 40, height: 40, borderRadius: 12, backgroundColor: t.cards.colors.paper, boxShadow: `inset 0 0 0 3px ${t.cards.colors.line}, inset 0 -3px 0 0 ${t.cards.colors.line}` }
+            : done
+              ? { backgroundColor: palette.success, boxShadow: `${t.objectShadow}, ${t.glow(palette.success)}` }
+              : { backgroundColor: palette.paper, boxShadow: t.objectShadow },
           settle.style,
         ]}
       >
-        {done && <Check size={13} color="#ffffff" strokeWidth={3} />}
+        {done && <Check size={t.cards ? 22 : 13} color="#ffffff" strokeWidth={3} />}
       </Animated.View>
     </Pressable>
   );
@@ -364,6 +484,7 @@ const TaskLine = ({ entry }: { entry: Extract<Entry, { kind: 'task' }> }) => {
 };
 
 export const FeedPart = memo(function FeedPart({ part }: { part: Part }) {
+  const { cards } = useTheme();
   switch (part.kind) {
     case 'day':
       return <DaySeparator label={part.label} />;
@@ -372,6 +493,7 @@ export const FeedPart = memo(function FeedPart({ part }: { part: Part }) {
     case 'jot':
       return <Jot entry={part} />;
     case 'link':
+      if (cards) return <LinkCard entry={part} />;
       return isVisualLink(part) ? <VisualLink entry={part} /> : <LinkCompact entry={part} />;
     case 'note':
       return <NoteRow entry={part} />;
@@ -421,5 +543,12 @@ const styles = StyleSheet.create({
     maxWidth: 320,
   },
   suggestedLabel: { flexShrink: 0 },
+  // Memory Cards
+  cardsSuggest: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 44, paddingLeft: 8, paddingRight: 16, borderRadius: 22, borderWidth: 3, borderStyle: 'dashed', maxWidth: 320 },
+  cardsStripDot: { width: 24, height: 24, borderRadius: 12 },
+  cardsDay: { marginTop: 16, marginBottom: 8 },
+  cardsBubbleHit: { maxWidth: '92%' },
+  cardsBubble: { paddingHorizontal: 22, paddingVertical: 14, borderRadius: 28 },
+  cardsCardWrap: { alignSelf: 'stretch', gap: 10 },
   reason: { flexShrink: 1 },
 });

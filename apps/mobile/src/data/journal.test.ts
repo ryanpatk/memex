@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildDemoData } from './fixtures/demoData';
 import { createFixtureRepository } from './fixtures/fixtureRepository';
-import { spaceFeed, summarizeSpaces, toJournal } from './journal';
+import { spaceColorHex, spaceFeed, summarizeSpaces, toJournal } from './journal';
+import { MC_SPACE_COLORS } from '@memex/core';
 
 const NOW = new Date(2026, 10, 1, 12, 0);
 
@@ -94,5 +95,20 @@ describe('createFixtureRepository', () => {
     expect((await repo.jots.getAll()).some((j) => j.id === jot.id)).toBe(false);
     // A fresh repository starts from the demo data again: nothing persists.
     expect((await createFixtureRepository({ now: NOW }).jots.getAll()).length).toBe(buildDemoData(NOW).jots.length);
+  });
+});
+
+describe('space colours per look', () => {
+  it('uses the Memory Cards colours when the look passes its palette', () => {
+    const data = buildDemoData(NOW);
+    const palette = MC_SPACE_COLORS.map((c) => c.value);
+    const journal = toJournal(data, '#5077ff', NOW, new Set(), palette);
+    journal.spaces.forEach((space) => expect(palette).toContain(space.color));
+  });
+
+  it('keeps chosen and hex colours as they are, converts OKLCH', () => {
+    expect(spaceColorHex('#2fbf71', '#000000')).toBe('#2fbf71');
+    expect(spaceColorHex('oklch(1 0 0)', '#000000')).toBe('#ffffff');
+    expect(spaceColorHex('not a colour', '#123456')).toBe('#123456');
   });
 });

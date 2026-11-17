@@ -69,16 +69,30 @@ export const Button = ({ label, variant = 'secondary', icon, loading, compact, d
         style={[
           styles.button,
           compact && styles.compact,
-          {
-            backgroundColor: fill,
-            borderRadius: t.radius.m,
-            boxShadow: ghost ? undefined : primary ? `${t.objectShadow}, ${t.glow(palette.accent)}` : t.objectShadow,
-            opacity: disabled && !loading ? 0.55 : 1,
-          },
+          t.cards
+            ? {
+                // Memory Cards (s02): molded pills, a lit edge and a lip; secondary is paper with a line ring
+                backgroundColor: fill,
+                borderRadius: 9999,
+                minHeight: compact ? 48 : 56,
+                paddingHorizontal: compact ? 20 : 28,
+                boxShadow: ghost
+                  ? undefined
+                  : primary
+                    ? t.cards.molded()
+                    : `inset 0 0 0 2px ${t.cards.colors.line}, inset 0 -4px 0 0 ${t.cards.colors.line}`,
+                opacity: disabled && !loading ? 0.38 : 1,
+              }
+            : {
+                backgroundColor: fill,
+                borderRadius: t.radius.m,
+                boxShadow: ghost ? undefined : primary ? `${t.objectShadow}, ${t.glow(palette.accent)}` : t.objectShadow,
+                opacity: disabled && !loading ? 0.55 : 1,
+              },
           settle.style,
         ]}
       >
-        {!ghost && (
+        {!ghost && !t.cards && (
           <LinearGradient
             pointerEvents="none"
             style={[StyleSheet.absoluteFill, { borderRadius: t.radius.m }]}

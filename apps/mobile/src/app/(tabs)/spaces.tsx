@@ -14,6 +14,7 @@ import { Paper } from '../../ui/Paper';
 import { Placeholder } from '../../ui/Placeholder';
 import { ScreenHeader } from '../../ui/ScreenHeader';
 import { Text } from '../../ui/Text';
+import { CardsSpaces } from '../../cards/CardsSpaces';
 
 const countFmt = new Intl.NumberFormat();
 
@@ -24,6 +25,11 @@ const countFmt = new Intl.NumberFormat();
  * there (decision 14B).
  */
 export default function SpacesScreen() {
+  const { cards } = useTheme();
+  return cards ? <CardsSpaces /> : <ClassicSpaces />;
+}
+
+function ClassicSpaces() {
   const t = useTheme();
   const router = useRouter();
   const { journal, isLoading, unavailable, error, refreshing, refresh } = useJournal();

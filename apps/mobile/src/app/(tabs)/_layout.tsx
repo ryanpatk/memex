@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router/tabs';
 import * as Haptics from 'expo-haptics';
 import { BookOpen, Inbox, MessageSquareText, Shapes, type LucideIcon } from 'lucide-react-native';
+import { CardsTabBar } from '../../cards/CardsTabBar';
 import { useInbox } from '../../data/useInbox';
 import { typeRole, useTheme } from '../../theme/theme';
 
@@ -25,6 +26,8 @@ export default function TabsLayout() {
 
   return (
     <Tabs
+      // Memory Cards: its own bar with the centre + (CardsTabBar); classic keeps the stock bar
+      tabBar={t.cards ? (props) => <CardsTabBar {...props} waiting={waiting} /> : undefined}
       screenListeners={{ tabPress: () => void Haptics.selectionAsync() }}
       screenOptions={{
         headerShown: false,
@@ -41,7 +44,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Journal', tabBarIcon: icon(MessageSquareText) }} />
-      <Tabs.Screen name="library" options={{ title: 'Library', tabBarIcon: icon(BookOpen) }} />
+      <Tabs.Screen name="library" options={{ title: t.cards ? 'Cards' : 'Library', tabBarIcon: icon(BookOpen) }} />
       <Tabs.Screen name="spaces" options={{ title: 'Spaces', tabBarIcon: icon(Shapes) }} />
       <Tabs.Screen
         name="inbox"

@@ -29,6 +29,8 @@ export type LinkItem = Extract<StreamItem, { type: 'link' }>;
 export interface LibraryQuery {
   source: SourceKey | null;
   search: string;
+  /** Only these links (the Memory Cards space pills: what one space holds); null/absent = every link. */
+  linkIds?: ReadonlySet<string> | null;
 }
 
 export const filtersFor = (source: SourceKey | null): LibraryFilters => ({
@@ -43,7 +45,7 @@ const noSpaces = { spacesOf: () => [] as string[] };
 export const libraryItems = (links: LinkWithTag[], query: LibraryQuery): LinkItem[] => {
   const filters = filtersFor(query.source);
   const items = links
-    .filter((link) => !link.id.startsWith('temp-'))
+    .filter((link) => !link.id.startsWith('temp-') && (!query.linkIds || query.linkIds.has(link.id)))
     .map(linkToItem)
     .filter((item) => matchesLibraryFilters(item, filters, noSpaces) && itemMatchesSearch(item, query.search));
   return sortItems(items, NEWEST_SAVED) as LinkItem[];

@@ -174,6 +174,28 @@ export default function TasksScreen() {
     const overdue = group.bucket === 'overdue';
     return (
       <View style={styles.group}>
+        {t.cards ? (
+          // Memory Cards (d27, m03): each group opens on a molded band in its space's colour
+          <View
+            style={[
+              styles.cardsBand,
+              {
+                backgroundColor: group.space?.color ?? (overdue ? t.cards.colors.error : t.cards.colors.line),
+                boxShadow: t.cards.molded(),
+              },
+            ]}
+            accessibilityRole="header"
+            accessible
+            accessibilityLabel={`${group.label}, ${group.tasks.length}`}
+          >
+            <Text size="m" weight="heavy" numberOfLines={1} style={[styles.shrink, { color: overdue && !group.space ? '#ffffff' : t.cards.colors.onColor }]}>
+              {group.label}
+            </Text>
+            <Text size="s" weight="heavy" numeric style={{ color: overdue && !group.space ? '#ffffff' : t.cards.colors.onColor, opacity: 0.75 }}>
+              {countFmt.format(group.tasks.length)}
+            </Text>
+          </View>
+        ) : (
         <View style={styles.groupHead} accessibilityRole="header" accessible accessibilityLabel={`${group.label}, ${group.tasks.length}`}>
           {group.space ? (
             <View style={[styles.dot, { backgroundColor: group.space.color }]} />
@@ -187,6 +209,7 @@ export default function TasksScreen() {
             {countFmt.format(group.tasks.length)}
           </Text>
         </View>
+        )}
         <Paper radius={t.radius.l} style={styles.card}>
           {rows(group.tasks, group.space?.id)}
         </Paper>
@@ -252,7 +275,7 @@ export default function TasksScreen() {
 
   return (
     <Canvas>
-      <StackHeader title="Tasks" subtitle={subtitle} />
+      <StackHeader title="Tasks" subtitle={t.cards ? undefined : subtitle} count={t.cards && totals && !unavailable ? totals.open : undefined} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.fill}>
         {isLoading ? (
           <FeedSkeleton />
@@ -316,6 +339,7 @@ const styles = StyleSheet.create({
   chipScroll: { marginHorizontal: -17 },
   chips: { gap: 8, paddingHorizontal: 17, paddingVertical: 2 },
   group: { gap: 8 },
+  cardsBand: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 56, borderRadius: 24, paddingHorizontal: 20 },
   groupHead: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 4, minHeight: 24 },
   dot: { width: 9, height: 9, borderRadius: 5 },
   shrink: { flexShrink: 1 },

@@ -125,7 +125,7 @@ export default function InboxScreen() {
 
   return (
     <Canvas>
-      <ScreenHeader title="Inbox" subtitle={journal && !unavailable ? (count ? `${countFmt.format(count)} waiting` : proposalsFailed ? undefined : 'All caught up') : undefined} />
+      <ScreenHeader title="Inbox" count={journal && !unavailable ? count : undefined} subtitle={journal && !unavailable ? (count ? `${countFmt.format(count)} waiting` : proposalsFailed ? undefined : 'All caught up') : undefined} />
       {isLoading ? (
         <FeedSkeleton />
       ) : unavailable ? (

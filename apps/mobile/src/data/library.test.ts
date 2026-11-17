@@ -26,6 +26,12 @@ describe('the phone Library', () => {
     expect(libraryItems(links, { source: 'x', search: 'glaze' })).toEqual([]);
   });
 
+  it('narrows to one space’s links (Memory Cards space pills)', () => {
+    const only = new Set(['l2', 'p1']);
+    expect(libraryItems(links, { source: null, search: '', linkIds: only }).map((i) => i.id).sort()).toEqual(['l2', 'p1']);
+    expect(libraryItems(links, { source: null, search: '', linkIds: null })).toHaveLength(links.length);
+  });
+
   it('leaves optimistic rows out', () => {
     const temp = { ...links[0], id: 'temp-1' };
     expect(libraryItems([...links, temp], { source: null, search: '' })).toHaveLength(links.length);

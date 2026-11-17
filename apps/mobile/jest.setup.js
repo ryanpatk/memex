@@ -75,3 +75,10 @@ jest.mock('@react-native-community/datetimepicker', () => {
 
 // Connectivity: the package's own mock (always online; tests drive the outbox directly).
 jest.mock('@react-native-community/netinfo', () => require('@react-native-community/netinfo/jest/netinfo-mock.js'));
+
+// AsyncStorage's documented Jest mock: screens that show the account button
+// (Memory Cards' Cards and Spaces headers) reach the app's repository module,
+// which imports AsyncStorage for the auth session.
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock'),
+);

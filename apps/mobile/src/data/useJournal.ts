@@ -21,7 +21,7 @@ import { keys } from './keys';
  */
 
 export const useJournal = () => {
-  const { palette } = useTheme();
+  const { palette, cards } = useTheme();
   const repository = useRepository();
   const hidden = useHiddenEntries();
   const dismissed = useDismissed();
@@ -58,8 +58,9 @@ export const useJournal = () => {
       palette.spaceFallback,
       new Date(),
       dismissed,
+      cards?.spaceColors,
     );
-  }, [isLoading, hidden, dismissed, jots.data, links.data, notes.data, tasks.data, spaces.data, linkRows.data, noteRows.data, taskRows.data, palette.spaceFallback]);
+  }, [isLoading, hidden, dismissed, jots.data, links.data, notes.data, tasks.data, spaces.data, linkRows.data, noteRows.data, taskRows.data, palette.spaceFallback, cards?.spaceColors]);
 
   const refetchers = all.map((q) => q.refetch);
   const refresh = useCallback(async () => {

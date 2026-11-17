@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ComponentRef } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -33,6 +33,8 @@ export interface ComposerProps {
   /** A space's screen: what you send is filed there unless it names its own @spaces. */
   space?: JournalSpace;
   now?: () => Date;
+  /** A new value focuses the field (the tab bar's centre + in the Memory Cards look). */
+  focusKey?: string;
 }
 
 const systemNow = () => new Date();
@@ -40,7 +42,7 @@ const MIN_INPUT = 44;
 const MAX_INPUT = 132;
 const INPUT_PAD = 22;
 
-export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = systemNow }: ComposerProps) => {
+export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = systemNow, focusKey }: ComposerProps) => {
   const t = useTheme();
   const { palette } = t;
   const [text, setText] = useState(draft ?? '');
@@ -54,6 +56,11 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = s
   const field = useRef<ComponentRef<typeof TextInput>>(null);
   const dock = useRef<ComponentRef<typeof View>>(null);
   const send = usePressSettle();
+  const cards = t.cards;
+
+  useEffect(() => {
+    if (focusKey) field.current?.focus();
+  }, [focusKey]);
 
   // A new ?draft= replaces the text (adjusting state during render, not in an effect).
   const [seenDraft, setSeenDraft] = useState(draft);
@@ -98,7 +105,12 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = s
   return (
     <View
       ref={dock}
-      style={[styles.dock, { backgroundColor: palette.paper, boxShadow: `inset 0 1px 0 0 ${palette.lit}, 0 -1px 0 0 ${palette.dark ? '#ffffff12' : '#1d21270f'}` }]}
+      style={[
+        styles.dock,
+        cards
+          ? styles.cardsDock
+          : { backgroundColor: palette.paper, boxShadow: `inset 0 1px 0 0 ${palette.lit}, 0 -1px 0 0 ${palette.dark ? '#ffffff12' : '#1d21270f'}` },
+      ]}
       onLayout={() => dock.current?.measureInWindow((_x: number, y: number) => onTop?.(y))}
     >
       {(picker || filedTo.length > 0 || suggestion) && (
@@ -207,7 +219,20 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = s
           style={[
             typeRole('m'),
             styles.input,
-            {
+            cards
+              ? {
+                  // Memory Cards (s04): the save field is a paper pill, ring on focus
+                  fontSize: 18,
+                  lineHeight: 24,
+                  height: Math.max(56, inputHeight),
+                  paddingHorizontal: 20,
+                  paddingTop: 16,
+                  color: palette.ink,
+                  backgroundColor: cards.colors.paper,
+                  borderRadius: 28,
+                  boxShadow: focused ? `0 0 0 4px ${cards.colors.ring}, ${cards.cardShadow}` : cards.cardShadow,
+                }
+              : {
               height: inputHeight,
               color: palette.ink,
               backgroundColor: palette.well,
@@ -215,7 +240,7 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = s
               boxShadow: palette.dark
                 ? `inset 0 1px 2px 0 #13171d33, inset 0 -1px 0 0 #f9fafb1f, 0 0 0 2px ${focused ? alpha(palette.accent, 0.55) : 'transparent'}`
                 : `inset 0 1px 2px 0 #1d212714, inset 0 -1px 0 0 #ffffff59, 0 0 0 2px ${focused ? alpha(palette.accent, 0.45) : 'transparent'}`,
-            },
+                },
           ]}
         />
 
@@ -236,14 +261,16 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = s
             style={[
               styles.side,
               styles.send,
-              {
-                backgroundColor: empty ? palette.well : palette.accent,
-                boxShadow: empty ? undefined : `${t.objectShadow}, ${t.glow(palette.accent)}`,
-              },
+              cards
+                ? { width: 56, height: 56, borderRadius: 28, backgroundColor: empty ? cards.colors.well : cards.colors.primary, boxShadow: empty ? undefined : cards.molded() }
+                : {
+                    backgroundColor: empty ? palette.well : palette.accent,
+                    boxShadow: empty ? undefined : `${t.objectShadow}, ${t.glow(palette.accent)}`,
+                  },
               send.style,
             ]}
           >
-            {!empty && (
+            {!empty && !cards && (
               <LinearGradient
                 pointerEvents="none"
                 style={[StyleSheet.absoluteFill, styles.sendGloss]}
@@ -323,6 +350,7 @@ const ChipButton = ({
 
 const styles = StyleSheet.create({
   dock: { paddingTop: 8, paddingBottom: 6, gap: 6 },
+  cardsDock: { backgroundColor: 'transparent', paddingHorizontal: 4, paddingBottom: 10 },
   chips: { gap: 6, paddingHorizontal: 12, alignItems: 'center', minHeight: 32 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 30, paddingHorizontal: 10, borderRadius: 9999, maxWidth: 220 },
   dot: { width: 8, height: 8, borderRadius: 4 },

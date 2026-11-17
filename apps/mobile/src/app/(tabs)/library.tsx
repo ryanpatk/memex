@@ -14,6 +14,7 @@ import { FilterChip } from '../../ui/FilterChip';
 import { Placeholder } from '../../ui/Placeholder';
 import { Button } from '../../ui/Pressable';
 import { ScreenHeader } from '../../ui/ScreenHeader';
+import { CardsLibrary } from '../../cards/CardsLibrary';
 
 /*
  * The Library (ROADMAP Phase 6: masonry grid): every saved link as a
@@ -25,7 +26,13 @@ import { ScreenHeader } from '../../ui/ScreenHeader';
 const countFmt = new Intl.NumberFormat();
 const GUTTER = 13;
 
+/** The Library tab: “Cards” in the Memory Cards look (cards/CardsLibrary), the masonry grid otherwise. */
 export default function LibraryScreen() {
+  const { cards } = useTheme();
+  return cards ? <CardsLibrary /> : <ClassicLibrary />;
+}
+
+function ClassicLibrary() {
   const t = useTheme();
   const { palette } = t;
   const router = useRouter();

@@ -60,7 +60,14 @@ export default function SpaceScreen() {
     <Canvas>
       <StackHeader
         title={space?.name}
-        subtitle={scoped && !unavailable ? `${countFmt.format(n)} ${n === 1 ? 'entry' : 'entries'}` : undefined}
+        band={t.cards ? space?.color : undefined}
+        subtitle={
+          scoped && !unavailable
+            ? t.cards
+              ? `${countFmt.format(n)} ${n === 1 ? 'card' : 'cards'} · ${countFmt.format(scoped.board.openTasks.length)} ${scoped.board.openTasks.length === 1 ? 'task' : 'tasks'}`
+              : `${countFmt.format(n)} ${n === 1 ? 'entry' : 'entries'}`
+            : undefined
+        }
         lead={
           space && (
             <View

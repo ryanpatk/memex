@@ -45,14 +45,20 @@ export interface JournalInput {
 export const withoutDismissed = (filer: Filer, dismissed: ReadonlySet<string>): Filer =>
   dismissed.size ? { suggest: (entry) => (dismissed.has(entry.id) ? undefined : filer.suggest(entry)) } : filer;
 
+/** A space colour as hex for React Native: chosen and Memory Cards colours already are; Pastel Sky's are OKLCH. */
+export const spaceColorHex = (color: string, fallback: string) =>
+  color.startsWith('#') ? color.slice(0, 7) : (oklchToHex(color)?.slice(0, 7) ?? fallback);
+
 export const toJournal = (
   input: JournalInput,
   fallbackColor: string,
   now = new Date(),
   dismissed: ReadonlySet<string> = new Set(),
+  /** The look's space palette (Memory Cards passes its eight colours); default Pastel Sky's. */
+  spacePalette?: readonly string[],
 ) => {
   const colors = new Map(
-    [...buildSpaceColors(input.spaces)].map(([id, color]) => [id, oklchToHex(color)?.slice(0, 7) ?? fallbackColor]),
+    [...buildSpaceColors(input.spaces, spacePalette)].map(([id, color]) => [id, spaceColorHex(color, fallbackColor)]),
   );
   const spaces = toJournalSpaces(input.spaces, colors, fallbackColor);
   const entries = buildEntries({ ...input, spaces });

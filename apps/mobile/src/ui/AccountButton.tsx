@@ -1,9 +1,11 @@
-import { Alert, Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text as RNText, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSession } from '../auth/SessionProvider';
 import { FIXTURE_MODE } from '../data/config';
 import { useRepository } from '../data/DataProvider';
-import { useTheme } from '../theme/theme';
+import { useLook, useTheme } from '../theme/theme';
+import { AccountSheet } from '../cards/AccountSheet';
 import { usePressSettle } from './Pressable';
 import { Text } from './Text';
 import { useToast } from './Toast';
@@ -15,6 +17,8 @@ import { useToast } from './Toast';
  */
 export const AccountButton = () => {
   const t = useTheme();
+  const { setLook } = useLook();
+  const [sheetOpen, setSheetOpen] = useState(false);
   const { session } = useSession();
   const settle = usePressSettle();
   const repository = useRepository();
@@ -34,11 +38,52 @@ export const AccountButton = () => {
     }
   };
 
+  const who = FIXTURE_MODE !== 'off' ? `${email} (demo data)` : email || 'Signed in';
   const open = () =>
-    Alert.alert(FIXTURE_MODE !== 'off' ? `${email} (demo data)` : email || 'Signed in', undefined, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign out', style: 'destructive', onPress: () => void signOut() },
-    ]);
+    t.cards
+      ? setSheetOpen(true)
+      : Alert.alert(who, undefined, [
+          { text: 'Cancel', style: 'cancel' },
+          // The Memory Cards look, behind its flag (theme/look.ts); remembered on this phone.
+          // Dev builds only, so a release build's account menu stays exactly as it was.
+          ...(__DEV__ ? [{ text: 'Try the new look', onPress: () => setLook('cards') }] : []),
+          { text: 'Sign out', style: 'destructive' as const, onPress: () => void signOut() },
+        ]);
+
+  if (t.cards) {
+    const c = t.cards;
+    return (
+      <>
+        <Pressable onPress={open} accessibilityRole="button" accessibilityLabel={`Account, ${email}`} hitSlop={6}>
+          {({ pressed }) => (
+            <View
+              style={[
+                styles.cardsDisc,
+                {
+                  backgroundColor: c.colors.paper,
+                  boxShadow: pressed
+                    ? `inset 0 3px 0 0 #0000001a, inset 0 0 0 2px ${c.colors.line}`
+                    : `inset 0 0 0 2px ${c.colors.line}, inset 0 -4px 0 0 ${c.colors.line}`,
+                  transform: pressed ? [{ scale: 0.94 }] : undefined,
+                },
+              ]}
+            >
+              <RNText style={[c.type.title, { color: c.colors.ink }]}>{letter}</RNText>
+            </View>
+          )}
+        </Pressable>
+        <AccountSheet
+          open={sheetOpen}
+          onClose={() => setSheetOpen(false)}
+          email={who}
+          onSignOut={() => {
+            setSheetOpen(false);
+            void signOut();
+          }}
+        />
+      </>
+    );
+  }
 
   return (
     <Pressable
@@ -62,4 +107,5 @@ export const AccountButton = () => {
 
 const styles = StyleSheet.create({
   disc: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  cardsDisc: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
 });

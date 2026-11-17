@@ -11,15 +11,17 @@ export const IconBadge = ({ children, color, size = 56 }: { children: ReactNode;
     <View
       style={[
         styles.disc,
-        { width: size, height: size, borderRadius: size * 0.34, backgroundColor: fill, boxShadow: `${t.objectShadow}, ${t.glow(fill)}` },
+        t.cards
+          ? { width: size, height: size, borderRadius: size / 2, backgroundColor: fill, boxShadow: t.cards.molded() }
+          : { width: size, height: size, borderRadius: size * 0.34, backgroundColor: fill, boxShadow: `${t.objectShadow}, ${t.glow(fill)}` },
       ]}
     >
-      <LinearGradient
+      {!t.cards && <LinearGradient
         pointerEvents="none"
         style={[StyleSheet.absoluteFill, { borderRadius: size * 0.34 }]}
         colors={['#ffffff4d', '#ffffff24', '#ffffff00', '#0000000f']}
         locations={[0, 0.46, 0.54, 1]}
-      />
+      />}
       {children}
     </View>
   );

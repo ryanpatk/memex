@@ -14,6 +14,7 @@ import { Canvas } from '../../ui/Canvas';
 import { FeedEmpty, FeedError, FeedSkeleton } from '../../ui/FeedStates';
 import { ScreenHeader } from '../../ui/ScreenHeader';
 import { TasksButton } from '../../tasks/TasksButton';
+import { useTheme } from '../../theme/theme';
 
 const countFmt = new Intl.NumberFormat();
 
@@ -35,7 +36,8 @@ export default function JournalScreen() {
   const actions = useEntryActions();
   const placeToasts = useComposerToasts();
   const pending = usePendingSaves();
-  const params = useLocalSearchParams<{ draft?: string; send?: string }>();
+  const params = useLocalSearchParams<{ draft?: string; send?: string; compose?: string }>();
+  const { cards } = useTheme();
   const today = journal ? countToday(journal.feed) : 0;
   const subtitle = journal && !unavailable
     ? `${countFmt.format(journal.entries.length)} entries${today ? ` · ${today} today` : ''}`
@@ -59,9 +61,12 @@ export default function JournalScreen() {
       <ScreenHeader
         title="Journal"
         subtitle={subtitle}
+        // Memory Cards (m01): the hero reads “Today” with today's count; Tasks lives on the Spaces tab
+        hero="Today"
+        count={today}
         trailing={
           <View style={styles.trailing}>
-            {journal && <TasksButton tasks={journal.tasks} />}
+            {journal && !cards && <TasksButton tasks={journal.tasks} />}
             <AccountButton />
           </View>
         }
@@ -85,7 +90,7 @@ export default function JournalScreen() {
         )}
         {/* Shown even when the Journal didn't load: offline, its saves wait on the phone. */}
         {!isLoading && (
-          <Composer spaces={journal?.spaces ?? []} filer={journal?.filer} onSubmit={actions.compose} draft={draft} onTop={placeToasts} />
+          <Composer spaces={journal?.spaces ?? []} filer={journal?.filer} onSubmit={actions.compose} draft={draft} onTop={placeToasts} focusKey={params.compose} />
         )}
       </KeyboardAvoidingView>
     </Canvas>

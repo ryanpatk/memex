@@ -28,7 +28,7 @@ export const useLibrary = (query: LibraryQuery) => {
   // A new source or search starts again from the first page.
   const [limit, setLimit] = useState(LIBRARY_PAGE);
   const [seen, setSeen] = useState(query);
-  if (seen.source !== query.source || seen.search !== query.search) {
+  if (seen.source !== query.source || seen.search !== query.search || seen.linkIds !== query.linkIds) {
     setSeen(query);
     setLimit(LIBRARY_PAGE);
   }

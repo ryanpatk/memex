@@ -6,6 +6,7 @@ import type { Repository } from '@memex/core';
 import { DataProvider } from '../data/DataProvider';
 import { createFixtureRepository } from '../data/fixtures/fixtureRepository';
 import { ThemeProvider } from '../theme/theme';
+import type { Look } from '../theme/look';
 import { ToastProvider } from '../ui/Toast';
 import { sequentialIds } from './network';
 
@@ -15,12 +16,12 @@ export const NOW = new Date(2026, 10, 1, 12, 0);
 export const renderWithData = async (
   ui: ReactElement,
   repository: Repository = createFixtureRepository({ now: NOW }),
-  { newId = sequentialIds() }: { newId?: () => string } = {},
+  { newId = sequentialIds(), look }: { newId?: () => string; look?: Look } = {},
 ) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <SafeAreaProvider initialMetrics={{ frame: { x: 0, y: 0, width: 402, height: 874 }, insets: { top: 62, left: 0, right: 0, bottom: 34 } }}>
-      <ThemeProvider>
+      <ThemeProvider initialLook={look}>
         <QueryClientProvider client={queryClient}>
           <ToastProvider>
             <DataProvider repository={repository} client="memex-ios/test" newId={newId}>

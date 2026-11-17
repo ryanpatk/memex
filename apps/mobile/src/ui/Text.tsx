@@ -1,5 +1,6 @@
 import { Text as RNText, type TextProps } from 'react-native';
 import type { TypeSize } from '@memex/core';
+import { cardsTextRole } from '../theme/cards';
 import { typeRole, useTheme, type Weight } from '../theme/theme';
 
 export type Tone = 'ink' | 'soft' | 'muted' | 'faint' | 'accent' | 'error' | 'onAccent';
@@ -12,9 +13,9 @@ interface Props extends TextProps {
   numeric?: boolean;
 }
 
-/** Text on a Pastel Sky type role (size + line + tracking together). */
+/** Text on a Pastel Sky type role (size + line + tracking together); in the Memory Cards look, its matching role (theme/cards.ts). */
 export const Text = ({ size = 's', weight = 'regular', tone = 'ink', numeric, style, ...rest }: Props) => {
-  const { palette } = useTheme();
+  const { palette, cards } = useTheme();
   const color = {
     ink: palette.ink,
     soft: palette.inkSoft,
@@ -27,7 +28,7 @@ export const Text = ({ size = 's', weight = 'regular', tone = 'ink', numeric, st
   return (
     <RNText
       {...rest}
-      style={[typeRole(size, weight), { color }, numeric && { fontVariant: ['tabular-nums'] }, style]}
+      style={[cards ? cardsTextRole(size, weight) : typeRole(size, weight), { color }, numeric && { fontVariant: ['tabular-nums'] }, style]}
     />
   );
 };
