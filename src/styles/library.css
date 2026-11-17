@@ -310,7 +310,7 @@ button.memex-table-sort:focus-visible {
   font-weight: var(--weight-ui-medium);
 }
 
-/* Spaces: each in its own hue, like the sidebar rows */
+/* Spaces: each in its own hue */
 .memex-table-spaces {
   display: flex;
   align-items: center;

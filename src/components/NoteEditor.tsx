@@ -163,7 +163,7 @@ const NoteEditor = ({ note, backLabel = 'notes', onBack, onSave, onDelete }: Not
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [status]);
 
-  // A save that failed: leaving the note (Back, the sidebar, another page) asks first
+  // A save that failed: leaving the note (Back, the top bar, another page) asks first
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       statusRef.current === 'error' &&

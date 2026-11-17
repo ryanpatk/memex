@@ -1,11 +1,11 @@
 /*
- * Drag an item onto a space to file it (ROADMAP.md Phase 1, “drag to sidebar
+ * Drag an item onto a space to file it (ROADMAP.md Phase 1, “drag to a
  * space”). Anything that renders an item marks itself with `data-item-key`
  * (`${type}:${id}`) and spreads `dragAttrs(key, title)`; a gallery of several
  * items sets `data-drag-keys` instead. One document-level listener
  * (hooks/useItemDragSource.ts) turns any drag that starts inside such an
  * element into a drag of those keys, or of the whole selection when the item
- * is part of it. Sidebar spaces are the drop targets (MemexSidebar). Filing
+ * is part of it. Space pills are the drop targets (components/cards/SpacePillRow). Filing
  * goes through useAddToSpace, the same path as the selection bar's menu.
  */
 

@@ -6,7 +6,7 @@ import { EmptySlot } from '../components/cards/Controls';
  * The route error boundary (router/index.tsx `errorElement`): a calm panel
  * with Reload and a way home instead of a blank page. `page` stands alone
  * (the root route, outside the providers, so it uses nothing from them);
- * `panel` fills the shell's main column and keeps the sidebar. Home is a
+ * `panel` fills the shell's main column and keeps the top bar. Home is a
  * plain link, a full load, so nothing from the broken render carries over.
  */
 const RouteError = ({ variant = 'page' }: { variant?: 'page' | 'panel' }) => {

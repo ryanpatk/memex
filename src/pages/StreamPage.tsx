@@ -482,7 +482,7 @@ const StreamPage = () => {
     if (present.length !== selectedItemKeys.length) setItemSelection(present);
   }, [itemsByKey, selectedItemKeys, setItemSelection]);
 
-  // Leaving the stream (unmount) must not leave the sidebar in bulk mode
+  // Leaving Cards (unmount) must not leave the app in selection mode
   useEffect(() => () => setSelectionMode(false), [setSelectionMode]);
 
   const handleToggleSelectionMode = () => {

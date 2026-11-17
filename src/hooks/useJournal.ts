@@ -16,7 +16,7 @@ import { loadStateOf } from '../utils/loadState';
  * The Journal's data: every entry (jots + links + notes + tasks, oldest
  * first), the spaces, the filing suggester and the Inbox: filing
  * suggestions plus agents' pending proposals (`inboxCount` counts both).
- * Reads only; the page owns the writes. Shared by the Journal page and the sidebar's Inbox
+ * Reads only; the page owns the writes. Shared by the Journal page and the top bar's Inbox
  * count (React Query dedupes the fetches). `loadState` covers the entries'
  * four reads ('failed' when one errored, or paused offline, with nothing
  * cached); `refetch` retries them.

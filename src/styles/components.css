@@ -208,7 +208,7 @@
 }
 
 /* Hover: controls swell a little (Wii-era “this is pressable”), cards lift.
-   Rows you read down — sidebar, list rows, menus — stay still. */
+   Rows you read down — list rows, menus — stay still. */
 @media (hover: hover) {
 
   :is( .memex-icon-button, .memex-task-check):hover:not(

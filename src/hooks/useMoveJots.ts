@@ -8,7 +8,7 @@ import { HANDLES_ERRORS } from '../utils/mutationErrors';
  * Journal when unfiled). `plan` turns stream keys into moves (core's
  * `planJotMoves`); `apply` writes them through `repository.jots.update`.
  * useAddToSpace and useRemoveFromSpace use it, so “File to…”, drag onto a
- * sidebar space and the selection bar all move jots, with their Undo.
+ * space pill and the selection bar all move jots, with their Undo.
  */
 export function useMoveJots() {
   const { data: jots } = useAllSelfMessages();

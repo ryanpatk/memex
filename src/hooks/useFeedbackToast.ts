@@ -20,7 +20,7 @@ interface ToastState {
  * Timing/phase state machine for the bottom-right FeedbackToast:
  * flash() shows optimistically, auto-exits after a beat, and the
  * animation-end handler finalizes removal (instant under reduced motion).
- * Toasts from different owners (the page, the sidebar, the shell's
+ * Toasts from different owners (the page, the space pills, the shell's
  * fallback for failed writes) share that corner, so showing one dismisses
  * the others: the latest message wins.
  */

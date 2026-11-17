@@ -1,7 +1,7 @@
 /*
  * Memory Cards — the component kit (design/memory-cards sheets s01–s14).
- * Classes are `.mc-*`; only components rendered in the cards look use them
- * (src/components/cards/), so they need no extra scoping. States use real
+ * Classes are `.mc-*`, used by the kit's components (src/components/cards/)
+ * and the pages, so they need no extra scoping. States use real
  * pseudo-classes: :hover, :active (pressed), :focus-visible, [disabled] /
  * [aria-disabled], [aria-busy="true"] (loading) and .is-error.
  *

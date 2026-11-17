@@ -13,12 +13,12 @@ import { getLinkTitle, jotSnippet, searchJots } from '@memex/core';
 import { openUrlInBackgroundTab } from '../utils/openUrlInBackgroundTab';
 
 /*
- * ⌘/Ctrl K, on every signed-in page: a small “Go to” palette over the
- * sidebar's destinations (Journal, Library, Tasks, the Inbox while something
- * waits, every space), plus your jots once you type two letters (core's
- * searchJots; Enter opens the Journal at that jot, `?jot=<id>`). Type to
- * narrow, ↑/↓ to move, Enter to go, Esc to close. The Library's own search
- * palette (“/”) stays where it is.
+ * ⌘/Ctrl K, on every signed-in page: a “Go to” palette over the app's
+ * destinations (Journal, Cards, Tasks, the Inbox while something waits,
+ * every space), pinned sites, and your jots once you type two letters
+ * (core's searchJots; Enter opens the Journal at that jot, `?jot=<id>`).
+ * Type to narrow, ↑/↓ to move, Enter to go, Esc to close. On Cards, “/”
+ * focuses the page's own search field.
  */
 
 interface Destination {
@@ -77,10 +77,10 @@ const GoToPalette = () => {
 };
 
 /**
- * ⌘K in the Memory Cards look (d33): a big field in a 40px sheet, then the
+ * ⌘K (Memory Cards d33): a big field in a 40px sheet, then the
  * results in groups — Spaces (dot in their colour, with how many cards),
  * Jots, Go to (Journal, Cards, Tasks, Inbox) and Pinned sites (they moved
- * here and onto space pages from the Library header). Same keys as classic.
+ * here and onto space pages from the Library header).
  */
 const GoToDialog = ({ onClose }: { onClose: () => void }) => {
   const navigate = useNavigate();

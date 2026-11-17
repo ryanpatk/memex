@@ -12,9 +12,9 @@ interface FeedbackToastProps {
 }
 
 /**
- * Bottom-right feedback toast. Presentational only — the caller owns timing
- * and phase transitions (see useFeedbackToast). In the Memory Cards look it
- * is the kit's pill toast, bottom-centre (s08).
+ * The feedback toast: the kit's pill toast, bottom-centre (s08).
+ * Presentational only — the caller owns timing and phase transitions (see
+ * useFeedbackToast).
  */
 const FeedbackToast = ({ message, phase, onAnimationEnd, action }: FeedbackToastProps) => {
   return (

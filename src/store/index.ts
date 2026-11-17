@@ -16,8 +16,8 @@ interface AppState {
   selectedProjectIds: string[];
   selectedLinkIds: string[];
 
-  // Stream selection (shared between the stream page and the sidebar so
-  // spaces can act as bulk-assign targets). Keys are `${type}:${id}`.
+  // Stream selection (shared between the Cards page and the space pills so
+  // spaces can act as drop targets). Keys are `${type}:${id}`.
   selectionMode: boolean;
   selectedItemKeys: string[];
   setSelectionMode: (on: boolean) => void;
@@ -27,7 +27,7 @@ interface AppState {
   clearItemSelection: () => void;
 
   // An item drag in progress (utils/itemDrag.ts): the keys it carries, so
-  // sidebar spaces can show themselves as drop targets. Not persisted.
+  // space pills can show themselves as drop targets. Not persisted.
   itemDrag: { keys: string[] } | null;
   setItemDrag: (drag: { keys: string[] } | null) => void;
 

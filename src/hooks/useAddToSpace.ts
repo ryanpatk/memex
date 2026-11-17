@@ -24,8 +24,8 @@ import { HANDLES_ERRORS } from '../utils/mutationErrors';
 type Flash = (message: string, action?: ToastAction) => void;
 
 /**
- * Add stream items (by `${type}:${id}` key) to a space. Shared by the sidebar
- * (spaces as bulk-assign and drop targets), the selection bar, the Journal's
+ * Add stream items (by `${type}:${id}` key) to a space. Shared by the space
+ * pills (drop targets), the selection bar, the Journal's
  * “File to…” and the Tasks view, so all of them report the same way:
  * optimistic toast with Undo, "already there" counts, move cue. Undo takes
  * back out only what this call newly filed. Jots (`jot:<id>`) live in one

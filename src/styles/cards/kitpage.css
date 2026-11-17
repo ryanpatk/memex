@@ -1,7 +1,6 @@
 /*
- * The Memory Cards kit page (/styleguide in the cards look): every component
- * from sheets s01–s14 in every state. Imported by src/pages/CardsKitPage.tsx
- * only. The `.kd-*` classes freeze a pseudo-state (hover, pressed, focus) so
+ * The Memory Cards kit page (/styleguide): every component from sheets
+ * s01–s14 in every state. Imported by src/pages/StyleguidePage.tsx only. The `.kd-*` classes freeze a pseudo-state (hover, pressed, focus) so
  * the catalogue can show it side by side; they repeat kit.css's own rules.
  */
 

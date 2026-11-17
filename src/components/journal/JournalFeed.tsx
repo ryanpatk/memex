@@ -237,7 +237,7 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
     );
 
     const openNote = useCallback((noteId: string) => navigate(`${LIBRARY_PATH}?${NOTE_PARAM}=${noteId}`), [navigate]);
-    // Memory Cards: a link entry opens its card on Cards (the classic Journal links straight out)
+    // A link entry opens its card on Cards
     const openLink = useCallback((linkId: string) => navigate(`${LIBRARY_PATH}?${LINK_PARAM}=${linkId}`), [navigate]);
 
     /** On a space page, a save filed only elsewhere leaves this feed: say where it went. */
