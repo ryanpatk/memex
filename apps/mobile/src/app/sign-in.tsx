@@ -1,5 +1,5 @@
 import { useRef, useState, type ComponentRef } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text as RNText, TextInput, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { isTransientError } from '@memex/core';
@@ -41,7 +41,7 @@ const PARAM_ERRORS: Record<string, string> = {
 };
 
 export default function SignIn() {
-  const { palette } = useTheme();
+  const { palette, cards } = useTheme();
   const insets = useSafeAreaInsets();
   const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
   const [email, setEmail] = useState('');
@@ -83,6 +83,77 @@ export default function SignIn() {
       setBusy(null);
     }
   };
+
+  const fields = (
+    <>
+      <TextField
+        label="Email"
+        value={email}
+        onChangeText={setEmail}
+        error={fieldErrors.email}
+        placeholder="you@example.com"
+        autoCapitalize="none"
+        autoCorrect={false}
+        spellCheck={false}
+        autoComplete="email"
+        textContentType="username"
+        keyboardType="email-address"
+        returnKeyType="next"
+        onSubmitEditing={() => passwordRef.current?.focus()}
+        submitBehavior="submit"
+      />
+      <TextField
+        ref={passwordRef}
+        label="Password"
+        value={password}
+        onChangeText={setPassword}
+        error={fieldErrors.password}
+        placeholder="Your password"
+        secureTextEntry
+        autoComplete="current-password"
+        textContentType="password"
+        returnKeyType="go"
+        onSubmitEditing={submit}
+      />
+      {error ? (
+        <Text size="s" tone="error" accessibilityLiveRegion="polite" accessibilityRole="alert">
+          {error}
+        </Text>
+      ) : null}
+    </>
+  );
+
+  if (cards)
+    // Memory Cards (m07): the wordmark big, Welcome back, two wells, two wide buttons; no card around them
+    return (
+      <Canvas>
+        <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <ScrollView
+            contentContainerStyle={[styles.cardsScroll, { paddingTop: insets.top + 56, paddingBottom: insets.bottom + 24 }]}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.cardsBrand}>
+              <Wordmark size={56} />
+              <RNText style={[cards.type.h2, { color: cards.colors.ink }]} accessibilityRole="header">
+                Welcome back
+              </RNText>
+            </View>
+            {fields}
+            <View style={styles.cardsButtons}>
+              <Button label="Sign in" variant="primary" loading={busy === 'password'} disabled={busy !== null} onPress={submit} />
+              <Button
+                label="Continue with GitHub"
+                icon={<GitHubMark color={palette.ink} />}
+                loading={busy === 'github'}
+                disabled={busy !== null}
+                onPress={github}
+              />
+            </View>
+            <RNText style={[cards.type.labelUi, { color: cards.colors.muted }]}>New to memex? Create your account on the web first.</RNText>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Canvas>
+    );
 
   return (
     <Canvas>
@@ -161,6 +232,9 @@ export default function SignIn() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  cardsScroll: { flexGrow: 1, paddingHorizontal: 24, gap: 20 },
+  cardsBrand: { gap: 12, marginBottom: 8 },
+  cardsButtons: { gap: 12, marginTop: 12 },
   scroll: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 17, gap: 25 },
   brand: { alignItems: 'center', gap: 4 },
   card: { padding: 17, gap: 17 },
