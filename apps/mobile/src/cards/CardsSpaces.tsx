@@ -14,7 +14,7 @@ import { SpaceTile } from './SpaceTile';
 import { useCards } from './useCards';
 
 /*
- * The Spaces tab in the Memory Cards look (m02, x03 tiles): a wide ink Tasks
+ * The Spaces tab (m02, x03 tiles): a wide ink Tasks
  * tile with the open count on top, then each space as a colour tile with its
  * count big. A tile opens the space's board.
  */

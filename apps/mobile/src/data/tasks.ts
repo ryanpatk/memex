@@ -87,24 +87,6 @@ export interface DueOption {
   value: string | null | 'pick';
 }
 
-/**
- * The due-date menu (web: the Tasks row's ··· menu): Today, Tomorrow, Next
- * week (the coming Monday; core's dueShortcuts), Pick a date…, and No due
- * date when one is set. The day it already has is left out.
- */
-export const dueOptions = (task: Pick<TaskWithTags, 'due_date'>, now = new Date()): DueOption[] => {
-  const { today, tomorrow, nextWeek } = dueShortcuts(now);
-  const current = dueDayKey(task.due_date);
-  const options: DueOption[] = [
-    { label: 'Today', value: today },
-    { label: 'Tomorrow', value: tomorrow },
-    { label: 'Next week', value: nextWeek },
-  ].filter((o) => o.value !== current);
-  options.push({ label: 'Pick a date…', value: 'pick' });
-  if (current) options.push({ label: 'No due date', value: null });
-  return options;
-};
-
 export interface DueChoice extends DueOption {
   /** The day the task is already due. */
   current?: boolean;

@@ -1,18 +1,18 @@
-import { Pressable, StyleSheet, View } from 'react-native';
-import { FileText, Link2, Square } from 'lucide-react-native';
-import { getHostname, type FileableEntry, type Suggestion } from '@memex/core';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Check } from 'lucide-react-native';
+import { getHostname, sourceOf, type FileableEntry, type Suggestion } from '@memex/core';
+import { LabelStrip } from '../cards/MemoryCard';
+import { useCards } from '../cards/useCards';
 import { entryTitle } from '../journal/useEntryActions';
-import { alpha, mix } from '../theme/palette';
-import { useTheme } from '../theme/theme';
-import { Paper } from '../ui/Paper';
 import { Button } from '../ui/Pressable';
-import { Text } from '../ui/Text';
-import { CardsSuggestionCard } from '../cards/InboxCards';
 
 /*
- * A filing suggestion in the Inbox (decision 13, web: the tray's InboxRow):
- * a recent unfiled item, the space the filer thinks it belongs in, and why.
- * File puts it there; Not now leaves it unfiled (a finished state) and stops
+ * A filing suggestion in the Inbox (decision 13; s10, m03): a recent unfiled
+ * item with its picture and title, the filer's reason, one filled “File in
+ * …” pill in the space's colour and Not now, on an Unfiled label strip. File
+ * puts it there; Not now leaves it unfiled (a finished state) and stops
  * suggesting it on this phone. Both come with Undo.
  */
 
@@ -31,15 +31,17 @@ export const SuggestionCard = ({
   onDismiss: () => void;
   onOpen?: () => void;
 }) => {
-  const t = useTheme();
-  const { palette } = t;
+  const c = useCards();
+  const [failed, setFailed] = useState(false);
   const { space, reason } = suggestion;
-  if (t.cards) return <CardsSuggestionCard entry={entry} suggestion={suggestion} onFile={onFile} onDismiss={onDismiss} onOpen={onOpen} />;
   const title = entryTitle(entry);
-  const where = entry.kind === 'link' ? getHostname(entry.link.url).replace(/^www\./, '') : KIND[entry.kind];
-  const Icon = entry.kind === 'link' ? Link2 : entry.kind === 'note' ? FileText : Square;
+  const link = entry.kind === 'link' ? entry.link : null;
+  const host = link ? getHostname(link.url).replace(/^www\./, '') : null;
+  const source = link ? sourceOf(link) : null;
+  const meta = link ? (source?.key === 'web' ? host : source?.key === 'pinterest' ? 'pinterest' : source?.label) : entry.kind;
+  const picture = link?.preview_image_url && !failed ? link.preview_image_url : null;
   return (
-    <Paper level="s" radius={t.radius.l} style={styles.card} testID={`suggestion-${entry.id}`}>
+    <View style={[styles.card, styles.suggestion, { backgroundColor: c.colors.paper, boxShadow: c.cardShadow }]} testID={`suggestion-${entry.id}`}>
       <Pressable
         onPress={onOpen}
         disabled={!onOpen}
@@ -47,48 +49,55 @@ export const SuggestionCard = ({
         accessibilityLabel={`${KIND[entry.kind]}: ${title}`}
         style={styles.item}
       >
-        <View style={[styles.icon, { backgroundColor: palette.tint }]}>
-          <Icon size={15} color={palette.tintInk} strokeWidth={1.9} />
+        <View style={[styles.thumb, { backgroundColor: c.colors.well }]}>
+          {picture ? (
+            <Image source={picture} style={StyleSheet.absoluteFill} contentFit="cover" onError={() => setFailed(true)} accessibilityIgnoresInvertColors />
+          ) : (
+            <RNText style={[c.type.h3, { color: c.colors.muted }]}>{(host ?? KIND[entry.kind]).slice(0, 1).toUpperCase()}</RNText>
+          )}
         </View>
-        <View style={styles.text}>
-          <Text size="s" weight="medium" numberOfLines={2}>
+        <View style={styles.itemText}>
+          <RNText style={[c.type.h3, { fontSize: 21, lineHeight: 26, color: c.colors.ink }]} numberOfLines={3}>
             {title}
-          </Text>
-          <Text size="xs" tone="muted" numberOfLines={1}>
-            {where}
-          </Text>
+          </RNText>
+          <RNText style={[c.type.labelUi, { color: c.colors.muted }]} numberOfLines={2} accessibilityLabel={`Likely ${space.name}: ${reason}`}>
+            {reason}
+          </RNText>
         </View>
       </Pressable>
-      <View
-        style={[styles.guess, { borderColor: alpha(space.color, 0.7), backgroundColor: mix(space.color, palette.paper, palette.dark ? 0.1 : 0.05) }]}
-        accessible
-        accessibilityLabel={`Likely ${space.name}: ${reason}`}
-      >
-        <View style={[styles.dot, { backgroundColor: space.color }]} />
-        <Text size="xs" weight="heavy" tone="soft" numberOfLines={1} style={styles.space}>
-          {space.name}?
-        </Text>
-        <Text size="xs" tone="muted" numberOfLines={2} style={styles.reason}>
-          {reason}
-        </Text>
-      </View>
       <View style={styles.actions}>
-        <Button compact variant="primary" label={`File in ${space.name}`} onPress={onFile} style={styles.file} />
+        <Pressable onPress={onFile} accessibilityRole="button" accessibilityLabel={`File in ${space.name}`} style={styles.fileCell}>
+          {({ pressed }) => (
+            <View style={[styles.file, { backgroundColor: space.color, boxShadow: c.molded(pressed), transform: pressed ? [{ scale: 0.96 }] : undefined }]}>
+              <View style={[styles.fileDisc, { backgroundColor: c.colors.paper }]}>
+                <Check size={18} color={c.colors.ink} strokeWidth={3.25} />
+              </View>
+              <RNText style={[c.type.label, styles.fileLabel, { color: c.colors.onColor }]} numberOfLines={1}>
+                File in {space.name}
+              </RNText>
+            </View>
+          )}
+        </Pressable>
         <Button compact variant="ghost" label="Not now" onPress={onDismiss} />
       </View>
-    </Paper>
+      <View style={[styles.strip, styles.suggestionStrip]}>
+        <LabelStrip label={{ name: null, color: null }} meta={meta ?? undefined} />
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  card: { padding: 12, gap: 10 },
-  item: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  icon: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  text: { flex: 1, minWidth: 0, gap: 1 },
-  guess: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderStyle: 'dashed', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  space: { flexShrink: 0, maxWidth: '45%' },
-  reason: { flex: 1, minWidth: 0 },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  file: { flex: 1 },
+  card: { borderRadius: 28, paddingTop: 20, paddingHorizontal: 20, gap: 14, overflow: 'hidden' },
+  suggestion: { paddingTop: 16, paddingHorizontal: 16 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, marginBottom: 6 },
+  strip: { marginHorizontal: -20, marginTop: 6 },
+  suggestionStrip: { marginHorizontal: -16 },
+  item: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  thumb: { width: 88, height: 72, borderRadius: 16, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  itemText: { flex: 1, minWidth: 0, gap: 4 },
+  fileCell: { flexShrink: 1 },
+  file: { flexDirection: 'row', alignItems: 'center', gap: 8, height: 48, borderRadius: 24, paddingLeft: 8, paddingRight: 18 },
+  fileDisc: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  fileLabel: { flexShrink: 1 },
 });

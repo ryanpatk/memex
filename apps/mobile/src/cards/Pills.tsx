@@ -85,10 +85,22 @@ export const AddPill = ({ label, onPress, accessibilityLabel }: { label: string;
 };
 
 /** The filer's guess (`.strip.sug`): dashed in the space's colour; one press files it. */
-export const SuggestPill = ({ name, color, onPress, hint }: { name: string; color: string; onPress: () => void; hint?: string }) => {
+export const SuggestPill = ({
+  name,
+  color,
+  onPress,
+  hint,
+  accessibilityLabel,
+}: {
+  name: string;
+  color: string;
+  onPress: () => void;
+  hint?: string;
+  accessibilityLabel?: string;
+}) => {
   const c = useCards();
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`File in ${name}`} accessibilityHint={hint}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={accessibilityLabel ?? `File in ${name}`} accessibilityHint={hint}>
       {({ pressed }) => (
         <View style={[styles.pill, styles.suggest, { borderColor: color, transform: pressed ? [{ scale: 0.96 }] : undefined }]}>
           <View style={[styles.smallDot, { backgroundColor: color }]} />

@@ -68,13 +68,14 @@ describe('ShareSheet', () => {
   it('previews a shared link and saves it with a note and a space, as a share', async () => {
     const { repository } = await renderWithData(<Harness content={LINK} />);
     await flush();
-    expect(screen.getByLabelText('Link: [test] Calm Technology, https://calmtech.com/book')).toBeTruthy();
-    expect(screen.getByText('In your Journal')).toBeTruthy();
+    // The card it will become; its label strip names the space (m05).
+    expect(within(screen.getByLabelText('Link: [test] Calm Technology, https://calmtech.com/book')).getByText('Unfiled')).toBeTruthy();
+    expect(within(screen.getByLabelText('Link: [test] Calm Technology, https://calmtech.com/book')).getByText('calmtech.com')).toBeTruthy();
 
     await fireEvent.changeText(screen.getByLabelText('Note'), 'For the reading pile');
     await fireEvent.press(screen.getByRole('button', { name: 'File in Kyoto trip' }));
     expect(screen.getByRole('button', { name: 'File in Kyoto trip' }).props.accessibilityState.selected).toBe(true);
-    expect(screen.getByText('In your Journal, filed in Kyoto trip')).toBeTruthy();
+    expect(within(screen.getByLabelText('Link: [test] Calm Technology, https://calmtech.com/book')).getByText('Kyoto trip')).toBeTruthy();
 
     await fireEvent.press(screen.getByTestId('share-save'));
     await flush();
@@ -95,7 +96,7 @@ describe('ShareSheet', () => {
     expect(screen.getByText('File in…')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'File in Reading' }));
     expect(screen.getByLabelText('Note').props.value).toBe('Later @Reading ');
-    expect(screen.getByText('In your Journal, filed in Reading')).toBeTruthy();
+    expect(within(screen.getByLabelText('Link: [test] Calm Technology, https://calmtech.com/book')).getByText('Reading')).toBeTruthy();
   });
 
   it('shared text is editable and follows the composer: “[] ” makes a task', async () => {
@@ -124,18 +125,18 @@ describe('ShareSheet', () => {
   it('signed out, it says so, keeps the item, and offers to sign in', async () => {
     await renderWithData(<Harness content={LINK} signedIn={false} />);
     await flush();
-    expect(screen.getByText('You’re signed out of memex')).toBeTruthy();
-    expect(screen.getByLabelText('Link: [test] Calm Technology, https://calmtech.com/book')).toBeTruthy();
+    expect(screen.getByText('You’re signed out. Sign in and this save comes with you.')).toBeTruthy();
+    expect(within(screen.getByLabelText('Link: [test] Calm Technology, https://calmtech.com/book')).getByText('Unfiled')).toBeTruthy();
     expect(screen.queryByTestId('share-save')).toBeNull();
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
     expect(onSignIn).toHaveBeenCalled();
   });
 
-  it('Close closes without saving', async () => {
+  it('Cancel closes without saving', async () => {
     const { repository } = await renderWithData(<Harness content={LINK} />);
     await flush();
     const before = (await repository.links.getAll()).length;
-    await fireEvent.press(screen.getByRole('button', { name: 'Close' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Cancel' }));
     expect(onClose).toHaveBeenCalled();
     expect(await repository.links.getAll()).toHaveLength(before);
   });

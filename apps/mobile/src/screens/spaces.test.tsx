@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, screen } from '@testing-library/react-native';
-import { lastLabel } from '../spaces/SpaceCard';
 import { NOW, renderWithData } from '../testing/render';
 import SpacesScreen from '../app/(tabs)/spaces';
 import SpaceScreen from '../app/space/[id]';
@@ -27,30 +26,20 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('lastLabel', () => {
-  it('says today with the time, yesterday, or the date', () => {
-    expect(lastLabel(new Date(2026, 10, 1, 9, 5).toISOString(), NOW)).toMatch(/^today 9:05/);
-    expect(lastLabel(new Date(2026, 9, 31, 23, 0).toISOString(), NOW)).toBe('yesterday');
-    expect(lastLabel(new Date(2026, 9, 28, 8, 0).toISOString(), NOW)).toMatch(/Oct 28/);
-  });
-});
-
 describe('Spaces tab', () => {
-  it('lists every space with its counts and newest entries, and Tasks on top', async () => {
+  it('shows a Tasks tile with the open count, then a colour tile per space with its count', async () => {
     await renderWithData(<SpacesScreen />);
     await flush();
-    expect(screen.getByText('4 spaces')).toBeTruthy();
-    expect(screen.getByLabelText(/^Studio, 7 items · 2 open tasks · last today/)).toBeTruthy();
-    expect(screen.getByLabelText(/^Reading, 3 items · last /)).toBeTruthy();
-    expect(screen.getByLabelText('Task: Write the case study intro')).toBeTruthy();
-    expect(screen.getByLabelText('Task: Order film for the trip')).toBeTruthy();
-    expect(screen.getByLabelText('Tasks, 6 open · 1 overdue · 1 due today')).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Spaces' })).toBeTruthy();
+    expect(screen.getByLabelText('Tasks, 6 open, 1 overdue')).toBeTruthy();
+    expect(screen.getByLabelText('Studio, 7 cards, 2 open tasks')).toBeTruthy();
+    expect(screen.getByLabelText('Reading, 3 cards')).toBeTruthy();
   });
 
   it('opens a space’s board and Tasks', async () => {
     await renderWithData(<SpacesScreen />);
     await flush();
-    await fireEvent.press(screen.getByTestId('space-card-kyoto'));
+    await fireEvent.press(screen.getByLabelText(/^Kyoto trip, /));
     expect(routerMock.__router.push).toHaveBeenCalledWith({ pathname: '/space/[id]', params: { id: 'kyoto' } });
     await fireEvent.press(screen.getByLabelText(/^Tasks, /));
     expect(routerMock.__router.push).toHaveBeenCalledWith('/tasks');
@@ -63,7 +52,7 @@ describe('A space’s board', () => {
     await renderWithData(<SpaceScreen />);
     await flush();
     expect(screen.getByRole('header', { name: 'Kyoto trip' })).toBeTruthy();
-    expect(screen.getByText('4 entries')).toBeTruthy();
+    expect(screen.getByText('4 cards · 2 tasks')).toBeTruthy();
     expect(screen.getByLabelText('Task: Renew passport photos')).toBeTruthy();
     expect(screen.getByLabelText('Note: Kyoto — first draft itinerary')).toBeTruthy();
     expect(screen.queryByLabelText(/Calm Technology/)).toBeNull();
@@ -79,7 +68,7 @@ describe('A space’s board', () => {
     await fireEvent.press(screen.getByTestId('composer-send'));
     await flush();
     expect((await repository.jots.getAll()).at(-1)).toMatchObject({ body: '[test] tea at Ippodo', profile_id: 'kyoto' });
-    expect(screen.getByText('[test] tea at Ippodo')).toBeTruthy();
+    expect(screen.getByLabelText(/^Jot at .*: \[test\] tea at Ippodo/)).toBeTruthy();
 
     await fireEvent.changeText(screen.getByLabelText('Write in Kyoto trip'), '[] [test] pack the tripod @Studio');
     await fireEvent.press(screen.getByTestId('composer-send'));

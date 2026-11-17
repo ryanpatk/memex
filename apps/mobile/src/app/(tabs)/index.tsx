@@ -13,10 +13,7 @@ import { AccountButton } from '../../ui/AccountButton';
 import { Canvas } from '../../ui/Canvas';
 import { FeedEmpty, FeedError, FeedSkeleton } from '../../ui/FeedStates';
 import { ScreenHeader } from '../../ui/ScreenHeader';
-import { TasksButton } from '../../tasks/TasksButton';
-import { useTheme } from '../../theme/theme';
 
-const countFmt = new Intl.NumberFormat();
 
 /** Entries above the first day separator of a newest-first feed, if that day is today. */
 const countToday = (feed: Part[]) => {
@@ -37,11 +34,7 @@ export default function JournalScreen() {
   const placeToasts = useComposerToasts();
   const pending = usePendingSaves();
   const params = useLocalSearchParams<{ draft?: string; send?: string }>();
-  const { cards } = useTheme();
   const today = journal ? countToday(journal.feed) : 0;
-  const subtitle = journal && !unavailable
-    ? `${countFmt.format(journal.entries.length)} entries${today ? ` · ${today} today` : ''}`
-    : undefined;
 
   // DEV-ONLY, demo data only: `?draft=…&send=1` sends the draft, so the
   // simulator (which can't be tapped from scripts) can prove the save path.
@@ -58,19 +51,8 @@ export default function JournalScreen() {
 
   return (
     <Canvas>
-      <ScreenHeader
-        title="Journal"
-        subtitle={subtitle}
-        // Memory Cards (m01): the hero reads “Today” with today's count; Tasks lives on the Spaces tab
-        hero="Today"
-        count={today}
-        trailing={
-          <View style={styles.trailing}>
-            {journal && !cards && <TasksButton tasks={journal.tasks} />}
-            <AccountButton />
-          </View>
-        }
-      />
+      {/* m01: the hero reads “Today” with today's count; Tasks lives on the Spaces tab */}
+      <ScreenHeader title="Journal" hero="Today" count={today} trailing={<AccountButton />} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.fill}>
         {isLoading ? (
           <FeedSkeleton />
@@ -100,5 +82,4 @@ export default function JournalScreen() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   pendingOnly: { paddingHorizontal: 17, paddingBottom: 10 },
-  trailing: { flexDirection: 'row', alignItems: 'center', gap: 10 },
 });

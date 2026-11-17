@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FlatList, RefreshControl, StyleSheet, View, type ListRenderItem } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, type ListRenderItem } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { CloudOff, Inbox as InboxIcon } from 'lucide-react-native';
 import type { FileableEntry, Suggestion } from '@memex/core';
@@ -28,15 +28,12 @@ import { useToast } from '../../ui/Toast';
  */
 
 type Item =
-  | { kind: 'head'; id: string; title: string; lede: string }
   | { kind: 'proposalsFailed'; id: string }
   | { kind: 'proposal'; id: string; view: ProposalView }
   | { kind: 'suggestion'; id: string; entry: FileableEntry; suggestion: Suggestion };
 
-const countFmt = new Intl.NumberFormat();
-
 export default function InboxScreen() {
-  const t = useTheme();
+  const { cards: c } = useTheme();
   const toast = useToast();
   const actions = useActions();
   const entryActions = useEntryActions();
@@ -61,38 +58,17 @@ export default function InboxScreen() {
   const items: Item[] = [
     // Agents' proposals didn't load: say so, rather than “Nothing waiting”.
     ...(proposalsFailed ? [{ kind: 'proposalsFailed' as const, id: 'proposals-failed' }] : []),
-    ...(proposals.length
-      ? [
-          // Memory Cards (m03): the cards speak for themselves, no section heads
-          ...(t.cards ? [] : [{ kind: 'head' as const, id: 'head:agents', title: 'From agents', lede: 'Changes an agent asked to make. Nothing changes until you approve; rejected ones are kept as a record.' }]),
-          ...proposals.map((view) => ({ kind: 'proposal' as const, id: `proposal:${view.proposal.id}`, view })),
-        ]
-      : []),
-    ...(suggestions.length
-      ? [
-          ...(t.cards ? [] : [{ kind: 'head' as const, id: 'head:filing', title: 'Filing suggestions', lede: 'Recent saves with a likely space. File them, or leave them be: unfiled is fine.' }]),
-          ...suggestions.map(({ entry, suggestion }) => ({ kind: 'suggestion' as const, id: entry.id, entry, suggestion })),
-        ]
-      : []),
+    // m03: the cards speak for themselves, so no section heads
+    ...proposals.map((view) => ({ kind: 'proposal' as const, id: `proposal:${view.proposal.id}`, view })),
+    ...suggestions.map(({ entry, suggestion }) => ({ kind: 'suggestion' as const, id: entry.id, entry, suggestion })),
   ];
 
   const renderItem: ListRenderItem<Item> = ({ item }) => {
     switch (item.kind) {
-      case 'head':
-        return (
-          <View style={styles.head}>
-            <Text size="xs" weight="heavy" tone="soft" accessibilityRole="header">
-              {item.title}
-            </Text>
-            <Text size="xs" tone="muted">
-              {item.lede}
-            </Text>
-          </View>
-        );
       case 'proposalsFailed':
         return (
-          <Paper level="s" radius={t.radius.l} style={styles.failed}>
-            <CloudOff size={18} color={t.palette.muted} strokeWidth={2} />
+          <Paper level="s" style={styles.failed}>
+            <CloudOff size={22} color={c.colors.muted} strokeWidth={2.5} />
             <Text size="s" tone="soft" style={styles.failedText}>
               Couldn’t load agents’ proposals
             </Text>
@@ -126,7 +102,7 @@ export default function InboxScreen() {
 
   return (
     <Canvas>
-      <ScreenHeader title="Inbox" count={journal && !unavailable ? count : undefined} subtitle={journal && !unavailable ? (count ? `${countFmt.format(count)} waiting` : proposalsFailed ? undefined : 'All caught up') : undefined} />
+      <ScreenHeader title="Inbox" count={journal && !unavailable && count > 0 ? count : undefined} />
       {isLoading ? (
         <FeedSkeleton />
       ) : unavailable ? (
@@ -136,11 +112,11 @@ export default function InboxScreen() {
           data={items}
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
-          contentContainerStyle={[styles.list, t.cards && styles.cardsList, !items.length && styles.emptyList]}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={t.palette.muted} />}
+          contentContainerStyle={[styles.list, !items.length && styles.emptyList]}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void refresh()} tintColor={c.colors.muted} />}
           ListEmptyComponent={
             <Placeholder
-              icon={<InboxIcon size={26} color={t.palette.onAccent} strokeWidth={2} />}
+              icon={<InboxIcon />}
               title="Nothing waiting"
               body="Unfiled is a finished state. When memex has a likely space for something new, or an agent asks to change something, it waits here."
             />
@@ -154,10 +130,8 @@ export default function InboxScreen() {
 }
 
 const styles = StyleSheet.create({
-  list: { paddingTop: 4, paddingBottom: 33, paddingHorizontal: 17, gap: 10 },
-  cardsList: { paddingTop: 8, paddingBottom: 40, paddingHorizontal: 20, gap: 16 },
+  list: { paddingTop: 8, paddingBottom: 40, paddingHorizontal: 20, gap: 16 },
   emptyList: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 0 },
-  head: { gap: 2, paddingHorizontal: 4, paddingTop: 6 },
-  failed: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 14, paddingRight: 8, paddingVertical: 8 },
+  failed: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingLeft: 18, paddingRight: 10, paddingVertical: 10 },
   failedText: { flex: 1, minWidth: 0 },
 });

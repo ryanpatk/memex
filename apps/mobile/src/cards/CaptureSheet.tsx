@@ -107,7 +107,7 @@ export const CaptureSheet = ({
         placeholder={kind === 'note' ? 'Title on the first line…' : kind === 'task' ? 'What needs doing…' : 'A thought, a link…'}
         placeholderTextColor={c.colors.faint}
         selectionColor={c.colors.primary}
-        accessibilityLabel={kind === 'note' ? 'Note' : kind === 'task' ? 'Task' : 'Jot'}
+        accessibilityLabel="Text to save"
         accessibilityHint="Type @ and a space's name to file it there"
         style={[c.type.body, styles.field, { fontSize: 20, lineHeight: 28, color: c.colors.ink, backgroundColor: c.colors.well }]}
       />

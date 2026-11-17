@@ -59,6 +59,6 @@ const Gap = () => <View style={styles.gap} />;
 
 const styles = StyleSheet.create({
   // Inverted: paddingTop sits at the bottom of the screen, above the composer.
-  content: { paddingHorizontal: 17, paddingTop: 17, paddingBottom: 8 },
-  gap: { height: 10 },
+  content: { paddingHorizontal: 20, paddingTop: 17, paddingBottom: 8 },
+  gap: { height: 14 },
 });

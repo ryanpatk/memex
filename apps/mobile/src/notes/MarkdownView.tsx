@@ -9,8 +9,9 @@ import { useToast } from '../ui/Toast';
 import { parseMarkdown, safeHref, type Block, type Span } from './markdown';
 
 /*
- * A note, read: markdown/parseMarkdown's blocks on the Pastel Sky type
- * scale (web: MarkdownText's reading view). Web links open in the in-app
+ * A note, read (m04): markdown/parseMarkdown's blocks on the Memory Cards
+ * type scale (Nunito headings, 18px body, molded task boxes; web:
+ * MarkdownText's reading view). Web links open in the in-app
  * Safari, mailto: in Mail (the in-app browser only takes http(s)); task boxes show their state (ticking them is the editor's job).
  */
 
@@ -39,7 +40,7 @@ const Spans = ({ spans }: { spans: Span[] }) => {
             style={[
               span.bold && { fontFamily: FONTS.heavy },
               span.italic && { fontFamily: span.bold ? FONTS.heavyItalic : FONTS.italic },
-              span.code && { fontFamily: MONO, fontSize: 14, backgroundColor: palette.well },
+              span.code && { fontFamily: MONO, fontSize: 16, backgroundColor: palette.well },
               span.href && { color: palette.accentText, textDecorationLine: 'underline', textDecorationColor: alpha(palette.accentText, 0.4) },
             ]}
           >
@@ -55,7 +56,7 @@ const BlockView = ({ block }: { block: Block }) => {
   const t = useTheme();
   const { palette } = t;
   const c = t.cards;
-  if (c && block.kind === 'heading')
+  if (block.kind === 'heading')
     // Memory Cards (m04): headings in rounded Nunito, h2 28 → h3 24 → 20
     return (
       <RNText
@@ -65,7 +66,7 @@ const BlockView = ({ block }: { block: Block }) => {
         <Spans spans={block.spans} />
       </RNText>
     );
-  if (c && block.kind === 'item' && block.marker === 'task')
+  if (block.kind === 'item' && block.marker === 'task')
     // Memory Cards (s09 .chk): a 32px molded box; done is green with a white tick
     return (
       <View style={[styles.item, styles.cardsItem, { paddingLeft: block.depth * 18 }]}>
@@ -89,18 +90,6 @@ const BlockView = ({ block }: { block: Block }) => {
       </View>
     );
   switch (block.kind) {
-    case 'heading':
-      return (
-        <Text
-          size={block.level === 1 ? 'l' : block.level === 2 ? 'm' : 's'}
-          weight="heavy"
-          tone={block.level > 2 ? 'soft' : 'ink'}
-          accessibilityRole="header"
-          style={styles.heading}
-        >
-          <Spans spans={block.spans} />
-        </Text>
-      );
     case 'paragraph':
       return (
         <Text size="m" selectable>
@@ -110,22 +99,10 @@ const BlockView = ({ block }: { block: Block }) => {
     case 'item':
       return (
         <View style={[styles.item, { paddingLeft: block.depth * 18 }]}>
-          {block.marker === 'task' ? (
-            <View
-              style={[styles.box, block.checked ? { backgroundColor: palette.success } : { boxShadow: `inset 0 0 0 1.5px ${palette.faint}` }]}
-              accessible
-              accessibilityRole="checkbox"
-              accessibilityLabel={block.spans.map((span) => span.text).join('')}
-              accessibilityState={{ checked: Boolean(block.checked) }}
-            >
-              {block.checked && <Check size={11} color="#ffffff" strokeWidth={3} />}
-            </View>
-          ) : (
-            <Text size="m" tone="muted" numeric style={styles.marker}>
-              {block.marker === 'number' ? `${block.number}.` : '•'}
-            </Text>
-          )}
-          <Text size="m" selectable tone={block.checked ? 'muted' : 'ink'} style={[styles.itemText, block.checked && styles.struck]}>
+          <Text size="m" tone="muted" numeric style={styles.marker}>
+            {block.marker === 'number' ? `${block.number}.` : '•'}
+          </Text>
+          <Text size="m" selectable style={styles.itemText}>
             <Spans spans={block.spans} />
           </Text>
         </View>
@@ -140,8 +117,8 @@ const BlockView = ({ block }: { block: Block }) => {
       );
     case 'code':
       return (
-        <View style={[styles.code, { backgroundColor: palette.well, borderRadius: t.radius.m }]}>
-          <Text selectable style={{ fontFamily: MONO, fontSize: 13, lineHeight: 19, color: palette.ink }}>
+        <View style={[styles.code, { backgroundColor: palette.well }]}>
+          <Text selectable style={{ fontFamily: MONO, fontSize: 16, lineHeight: 22, color: palette.ink }}>
             {block.text}
           </Text>
         </View>
@@ -170,10 +147,9 @@ const styles = StyleSheet.create({
   marker: { minWidth: 16, textAlign: 'right' },
   cardsItem: { alignItems: 'center', gap: 14, marginTop: -2 },
   cardsBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  box: { width: 18, height: 18, borderRadius: 5, marginTop: 3, alignItems: 'center', justifyContent: 'center' },
   itemText: { flex: 1, minWidth: 0 },
   struck: { textDecorationLine: 'line-through' },
   quote: { borderLeftWidth: 3, paddingLeft: 12 },
-  code: { padding: 12 },
+  code: { padding: 16, borderRadius: 20 },
   rule: { height: StyleSheet.hairlineWidth, marginVertical: 6 },
 });

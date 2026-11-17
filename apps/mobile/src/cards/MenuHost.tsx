@@ -29,6 +29,7 @@ export const MenuHost = () => {
           <View
             style={[styles.menu, { width: Math.min(width - 48, 360), maxHeight: height * 0.7, backgroundColor: c.colors.paper, boxShadow: c.menuShadow }]}
             accessibilityViewIsModal
+            onAccessibilityEscape={close}
             accessibilityLabel={spec.title}
             testID="menu"
           >

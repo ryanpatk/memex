@@ -2,8 +2,7 @@ import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { CloudOff } from 'lucide-react-native';
-import { ThemeProvider, useTheme } from '../theme/theme';
+import { ThemeProvider } from '../theme/theme';
 import { Canvas } from './Canvas';
 import { Placeholder } from './Placeholder';
 import { Button } from './Pressable';
@@ -16,22 +15,20 @@ import { Button } from './Pressable';
  * error came before the app was ready.
  */
 
-const Body = ({ retry }: { retry: () => void }) => {
-  const { palette } = useTheme();
-  return (
-    <Canvas>
-      <View style={styles.center}>
-        <Placeholder
-          icon={<CloudOff size={26} color={palette.onAccent} strokeWidth={2} />}
-          title="Something went wrong"
-          body="memex hit a problem showing this screen. Try again; if it keeps happening, close the app and open it again."
-        >
-          <Button label="Try again" variant="primary" onPress={retry} />
-        </Placeholder>
-      </View>
-    </Canvas>
-  );
-};
+const Body = ({ retry }: { retry: () => void }) => (
+  <Canvas>
+    <View style={styles.center}>
+      <Placeholder
+        icon="!"
+        tone="error"
+        title="Something went wrong"
+        body="memex hit a problem showing this screen. Try again; if it keeps happening, close the app and open it again."
+      >
+        <Button label="Try again" variant="primary" onPress={retry} />
+      </Placeholder>
+    </View>
+  </Canvas>
+);
 
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   useEffect(() => {

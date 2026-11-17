@@ -3,15 +3,13 @@ import { AccessibilityInfo, Pressable, StyleSheet, Text as RNText, View } from '
 import { Check } from 'lucide-react-native';
 import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { useTheme } from '../theme/theme';
-import { Text } from './Text';
 import { useCards } from '../cards/useCards';
 
 /*
- * The toast (web: FeedbackToast): one short message at a time above the
- * composer, with at most one action ("Undo", "Open"). It's announced to
- * VoiceOver politely and stays up for the Undo window. Paper on the canvas,
- * the action an object in the accent.
+ * The toast (web: FeedbackToast; Memory Cards s08, m08): one short message
+ * at a time above the composer or the tab bar, with at most one action
+ * ("Undo"). It's announced to VoiceOver politely and stays up for the Undo
+ * window.
  */
 
 export interface ToastAction {
@@ -78,58 +76,8 @@ export const useToast = (): ToastApi => {
   return api;
 };
 
-const ToastHost = ({ toast, bottom, onAction }: { toast: ToastState | null; bottom: number; onAction: () => void }) => {
-  const t = useTheme();
-  const { palette } = t;
-  if (!toast) return null;
-  if (t.cards) return <CardsToast toast={toast} bottom={bottom} onAction={onAction} />;
-  return (
-    <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, styles.host, { paddingBottom: bottom }]}>
-      <Animated.View
-        key={toast.id}
-        entering={FadeInDown.duration(180)}
-        exiting={FadeOutDown.duration(140)}
-        style={[
-          styles.toast,
-          {
-            backgroundColor: palette.dark ? palette.paper : palette.ink,
-            borderRadius: t.radius.l,
-            boxShadow: t.paperShadow('m'),
-          },
-        ]}
-        accessibilityLiveRegion="polite"
-        testID="toast"
-      >
-        <Text
-          size="s"
-          weight="medium"
-          style={[styles.message, { color: toast.tone === 'error' ? (palette.dark ? palette.error : '#ffb4a8') : palette.dark ? palette.ink : palette.paper }]}
-        >
-          {toast.message}
-        </Text>
-        {toast.action && (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={toast.action.label}
-            hitSlop={8}
-            onPress={() => {
-              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              toast.action?.onPress();
-              onAction();
-            }}
-            style={({ pressed }) => [styles.action, { backgroundColor: pressed ? palette.accent : 'transparent' }]}
-          >
-            {({ pressed }) => (
-              <Text size="s" weight="heavy" style={{ color: pressed ? palette.onAccent : palette.dark ? palette.accentText : palette.bubble }}>
-                {toast.action?.label}
-              </Text>
-            )}
-          </Pressable>
-        )}
-      </Animated.View>
-    </View>
-  );
-};
+const ToastHost = ({ toast, bottom, onAction }: { toast: ToastState | null; bottom: number; onAction: () => void }) =>
+  toast ? <CardsToast toast={toast} bottom={bottom} onAction={onAction} /> : null;
 
 /**
  * Memory Cards (s08, m08): a dark pill with a coloured disc (a tick, or “!”
@@ -180,8 +128,6 @@ const styles = StyleSheet.create({
   cardsToast: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 60, borderRadius: 30, paddingLeft: 14, paddingRight: 8, paddingVertical: 8 },
   disc: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   cardsAction: { minHeight: 44, minWidth: 64, paddingHorizontal: 20, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  host: { justifyContent: 'flex-end', paddingHorizontal: 12 },
-  toast: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 16, paddingRight: 6, paddingVertical: 6, minHeight: 48 },
   message: { flex: 1, paddingVertical: 6 },
-  action: { minHeight: 36, minWidth: 44, paddingHorizontal: 12, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  host: { justifyContent: 'flex-end', paddingHorizontal: 12 },
 });

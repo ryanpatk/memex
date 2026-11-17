@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { toDayKey } from '@memex/core';
 import { buildDemoData } from './fixtures/demoData';
 import { toJournal } from './journal';
-import { dueOptions, taskTotals, toTasksView } from './tasks';
+import { dueChoices, taskTotals, toTasksView } from './tasks';
 
 const NOW = new Date(2026, 10, 1, 12, 0);
 const journal = toJournal(buildDemoData(NOW), '#5077ff', NOW);
@@ -61,17 +61,27 @@ describe('taskTotals', () => {
   });
 });
 
-describe('dueOptions', () => {
+describe('dueChoices (the Due sheet)', () => {
   it('offers Today, Tomorrow, Next week (Monday) and a picker; clearing only when set', () => {
-    // 2026-11-01 is a Sunday: next week is Monday the 2nd, same as tomorrow.
-    expect(dueOptions({ due_date: undefined }, NOW)).toEqual([
-      { label: 'Today', value: '2026-11-01' },
-      { label: 'Tomorrow', value: '2026-11-02' },
-      { label: 'Next week', value: '2026-11-02' },
+    // 2026-11-01 is a Sunday: next week is Monday the 2nd, same as tomorrow, so it's left out.
+    expect(dueChoices({ due_date: undefined }, NOW)).toEqual([
+      { label: 'Today', value: '2026-11-01', current: false },
+      { label: 'Tomorrow', value: '2026-11-02', current: false },
       { label: 'Pick a date…', value: 'pick' },
     ]);
-    const set = dueOptions({ due_date: '2026-11-01' }, NOW);
-    expect(set.map((o) => o.label)).toEqual(['Tomorrow', 'Next week', 'Pick a date…', 'No due date']);
+    const set = dueChoices({ due_date: '2026-11-01' }, NOW);
+    expect(set.map((o) => o.label)).toEqual(['Today', 'Tomorrow', 'Pick a date…', 'No due date']);
+    expect(set[0].current).toBe(true);
     expect(set.at(-1)?.value).toBeNull();
+  });
+
+  it('names next week’s Monday on a weekday', () => {
+    const wednesday = new Date(2026, 10, 4, 9, 0);
+    expect(dueChoices({ due_date: undefined }, wednesday).map((o) => [o.label, o.value])).toEqual([
+      ['Today', '2026-11-04'],
+      ['Tomorrow', '2026-11-05'],
+      ['Next week', '2026-11-09'],
+      ['Pick a date…', 'pick'],
+    ]);
   });
 });

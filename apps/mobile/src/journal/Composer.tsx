@@ -2,11 +2,11 @@ import { useMemo, useRef, useState, type ComponentRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowUp, FileText, Plus } from 'lucide-react-native';
 import { parseComposer, withDefaultSpace, type ComposerResult, type Filer, type JournalSpace } from '@memex/core';
-import { alpha, mix } from '../theme/palette';
-import { typeRole, useTheme } from '../theme/theme';
+import { SpaceToggle, SuggestPill } from '../cards/Pills';
+import { useCards } from '../cards/useCards';
+import { SpaceChip } from '../ui/SpaceChip';
 import { usePressSettle } from '../ui/Pressable';
 import { Text } from '../ui/Text';
 import { KIND_HINT, SEND_LABEL, appendMention, draftSuggestion, insertMention, pickerFor } from './composerModel';
@@ -36,13 +36,12 @@ export interface ComposerProps {
 }
 
 const systemNow = () => new Date();
-const MIN_INPUT = 44;
+const MIN_INPUT = 56;
 const MAX_INPUT = 132;
 const INPUT_PAD = 22;
 
 export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = systemNow }: ComposerProps) => {
-  const t = useTheme();
-  const { palette } = t;
+  const c = useCards();
   const [text, setText] = useState(draft ?? '');
   const [caret, setCaret] = useState((draft ?? '').length);
   const [asNote, setAsNote] = useState(false);
@@ -54,7 +53,6 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = s
   const field = useRef<ComponentRef<typeof TextInput>>(null);
   const dock = useRef<ComponentRef<typeof View>>(null);
   const send = usePressSettle();
-  const cards = t.cards;
 
   // A new ?draft= replaces the text (adjusting state during render, not in an effect).
   const [seenDraft, setSeenDraft] = useState(draft);
@@ -97,16 +95,7 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = s
   const showHint = focused || !empty || Boolean(space);
 
   return (
-    <View
-      ref={dock}
-      style={[
-        styles.dock,
-        cards
-          ? styles.cardsDock
-          : { backgroundColor: palette.paper, boxShadow: `inset 0 1px 0 0 ${palette.lit}, 0 -1px 0 0 ${palette.dark ? '#ffffff12' : '#1d21270f'}` },
-      ]}
-      onLayout={() => dock.current?.measureInWindow((_x: number, y: number) => onTop?.(y))}
-    >
+    <View ref={dock} style={styles.dock} onLayout={() => dock.current?.measureInWindow((_x: number, y: number) => onTop?.(y))}>
       {(picker || filedTo.length > 0 || suggestion) && (
         <Animated.View entering={FadeIn.duration(140)} exiting={FadeOut.duration(100)}>
           <ScrollView
@@ -118,50 +107,34 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = s
           >
             {picker
               ? picker.matches.map((space) => (
-                  <ChipButton
+                  <SpaceToggle
                     key={space.id}
-                    space={space}
-                    label={space.name}
-                    a11y={`File in ${space.name}`}
-                    onPress={() => {
-                      void Haptics.selectionAsync();
-                      moveCaret(insertMention(text, caret, picker.query, space));
-                    }}
+                    name={space.name}
+                    color={space.color}
+                    on={false}
+                    accessibilityLabel={`File in ${space.name}`}
+                    onPress={() => moveCaret(insertMention(text, caret, picker.query, space))}
                   />
                 ))
               : filedTo.length > 0
-                ? filedTo.map((space) => {
-                    const hue = spaces.find((s) => s.id === space.id)?.color ?? palette.accent;
-                    return (
-                      <View
-                        key={space.id}
-                        style={[styles.chip, { backgroundColor: mix(hue, palette.paper, palette.dark ? 0.22 : 0.14), boxShadow: `0 0 0 1px ${alpha(hue, 0.3)}` }]}
-                        accessible
-                        accessibilityLabel={`Will be filed in ${space.name}`}
-                      >
-                        <View style={[styles.dot, { backgroundColor: hue }]} />
-                        <Text size="xs" weight="medium" tone="soft" numberOfLines={1}>
-                          → {space.name}
-                        </Text>
+                ? filedTo.map((filed) => {
+                    const space = spaces.find((s) => s.id === filed.id);
+                    return space ? (
+                      <View key={space.id} accessible accessibilityLabel={`Will be filed in ${space.name}`}>
+                        <SpaceChip space={space} />
                       </View>
-                    );
+                    ) : null;
                   })
                 : suggestion && (
-                    <View style={styles.suggestionRow}>
-                      <ChipButton
-                        space={suggestion.space}
-                        label={suggestion.space.name}
-                        dashed
-                        a11y={`File in ${suggestion.space.name}? ${suggestion.reason}`}
-                        onPress={() => {
-                          void Haptics.selectionAsync();
-                          moveCaret(appendMention(text, suggestion.space));
-                        }}
-                      />
-                      <Text size="xxs" tone="muted" numberOfLines={1} style={styles.reason}>
-                        {suggestion.reason}
-                      </Text>
-                    </View>
+                    <SuggestPill
+                      name={suggestion.space.name}
+                      color={suggestion.space.color}
+                      accessibilityLabel={`File in ${suggestion.space.name}? ${suggestion.reason}`}
+                      onPress={() => {
+                        void Haptics.selectionAsync();
+                        moveCaret(appendMention(text, suggestion.space));
+                      }}
+                    />
                   )}
           </ScrollView>
         </Animated.View>
@@ -179,16 +152,9 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = s
             setAsNote((v) => !v);
             field.current?.focus();
           }}
-          style={[
-            styles.side,
-            {
-              borderRadius: t.radius.m,
-              backgroundColor: asNote ? palette.tint : 'transparent',
-              boxShadow: asNote ? `0 0 0 1px ${alpha(palette.accent, 0.35)}` : undefined,
-            },
-          ]}
+          style={[styles.side, { backgroundColor: asNote ? c.colors.ink : c.colors.paper, boxShadow: asNote ? undefined : c.softShadow }]}
         >
-          <FileText size={20} color={asNote ? palette.tintInk : palette.muted} strokeWidth={asNote ? 2.25 : 1.75} />
+          <FileText size={22} color={asNote ? c.colors.paper : c.colors.muted} strokeWidth={2.5} />
         </Pressable>
 
         <TextInput
@@ -204,37 +170,22 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = s
           onSelectionChange={(e) => setCaret(e.nativeEvent.selection.start)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder={asNote ? 'Title on the first line…' : space ? `Jot in ${space.name}, paste a link…` : 'Jot, paste a link, “[] ” for a task…'}
-          placeholderTextColor={palette.faint}
-          selectionColor={palette.accent}
+          placeholder={asNote ? 'Title on the first line…' : space ? `Jot in ${space.name}, paste a link…` : 'Jot, paste a link, [] task…'}
+          placeholderTextColor={c.colors.faint}
+          selectionColor={c.colors.primary}
           autoCorrect
           accessibilityLabel={space ? `Write in ${space.name}` : 'Write in your Journal'}
           accessibilityHint="Plain text saves a jot, a link saves the link, start with [] for a task, type @ to file in a space"
           style={[
-            typeRole('m'),
+            c.type.body,
             styles.input,
-            cards
-              ? {
-                  // Memory Cards (s04): the save field is a paper pill, ring on focus
-                  fontSize: 18,
-                  lineHeight: 24,
-                  height: Math.max(56, inputHeight),
-                  paddingHorizontal: 20,
-                  paddingTop: 16,
-                  color: palette.ink,
-                  backgroundColor: cards.colors.paper,
-                  borderRadius: 28,
-                  boxShadow: focused ? `0 0 0 4px ${cards.colors.ring}, ${cards.cardShadow}` : cards.cardShadow,
-                }
-              : {
-              height: inputHeight,
-              color: palette.ink,
-              backgroundColor: palette.well,
-              borderRadius: t.radius.l,
-              boxShadow: palette.dark
-                ? `inset 0 1px 2px 0 #13171d33, inset 0 -1px 0 0 #f9fafb1f, 0 0 0 2px ${focused ? alpha(palette.accent, 0.55) : 'transparent'}`
-                : `inset 0 1px 2px 0 #1d212714, inset 0 -1px 0 0 #ffffff59, 0 0 0 2px ${focused ? alpha(palette.accent, 0.45) : 'transparent'}`,
-                },
+            {
+              // s04: the save field is a paper pill, ring on focus
+              height: Math.max(56, inputHeight),
+              color: c.colors.ink,
+              backgroundColor: c.colors.paper,
+              boxShadow: focused ? `0 0 0 4px ${c.colors.ring}, ${c.cardShadow}` : c.cardShadow,
+            },
           ]}
         />
 
@@ -252,30 +203,12 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = s
           testID="composer-send"
         >
           <Animated.View
-            style={[
-              styles.side,
-              styles.send,
-              cards
-                ? { width: 56, height: 56, borderRadius: 28, backgroundColor: empty ? cards.colors.well : cards.colors.primary, boxShadow: empty ? undefined : cards.molded() }
-                : {
-                    backgroundColor: empty ? palette.well : palette.accent,
-                    boxShadow: empty ? undefined : `${t.objectShadow}, ${t.glow(palette.accent)}`,
-                  },
-              send.style,
-            ]}
+            style={[styles.side, { backgroundColor: empty ? c.colors.well : c.colors.primary, boxShadow: empty ? undefined : c.molded() }, send.style]}
           >
-            {!empty && !cards && (
-              <LinearGradient
-                pointerEvents="none"
-                style={[StyleSheet.absoluteFill, styles.sendGloss]}
-                colors={['#ffffff4d', '#ffffff24', '#ffffff00', '#0000000f']}
-                locations={[0, 0.46, 0.54, 1]}
-              />
-            )}
             {kind === 'task' && !empty ? (
-              <Plus size={20} color={palette.onAccent} strokeWidth={2.5} />
+              <Plus size={24} color="#ffffff" strokeWidth={3} />
             ) : (
-              <ArrowUp size={20} color={empty ? palette.faint : palette.onAccent} strokeWidth={2.5} />
+              <ArrowUp size={24} color={empty ? c.colors.faint : '#ffffff'} strokeWidth={3} />
             )}
           </Animated.View>
         </Pressable>
@@ -305,56 +238,12 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = s
   );
 };
 
-const ChipButton = ({
-  space,
-  label,
-  a11y,
-  dashed,
-  onPress,
-}: {
-  space: JournalSpace;
-  label: string;
-  a11y: string;
-  dashed?: boolean;
-  onPress: () => void;
-}) => {
-  const t = useTheme();
-  const { palette } = t;
-  const settle = usePressSettle();
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={a11y} onPress={onPress} onPressIn={settle.onPressIn} onPressOut={settle.onPressOut}>
-      <Animated.View
-        style={[
-          styles.chip,
-          dashed
-            ? { borderWidth: 1, borderStyle: 'dashed', borderColor: alpha(space.color, 0.7), backgroundColor: mix(space.color, palette.paper, 0.06) }
-            : { backgroundColor: palette.paper, boxShadow: t.objectShadow },
-          settle.style,
-        ]}
-      >
-        <View style={[styles.dot, { backgroundColor: space.color }]} />
-        <Text size="xs" weight="medium" numberOfLines={1}>
-          {label}
-          {dashed ? '?' : ''}
-        </Text>
-      </Animated.View>
-    </Pressable>
-  );
-};
-
 const styles = StyleSheet.create({
-  dock: { paddingTop: 8, paddingBottom: 6, gap: 6 },
-  cardsDock: { backgroundColor: 'transparent', paddingHorizontal: 4, paddingBottom: 10 },
-  chips: { gap: 6, paddingHorizontal: 12, alignItems: 'center', minHeight: 32 },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 30, paddingHorizontal: 10, borderRadius: 9999, maxWidth: 220 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  suggestionRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  reason: { maxWidth: 220 },
-  row: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, paddingHorizontal: 8 },
-  side: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  send: { borderRadius: 22 },
-  sendGloss: { borderRadius: 22 },
-  input: { flex: 1, paddingHorizontal: 14, paddingTop: 11, paddingBottom: 11 },
-  hint: { flexDirection: 'row', gap: 6, paddingHorizontal: 64, alignItems: 'center' },
+  dock: { paddingTop: 8, paddingBottom: 10, paddingHorizontal: 4, gap: 8 },
+  chips: { gap: 8, paddingHorizontal: 12, alignItems: 'center', minHeight: 44 },
+  row: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 8 },
+  side: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  input: { flex: 1, borderRadius: 28, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 14, lineHeight: 24 },
+  hint: { flexDirection: 'row', gap: 6, paddingHorizontal: 76, alignItems: 'center' },
   hintRest: { flex: 1 },
 });

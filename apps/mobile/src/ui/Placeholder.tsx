@@ -2,15 +2,11 @@ import { cloneElement, isValidElement, type ReactElement, type ReactNode } from 
 import { StyleSheet, Text as RNText, View } from 'react-native';
 import { useCards } from '../cards/useCards';
 import { mix } from '../theme/palette';
-import { useTheme } from '../theme/theme';
-import { Paper } from './Paper';
-import { IconBadge } from './IconBadge';
-import { Text } from './Text';
 
 /**
- * An empty, error or “not yet” state: says what's going on and offers the
- * next step. Memory Cards (s08, m09): an empty card slot (dashed, with its
- * label strip and a disc holding the glyph), then the title and a line.
+ * An empty, error or “not yet” state (s08, m09): says what's going on and
+ * offers the next step. An empty card slot (dashed, with its label strip and
+ * a disc holding the glyph), then the title and a line.
  */
 export const Placeholder = ({
   icon,
@@ -19,35 +15,18 @@ export const Placeholder = ({
   children,
   tone = 'line',
 }: {
+  /** A Lucide icon element (recoloured to fit the slot) or a one-character glyph like “!”. */
   icon: ReactNode;
   title: string;
   body: string;
   children?: ReactNode;
-  /** Memory Cards: `error` tints the slot red (Couldn't load). */
+  /** `error` tints the slot red (Couldn't load). */
   tone?: 'line' | 'error';
-}) => {
-  const { cards } = useTheme();
-  if (cards)
-    return (
-      <EmptySlot icon={icon} title={title} body={body} tone={tone}>
-        {children}
-      </EmptySlot>
-    );
-  return (
-    <Paper level="m" radius={19} style={styles.card}>
-      <IconBadge>{icon}</IconBadge>
-      <View style={styles.copy}>
-        <Text size="m" weight="heavy" style={styles.center}>
-          {title}
-        </Text>
-        <Text size="s" tone="muted" style={styles.center}>
-          {body}
-        </Text>
-      </View>
-      {children}
-    </Paper>
-  );
-};
+}) => (
+  <EmptySlot icon={icon} title={title} body={body} tone={tone}>
+    {children}
+  </EmptySlot>
+);
 
 const EmptySlot = ({ icon, title, body, children, tone }: { icon: ReactNode; title: string; body: string; children?: ReactNode; tone: 'line' | 'error' }) => {
   const c = useCards();
@@ -82,8 +61,6 @@ const EmptySlot = ({ icon, title, body, children, tone }: { icon: ReactNode; tit
 };
 
 const styles = StyleSheet.create({
-  card: { alignItems: 'center', gap: 17, paddingHorizontal: 25, paddingVertical: 33, marginHorizontal: 17 },
-  copy: { gap: 4, maxWidth: 300 },
   center: { textAlign: 'center' },
   empty: { alignItems: 'center', gap: 12, paddingHorizontal: 32, paddingVertical: 24 },
   slot: { width: 220, height: 152, borderRadius: 28, borderWidth: 4, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', marginBottom: 12, overflow: 'hidden' },

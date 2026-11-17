@@ -9,8 +9,6 @@ import { JournalFeed } from '../../journal/JournalFeed';
 import { useComposerToasts } from '../../journal/useComposerToasts';
 import { useEntryActions } from '../../journal/useEntryActions';
 import { TasksButton } from '../../tasks/TasksButton';
-import { alpha } from '../../theme/palette';
-import { useTheme } from '../../theme/theme';
 import { Canvas } from '../../ui/Canvas';
 import { FeedError, FeedSkeleton } from '../../ui/FeedStates';
 import { Placeholder } from '../../ui/Placeholder';
@@ -28,7 +26,6 @@ const countFmt = new Intl.NumberFormat();
  */
 export default function SpaceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const t = useTheme();
   const router = useRouter();
   const { journal, isLoading, unavailable, error, refreshing, refresh } = useJournal();
   const actions = useEntryActions();
@@ -45,7 +42,7 @@ export default function SpaceScreen() {
         <StackHeader />
         <View style={styles.center}>
           <Placeholder
-            icon={<Shapes size={26} color={t.palette.onAccent} strokeWidth={2} />}
+            icon={<Shapes />}
             title="This space isn’t here anymore"
             body="It may have been deleted on another device."
           >
@@ -60,21 +57,11 @@ export default function SpaceScreen() {
     <Canvas>
       <StackHeader
         title={space?.name}
-        band={t.cards ? space?.color : undefined}
+        band={space?.color}
         subtitle={
           scoped && !unavailable
-            ? t.cards
-              ? `${countFmt.format(n)} ${n === 1 ? 'card' : 'cards'} · ${countFmt.format(scoped.board.openTasks.length)} ${scoped.board.openTasks.length === 1 ? 'task' : 'tasks'}`
-              : `${countFmt.format(n)} ${n === 1 ? 'entry' : 'entries'}`
+            ? `${countFmt.format(n)} ${n === 1 ? 'card' : 'cards'} · ${countFmt.format(scoped.board.openTasks.length)} ${scoped.board.openTasks.length === 1 ? 'task' : 'tasks'}`
             : undefined
-        }
-        lead={
-          space && (
-            <View
-              style={[styles.swatch, { backgroundColor: space.color, boxShadow: `${t.objectShadow}, 0 2px 8px -3px ${alpha(space.color, 0.7)}` }]}
-              accessibilityElementsHidden
-            />
-          )
         }
         trailing={space && <TasksButton tasks={spaceTasks} space={space.id} />}
       />
@@ -87,7 +74,7 @@ export default function SpaceScreen() {
         ) : scoped && n === 0 ? (
           <View style={styles.center}>
             <Placeholder
-              icon={<Shapes size={26} color={t.palette.onAccent} strokeWidth={2} />}
+              icon={<Shapes />}
               title={`Nothing in ${space?.name} yet`}
               body={`Write below and it lands here. Anywhere else, type @${space?.name} to file something in it.`}
             />
@@ -106,5 +93,4 @@ export default function SpaceScreen() {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   center: { flex: 1, justifyContent: 'center' },
-  swatch: { width: 22, height: 22, borderRadius: 7 },
 });

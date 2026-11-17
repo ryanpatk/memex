@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { Share } from 'react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { renderWithData } from '../testing/render';
 import LibraryScreen from '../app/(tabs)/library';
@@ -18,31 +19,16 @@ beforeEach(() => {
   routerMock.__router.back.mockClear();
 });
 
-describe('Library', () => {
-  it('shows saved links newest first, with source counts', async () => {
+describe('Cards', () => {
+  it('shows saved links newest first, each labelled with its space', async () => {
     await renderWithData(<LibraryScreen />);
     await flush();
-    expect(screen.getByText('24 links')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Pinterest, 10' })).toBeTruthy();
-    expect(screen.getByLabelText('Notes on a personal library, for the reading pile, are.na')).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Cards, 24' })).toBeTruthy();
+    expect(screen.getByLabelText('Notes on a personal library, for the reading pile, Unfiled, are.na')).toBeTruthy();
+    expect(screen.getByLabelText(/^Calm Technology, Reading, /)).toBeTruthy();
   });
 
-  it('filters by source and by search, and says how many match', async () => {
-    await renderWithData(<LibraryScreen />);
-    await flush();
-    await fireEvent.press(screen.getByRole('button', { name: 'YouTube, 4' }));
-    expect(screen.getByText('4 of 24 links')).toBeTruthy();
-    expect(screen.queryByLabelText(/are\.na$/)).toBeNull();
-    await fireEvent.changeText(screen.getByLabelText('Search the Library'), 'kintsugi');
-    expect(screen.getByText('1 of 24 links')).toBeTruthy();
-    expect(screen.getByLabelText('Kintsugi: mending with gold, YouTube')).toBeTruthy();
-    await fireEvent.changeText(screen.getByLabelText('Search the Library'), 'zzz');
-    expect(screen.getByText('Nothing matches “zzz”')).toBeTruthy();
-    await fireEvent.press(screen.getByRole('button', { name: 'Show everything' }));
-    expect(screen.getByText('24 links')).toBeTruthy();
-  });
-
-  it('opens link detail from a card', async () => {
+  it('opens a card', async () => {
     await renderWithData(<LibraryScreen />);
     await flush();
     await fireEvent.press(screen.getByTestId('library-card-y1'));
@@ -61,26 +47,40 @@ describe('Link detail', () => {
     expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith('https://calmtech.com/', expect.anything());
   });
 
-  it('files and unfiles the link in a space', async () => {
+  it('files and unfiles the link from its pills: “+ Space” and a filed pill open File in (m04)', async () => {
     routerMock.__setParams({ id: 'l2' });
     const { repository } = await renderWithData(<LinkDetailScreen />);
     await flush();
     const inSpace = async (space: string) => (await repository.spaceLinks.listMembership()).some((r) => r.link_id === 'l2' && r.profile_id === space);
-    expect(screen.getByRole('checkbox', { name: 'Reading' }).props.accessibilityState.checked).toBe(true);
-    await fireEvent.press(screen.getByRole('checkbox', { name: 'Kyoto trip' }));
+    expect(screen.getByRole('button', { name: 'In Reading. Change spaces' })).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'Add to a space' }));
+    expect(within(screen.getByTestId('menu')).getByRole('menuitem', { name: 'Reading' }).props.accessibilityState.checked).toBe(true);
+    await fireEvent.press(within(screen.getByTestId('menu')).getByRole('menuitem', { name: 'Kyoto trip' }));
     await flush();
-    expect(screen.getByRole('checkbox', { name: 'Kyoto trip' }).props.accessibilityState.checked).toBe(true);
     expect(await inSpace('kyoto')).toBe(true);
-    await fireEvent.press(screen.getByRole('checkbox', { name: 'Reading' }));
+    expect(screen.getByRole('button', { name: 'In Kyoto trip. Change spaces' })).toBeTruthy();
+    await fireEvent.press(screen.getByRole('button', { name: 'In Reading. Change spaces' }));
+    await fireEvent.press(within(screen.getByTestId('menu')).getByRole('menuitem', { name: 'Reading' }));
     await flush();
     expect(await inSpace('reading')).toBe(false);
+  });
+
+  it('shares the link', async () => {
+    routerMock.__setParams({ id: 'l2' });
+    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction', activityType: undefined });
+    await renderWithData(<LinkDetailScreen />);
+    await flush();
+    await fireEvent.press(screen.getByRole('button', { name: 'Share' }));
+    expect(share).toHaveBeenCalledWith({ url: 'https://calmtech.com/', message: 'https://calmtech.com/' });
+    share.mockRestore();
   });
 
   it('deletes with Undo and goes back', async () => {
     routerMock.__setParams({ id: 'l2' });
     const { repository } = await renderWithData(<LinkDetailScreen />);
     await flush();
-    await fireEvent.press(screen.getByRole('button', { name: 'Delete link' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'More actions' }));
+    await fireEvent.press(within(screen.getByTestId('menu')).getByRole('menuitem', { name: 'Delete' }));
     expect(routerMock.__router.back).toHaveBeenCalled();
     expect(screen.getByText('Deleted “Calm Technology”.')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Undo' }));

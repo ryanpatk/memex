@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import { Alert, Linking, type AlertButton } from 'react-native';
+import { Linking } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import type { Repository } from '@memex/core';
 import { createFixtureRepository } from '../data/fixtures/fixtureRepository';
@@ -69,7 +69,7 @@ describe('Offline on a cold start', () => {
     expect(screen.queryByText(/Network request failed/)).toBeNull();
     net.setOnline(true);
     await tryAgain();
-    expect(screen.getByText('4 spaces')).toBeTruthy();
+    expect(screen.getByLabelText(/^Kyoto trip, \d+ cards/)).toBeTruthy();
   });
 
   it('a space’s board says offline, not “isn’t here anymore”', async () => {
@@ -186,14 +186,14 @@ describe('Refused by the server', () => {
     await renderWithData(<InboxScreen />, repository);
     await flush();
     expect(screen.getByText('Couldn’t load agents’ proposals')).toBeTruthy();
-    expect(screen.queryByText('All caught up')).toBeNull();
-    expect(screen.queryByText('From agents')).toBeNull();
-    expect(screen.getByText('Filing suggestions')).toBeTruthy();
+    expect(screen.queryByText('Nothing waiting')).toBeNull();
+    expect(screen.queryByTestId('proposal-pr1')).toBeNull();
+    expect(screen.getByTestId('suggestion-link:l3')).toBeTruthy();
     fail = false;
     await tryAgain();
     expect(screen.queryByText('Couldn’t load agents’ proposals')).toBeNull();
-    expect(screen.getByText('From agents')).toBeTruthy();
-    expect(screen.getByText('9 waiting')).toBeTruthy();
+    expect(screen.getByTestId('proposal-pr1')).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Inbox, 9' })).toBeTruthy();
   });
 });
 
@@ -204,14 +204,17 @@ describe('Pull to refresh', () => {
     await flush();
     net.setOnline(false);
     await act(async () => {
-      await screen.getByLabelText('Spaces').props.refreshControl.props.onRefresh();
+      await screen
+        .getAllByLabelText('Spaces')
+        .find((el) => el.props.refreshControl)
+        ?.props.refreshControl.props.onRefresh();
     });
     await flush();
     expect(screen.getByText('Couldn’t refresh: no connection. Showing what was here.')).toBeTruthy();
-    expect(screen.getByText('4 spaces')).toBeTruthy();
+    expect(screen.getByLabelText(/^Kyoto trip, \d+ cards/)).toBeTruthy();
   });
 
-  it('in the Library too', async () => {
+  it('in Cards too', async () => {
     const net = withNetwork(createFixtureRepository({ now: NOW }));
     await renderWithData(<LibraryScreen />, net.repository);
     await flush();
@@ -221,7 +224,7 @@ describe('Pull to refresh', () => {
     });
     await flush();
     expect(screen.getByText('Couldn’t refresh: no connection. Showing what was here.')).toBeTruthy();
-    expect(screen.getByText('24 links')).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Cards, 24' })).toBeTruthy();
   });
 });
 
@@ -260,11 +263,12 @@ describe('Links in a note', () => {
 describe('Sign out', () => {
   it('says so when it fails (offline), rather than doing nothing', async () => {
     jest.spyOn(console, 'warn').mockImplementation(() => {});
-    jest.spyOn(Alert, 'alert').mockImplementationOnce((_title, _message, buttons?: AlertButton[]) => buttons?.find((b) => b.text === 'Sign out')?.onPress?.());
     const base = createFixtureRepository({ now: NOW });
     const repository: Repository = { ...base, auth: { ...base.auth, signOut: async () => ({ error: { message: 'Network request failed' } }) } };
     await renderWithData(<AccountButton />, repository);
     await fireEvent.press(screen.getByRole('button', { name: /^Account/ }));
+    // The account sheet (m07)
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
     await flush();
     expect(screen.getByText('Couldn’t sign out. Check your connection.')).toBeTruthy();
   });

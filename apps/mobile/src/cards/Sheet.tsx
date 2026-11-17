@@ -39,6 +39,8 @@ export const Sheet = ({
         <View
           style={[styles.sheet, { backgroundColor: c.colors.paper, paddingBottom: insets.bottom + 24 }]}
           accessibilityViewIsModal
+          // VoiceOver's escape gesture closes it (the scrim is outside the modal view)
+          onAccessibilityEscape={onClose}
           testID={testID}
         >
           <View style={[styles.grab, { backgroundColor: c.colors.line }]} />

@@ -12,12 +12,11 @@ import {
 import { alpha, mix, type Palette } from './palette';
 
 /*
- * The Memory Cards look for React Native, from @memex/core's tokens
+ * Memory Cards for React Native, from @memex/core's tokens
  * (tokens/memoryCards.ts, mirrored from the web's src/styles/cards/tokens.css).
- * buildCardsPalette fills the existing Palette roles with Memory Cards
- * colours, so every screen picks the look up through useTheme(); CARDS holds
- * what the look adds (type roles, radii, the label strip, molded depth).
- * Plain TS so it's unit-tested.
+ * buildCardsPalette fills the Palette roles every screen reads;
+ * buildCardsTheme holds what the look adds (type roles, radii, the label
+ * strip, molded depth, a few extra colours). Plain TS so it's unit-tested.
  */
 
 export const CARDS_FONTS = {
@@ -164,15 +163,15 @@ export const buildCardsPalette = (dark: boolean): Palette => {
 export const noteTint = (color: string | null | undefined, theme: CardsTheme) =>
   color ? mix(color, theme.colors.paper, theme.colors.noteTint / 100) : theme.colors.notePaper;
 
-type Size = 'xxs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'xxl';
+/** The sizes <Text> takes (ui/Text.tsx); the names predate Memory Cards. */
+export type TextSize = 'xxs' | 'xs' | 's' | 'm' | 'l' | 'xl' | 'xxl';
 
 /**
- * The classic type sizes as Memory Cards roles, so existing screens follow
- * the look's rule (nothing under 16; headings in rounded Nunito):
- * xxs–s → 16 labels, m → 18 body, l → 24 h3, xl → 28 h2, xxl → 36 h1.
- * Heavy text uses Nunito; regular and medium stay Inter.
+ * <Text>'s sizes as Memory Cards roles (nothing under 16; headings in
+ * rounded Nunito): xxs–s → 16 labels, m → 18 body, l → 24 h3, xl → 28 h2,
+ * xxl → 36 h1. Heavy text uses Nunito; regular and medium stay Inter.
  */
-export const cardsTextRole = (size: Size, weight: 'regular' | 'medium' | 'heavy' = 'regular') => {
+export const cardsTextRole = (size: TextSize, weight: 'regular' | 'medium' | 'heavy' = 'regular') => {
   const heavy = weight === 'heavy';
   switch (size) {
     case 'xxs':

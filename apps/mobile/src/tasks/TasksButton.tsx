@@ -17,8 +17,7 @@ const countFmt = new Intl.NumberFormat();
  * On a space's screen it opens Tasks filtered to that space.
  */
 export const TasksButton = ({ tasks, space }: { tasks: readonly TaskWithTags[]; space?: string }) => {
-  const t = useTheme();
-  const { palette } = t;
+  const { cards, palette } = useTheme();
   const router = useRouter();
   const settle = usePressSettle();
   const { open, overdue } = taskTotals(tasks);
@@ -38,14 +37,12 @@ export const TasksButton = ({ tasks, space }: { tasks: readonly TaskWithTags[]; 
       <Animated.View
         style={[
           styles.pill,
-          t.cards
-            ? // Memory Cards: a molded paper pill like the round buttons beside it
-              { height: 44, borderRadius: 22, paddingHorizontal: 14, backgroundColor: t.cards.colors.paper, boxShadow: `inset 0 0 0 2px ${t.cards.colors.line}, inset 0 -4px 0 0 ${t.cards.colors.line}` }
-            : { backgroundColor: palette.paper, boxShadow: t.objectShadow },
+          // a molded paper pill like the round buttons beside it
+          { backgroundColor: cards.colors.paper, boxShadow: `inset 0 0 0 2px ${cards.colors.line}, inset 0 -4px 0 0 ${cards.colors.line}` },
           settle.style,
         ]}
       >
-        <ListChecks size={t.cards ? 20 : 17} color={palette.ink} strokeWidth={t.cards ? 2.5 : 2} />
+        <ListChecks size={20} color={palette.ink} strokeWidth={2.5} />
         <Text size="xs" weight="heavy" numeric>
           {countFmt.format(open)}
         </Text>
@@ -56,6 +53,6 @@ export const TasksButton = ({ tasks, space }: { tasks: readonly TaskWithTags[]; 
 };
 
 const styles = StyleSheet.create({
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 38, paddingHorizontal: 12, borderRadius: 19 },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, paddingHorizontal: 14, borderRadius: 22 },
   dot: { position: 'absolute', top: -1, right: -1, width: 11, height: 11, borderRadius: 6, borderWidth: 2 },
 });

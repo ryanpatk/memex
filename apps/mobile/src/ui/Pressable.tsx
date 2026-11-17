@@ -1,6 +1,5 @@
 import { type ReactNode } from 'react';
 import { ActivityIndicator, Pressable as RNPressable, StyleSheet, View, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import { DEPTH } from '@memex/core';
@@ -8,10 +7,10 @@ import { useTheme } from '../theme/theme';
 import { Text } from './Text';
 
 /*
- * Objects: things you press. Raised material (gradient + bevel), a settle on
- * press (0.97 over 80ms) and a soft spring back, a light haptic tick. Gloss
- * and a glow in its own colour mark the primary action only. Reduced motion
- * keeps the material change and drops the travel.
+ * Objects: things you press (Memory Cards s02). A molded pill (primary
+ * blue with a darker lip; secondary paper with a line ring; ghost flat and
+ * quiet), a settle on press (0.97 over 80ms) and a soft spring back, a light
+ * haptic tick. Reduced motion keeps the press and drops the travel.
  */
 
 type Variant = 'primary' | 'secondary' | 'ghost';
@@ -42,8 +41,7 @@ export const usePressSettle = () => {
 };
 
 export const Button = ({ label, variant = 'secondary', icon, loading, compact, disabled, style, onPress, ...rest }: Props) => {
-  const t = useTheme();
-  const { palette } = t;
+  const { palette, cards } = useTheme();
   const settle = usePressSettle();
   const primary = variant === 'primary';
   const ghost = variant === 'ghost';
@@ -69,46 +67,25 @@ export const Button = ({ label, variant = 'secondary', icon, loading, compact, d
         style={[
           styles.button,
           compact && styles.compact,
-          t.cards
-            ? {
-                // Memory Cards (s02): molded pills, a lit edge and a lip; secondary is paper with a line ring
-                backgroundColor: fill,
-                borderRadius: 9999,
-                minHeight: compact ? 48 : 56,
-                paddingHorizontal: compact ? 20 : 28,
-                boxShadow: ghost
-                  ? undefined
-                  : primary
-                    ? t.cards.molded()
-                    : `inset 0 0 0 2px ${t.cards.colors.line}, inset 0 -4px 0 0 ${t.cards.colors.line}`,
-                opacity: disabled && !loading ? 0.38 : 1,
-              }
-            : {
-                backgroundColor: fill,
-                borderRadius: t.radius.m,
-                boxShadow: ghost ? undefined : primary ? `${t.objectShadow}, ${t.glow(palette.accent)}` : t.objectShadow,
-                opacity: disabled && !loading ? 0.55 : 1,
-              },
+          {
+            // Memory Cards (s02): molded pills, a lit edge and a lip; secondary is paper with a line ring
+            backgroundColor: fill,
+            borderRadius: 9999,
+            minHeight: compact ? 48 : 56,
+            paddingHorizontal: compact ? 20 : 28,
+            boxShadow: ghost
+              ? undefined
+              : primary
+                ? cards.molded()
+                : `inset 0 0 0 2px ${cards.colors.line}, inset 0 -4px 0 0 ${cards.colors.line}`,
+            opacity: disabled && !loading ? 0.38 : 1,
+          },
           settle.style,
         ]}
       >
-        {!ghost && !t.cards && (
-          <LinearGradient
-            pointerEvents="none"
-            style={[StyleSheet.absoluteFill, { borderRadius: t.radius.m }]}
-            colors={
-              primary
-                ? ['#ffffff4d', '#ffffff24', '#ffffff00', '#0000000f']
-                : palette.dark
-                  ? ['#f9fafb1a', '#13171d1f']
-                  : ['#ffffff1f', '#1d21270d']
-            }
-            locations={primary ? [0, 0.46, 0.54, 1] : [0, 1]}
-          />
-        )}
         <View style={[styles.content, compact && styles.compactContent]}>
           {loading ? <ActivityIndicator size="small" color={primary ? palette.onAccent : palette.ink} /> : icon}
-          <Text size={compact ? 's' : 'm'} weight="heavy" tone={primary ? 'onAccent' : ghost && t.cards ? 'muted' : 'ink'}>
+          <Text size={compact ? 's' : 'm'} weight="heavy" tone={primary ? 'onAccent' : ghost ? 'muted' : 'ink'}>
             {label}
           </Text>
         </View>
@@ -118,8 +95,8 @@ export const Button = ({ label, variant = 'secondary', icon, loading, compact, d
 };
 
 const styles = StyleSheet.create({
-  button: { minHeight: 48, justifyContent: 'center', paddingHorizontal: 17 },
-  compact: { minHeight: 38, paddingHorizontal: 13 },
+  button: { justifyContent: 'center' },
+  compact: {},
   content: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   compactContent: { gap: 6 },
 });

@@ -83,7 +83,7 @@ describe('/share', () => {
     routerMock.__setParams({ url: 'https://example.org/test-share' });
     await renderWithData(<ShareScreen />);
     await flush();
-    expect(screen.getByText('You’re signed out of memex')).toBeTruthy();
+    expect(screen.getByText('You’re signed out. Sign in and this save comes with you.')).toBeTruthy();
     await fireEvent.press(screen.getByRole('button', { name: 'Sign in' }));
     expect(routerMock.__router.replace).toHaveBeenCalledWith('/sign-in');
     expect(shareDraft.get()).toMatchObject({ url: 'https://example.org/test-share' });
