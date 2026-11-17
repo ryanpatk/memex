@@ -290,7 +290,7 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
       getAll: () => wait([...db.spaces].sort((a, b) => (a.created_at < b.created_at ? -1 : 1))),
       getById: (id) => wait(db.spaces.find((space) => space.id === id) ?? null),
       create: (data) => {
-        const space: Profile = { id: newId(), user_id: userId, name: data.name, created_at: now(), updated_at: now() };
+        const space: Profile = { id: newId(), user_id: userId, name: data.name, color: data.color ?? null, created_at: now(), updated_at: now() };
         db.spaces.push(space);
         return wait(space);
       },

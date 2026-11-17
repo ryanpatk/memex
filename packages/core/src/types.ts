@@ -189,6 +189,12 @@ export interface Profile {
   id: string
   user_id: string
   name: string
+  /**
+   * A colour the user chose for the space (`#rrggbb`), or null/absent for an
+   * automatic one. Additive column from migration
+   * 20261116120000_add_space_color.sql; databases without it never return it.
+   */
+  color?: string | null
   created_at: string
   updated_at: string
 }
@@ -311,10 +317,14 @@ export interface UpdateTagData {
 
 export interface CreateProfileData {
   name: string
+  /** `#rrggbb`; omitted = automatic. Needs the `profiles.color` column. */
+  color?: string | null
 }
 
 export interface UpdateProfileData {
   name?: string
+  /** `#rrggbb`, or null to go back to automatic. Needs the `profiles.color` column. */
+  color?: string | null
 }
 
 export interface CreateLinkData {

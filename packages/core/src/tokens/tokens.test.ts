@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { profile } from '../testing/fixtures';
 import { CANVAS_COLOR_OPTIONS, DEFAULT_CANVAS_COLOR_ID, getCanvasColorOption, isCanvasColorId } from './canvasColors';
 import { buildCanvasGradient, buildThemeSurfaceColors, formatOklch, getCanvasGradientStops, oklchToHex, parseOklch } from './color';
-import { buildSpaceColors } from './spaceColors';
+import { MC_SPACE_COLOR_VALUES, buildSpaceColors, chosenSpaceColor } from './spaceColors';
 
 describe('canvas swatches', () => {
   it('falls back to the default swatch for unknown ids (old swatch names)', () => {
@@ -70,6 +70,24 @@ describe('buildSpaceColors', () => {
 
   it('is empty without spaces', () => {
     expect(buildSpaceColors(undefined).size).toBe(0);
+  });
+
+  it('prefers a chosen colour and keeps automatic ones for the rest', () => {
+    const spaces = [
+      { ...profile('a', 'A', '2026-01-01T00:00:00Z'), color: '#2FBF71' },
+      profile('b', 'B', '2026-01-02T00:00:00Z'),
+    ];
+    const colors = buildSpaceColors(spaces, MC_SPACE_COLOR_VALUES);
+    expect(colors.get('a')).toBe('#2fbf71');
+    // b is second in creation order, so it takes the palette's second colour
+    expect(colors.get('b')).toBe(MC_SPACE_COLOR_VALUES[1]);
+  });
+
+  it('ignores stored colours that are not #rrggbb', () => {
+    expect(chosenSpaceColor({ color: 'red' })).toBeNull();
+    expect(chosenSpaceColor({ color: null })).toBeNull();
+    expect(chosenSpaceColor({})).toBeNull();
+    expect(chosenSpaceColor({ color: ' #FF5A6F ' })).toBe('#ff5a6f');
   });
 });
 

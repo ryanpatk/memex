@@ -27,6 +27,7 @@ export * from './tokens/canvasColors';
 export * from './tokens/color';
 export * from './tokens/spaceColors';
 export * from './tokens/pastelSky';
+export * from './tokens/memoryCards';
 export * from './repository';
 export * from './capture';
 export * from './outbox';
