@@ -1,5 +1,6 @@
 import { forwardRef, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { Plus } from 'lucide-react';
+import Popover from '../cards/Popover';
 import { mentionQuery, parseComposer, withDefaultSpace, type ComposerResult, type JournalSpace } from '@memex/core';
 
 /*
@@ -45,6 +46,8 @@ const JournalComposer = forwardRef<JournalComposerHandle, JournalComposerProps>(
   const [pickIndex, setPickIndex] = useState(0);
   const [pickerDismissed, setPickerDismissed] = useState(false);
   const fieldRef = useRef<HTMLTextAreaElement>(null);
+  // The field's box: the @ space picker opens against it
+  const [fieldEl, setFieldEl] = useState<HTMLDivElement | null>(null);
   const hintId = useId();
   const listId = useId();
 
@@ -142,8 +145,16 @@ const JournalComposer = forwardRef<JournalComposerHandle, JournalComposerProps>(
 
   return (
     <div className={`jr-composer mc-jr-composer${text ? ' has-text' : ''}`}>
-      {pickerOpen && (
-        <div className="memex-menu jr-picker" role="listbox" id={listId} aria-label="Spaces">
+      <Popover
+        anchor={fieldEl}
+        open={pickerOpen}
+        placement="top-start"
+        gap={8}
+        className="memex-menu jr-picker"
+        role="listbox"
+        id={listId}
+        aria-label="Spaces"
+      >
           {matches.map((space, i) => (
             <button
               key={space.id}
@@ -160,9 +171,8 @@ const JournalComposer = forwardRef<JournalComposerHandle, JournalComposerProps>(
               {space.name}
             </button>
           ))}
-        </div>
-      )}
-      <div className="jr-composer-field mc-field">
+      </Popover>
+      <div ref={setFieldEl} className="jr-composer-field mc-field">
         <textarea
           ref={fieldRef}
           className="jr-composer-input"

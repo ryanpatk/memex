@@ -8,6 +8,7 @@ import {
   type ReactNode,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
+import Popover from './Popover';
 
 export type MenuEntry =
   | {
@@ -34,10 +35,10 @@ interface MenuProps {
     onKeyDown: (event: ReactKeyboardEvent) => void;
     'aria-haspopup': 'menu';
     'aria-expanded': boolean;
-    'aria-controls': string;
+    'aria-controls': string | undefined;
   }) => ReactNode;
   entries: MenuEntry[];
-  /** Which edge of the trigger the menu lines up with. */
+  /** Which edge of the trigger the menu lines up with (it opens below, or above when there's no room). */
   align?: 'start' | 'end';
   label: string;
   /** Extra content under the items (e.g. a hint). */
@@ -46,14 +47,18 @@ interface MenuProps {
 
 /**
  * The ••• menu (s07), per the WAI-ARIA menu button pattern: Enter/Space/↓
- * opens on the first item, ↑ on the last; ↑/↓/Home/End move; Esc or Tab
- * closes and focus returns to the trigger; a click outside closes.
+ * opens on the first item, ↑ on the last; ↑/↓/Home/End move; Esc closes and
+ * focus returns to the trigger; Tab closes and moves on from the trigger; a
+ * click outside closes. It opens in a Popover, so it flips, slides and
+ * scrolls to stay on screen and nothing on the page can clip or cover it.
  */
 const Menu = ({ trigger, entries, align = 'end', label, footer }: MenuProps) => {
   const [open, setOpen] = useState(false);
   const menuId = useId();
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
+  // The trigger as state too: the Popover positions against it
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
   const focusOnOpen = useRef<'first' | 'last'>('first');
 
   const items = () => Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]:not(:disabled)') ?? []);
@@ -96,7 +101,9 @@ const Menu = ({ trigger, entries, align = 'end', label, footer }: MenuProps) => 
       event.stopPropagation();
       close();
     } else if (event.key === 'Tab') {
-      close(false);
+      // Back on the trigger first, so Tab carries on from there (the menu
+      // itself sits at the end of the page)
+      close(true);
     }
   };
 
@@ -113,6 +120,7 @@ const Menu = ({ trigger, entries, align = 'end', label, footer }: MenuProps) => 
       {trigger({
         ref: (node) => {
           triggerRef.current = node;
+          setAnchor(node);
         },
         onClick: () => {
           focusOnOpen.current = 'first';
@@ -121,16 +129,17 @@ const Menu = ({ trigger, entries, align = 'end', label, footer }: MenuProps) => 
         onKeyDown: onTriggerKey,
         'aria-haspopup': 'menu',
         'aria-expanded': open,
-        'aria-controls': menuId,
+        'aria-controls': open ? menuId : undefined,
       })}
-      <div
-        ref={menuRef}
+      <Popover
+        anchor={anchor}
+        open={open}
+        placement={align === 'start' ? 'bottom-start' : 'bottom-end'}
+        popoverRef={menuRef}
         id={menuId}
         role="menu"
         aria-label={label}
         className="mc-menu"
-        hidden={!open}
-        style={align === 'start' ? ({ left: 0, right: 'auto' } as CSSProperties) : undefined}
         onKeyDown={onMenuKey}
       >
         {entries.map((entry) => {
@@ -165,7 +174,7 @@ const Menu = ({ trigger, entries, align = 'end', label, footer }: MenuProps) => 
           );
         })}
         {footer}
-      </div>
+      </Popover>
     </span>
   );
 };

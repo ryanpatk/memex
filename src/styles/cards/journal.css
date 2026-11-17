@@ -236,14 +236,14 @@ html:root .jr-actions .memex-icon-button:focus-visible {
 html:root .jr-menu.memex-menu,
 html:root .jr-picker.memex-menu {
   min-width: 300px;
-  max-width: calc(100vw - 32px);
-  max-height: 420px;
+  max-width: min(calc(100vw - 32px), var(--mc-pop-max-w, 100vw));
+  max-height: min(420px, var(--mc-pop-max-h, 100vh));
+  overflow-y: auto;
   padding: 12px;
   border-radius: 28px;
   background: var(--mc-paper);
   box-shadow: var(--mc-sh3);
   border: 0;
-  z-index: 60;
 }
 html:root .jr-menu.memex-menu > button,
 html:root .jr-picker.memex-menu > button {
@@ -432,10 +432,6 @@ html:root .mc-jr-composer .jr-hint .memex-kbd {
 html:root .mc-jr-composer .jr-hint-spaces {
   color: var(--mc-pri-ink);
   font-weight: 700;
-}
-html:root .mc-jr-composer .jr-picker {
-  left: 16px;
-  bottom: calc(100% - 8px);
 }
 
 /* ---------- Inbox page (d25, d26) ---------- */
@@ -703,9 +699,3 @@ html:root .mc-jr-paper .jr-feed {
   padding-bottom: 24px;
 }
 
-/* Entry menus open leftward from their button, so the feed's scroller never clips them */
-html:root .jr-menu.memex-menu {
-  left: auto;
-  right: 0;
-  transform-origin: bottom right;
-}

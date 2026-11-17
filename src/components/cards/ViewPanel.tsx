@@ -15,6 +15,7 @@ import {
   type SourceKey,
 } from '@memex/core';
 import Menu from './Menu';
+import Popover from './Popover';
 
 export interface ViewPanelTab {
   view: LibraryView;
@@ -94,9 +95,8 @@ const ViewPanel = (props: ViewPanelProps) => {
     requestAnimationFrame(() => panelRef.current?.querySelector<HTMLElement>('button, a')?.focus());
     const onPointer = (event: MouseEvent) => {
       const target = event.target as Node;
+      // Menus the panel opens nest inside it (popoverPlacement.ts → popoverHost)
       if (panelRef.current?.contains(target) || anchor?.contains(target)) return;
-      // A click inside a menu the panel opened is still the panel's
-      if ((target as HTMLElement).closest?.('.mc-menu')) return;
       onClose();
     };
     const onKey = (event: KeyboardEvent) => {
@@ -119,7 +119,7 @@ const ViewPanel = (props: ViewPanelProps) => {
   const tabs = props.tabs.filter((tab) => tab.view.id !== 'everything' && tab.view.id !== 'unfiled');
 
   return (
-    <div ref={panelRef} className="mc-view-panel" role="dialog" aria-label="View">
+    <Popover anchor={anchor} open={open} placement="bottom-end" popoverRef={panelRef} className="mc-view-panel" role="dialog" aria-label="View">
       <div className="mc-view-head">
         <h2 className="mc-h2">View</h2>
         <button type="button" className="mc-btn is-quiet is-small" onClick={props.onReset} disabled={!props.canReset}>
@@ -270,7 +270,7 @@ const ViewPanel = (props: ViewPanelProps) => {
         />
       )}
       {props.footer && <div className="mc-view-foot">{props.footer}</div>}
-    </div>
+    </Popover>
   );
 };
 

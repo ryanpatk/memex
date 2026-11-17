@@ -19,6 +19,7 @@ import { getInitials } from '../../utils/streamCardFormat';
 import { dragAttrs } from '../../utils/itemDrag';
 import { LinkMemoryCard, NoteMemoryCard, DueChip } from '../cards/cards';
 import { AgentBadge } from '../cards/MemoryCard';
+import Popover from '../cards/Popover';
 import { entryLabel } from '../cards/journal/entryLabel';
 
 /*
@@ -117,7 +118,11 @@ const Picture = ({ link, className }: { link: LinkWithTag; className?: string })
 /* Menus                                                               */
 /* ------------------------------------------------------------------ */
 
-/** A small action menu: Escape or an outside click closes it, arrows move between items. */
+/**
+ * A small action menu: Escape or an outside click closes it (focus back on
+ * its button), arrows move between items. It opens above its button, flipped
+ * or slid to stay on screen (cards/Popover).
+ */
 const Menu = ({
   label,
   icon,
@@ -128,32 +133,40 @@ const Menu = ({
   children: (close: () => void) => ReactNode;
 }) => {
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [button, setButton] = useState<HTMLButtonElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
     const onPointer = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (menuRef.current?.contains(target) || button?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener('mousedown', onPointer);
-    rootRef.current?.querySelector<HTMLButtonElement>('[role="menu"] button:not([aria-disabled="true"])')?.focus();
+    menuRef.current?.querySelector<HTMLButtonElement>('button:not([aria-disabled="true"])')?.focus();
     return () => document.removeEventListener('mousedown', onPointer);
-  }, [open]);
+  }, [button, open]);
 
   const close = () => {
     setOpen(false);
-    buttonRef.current?.focus();
+    button?.focus();
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Escape') {
+      event.preventDefault();
       event.stopPropagation();
       close();
       return;
     }
+    if (event.key === 'Tab') {
+      // Back on the button first, so Tab carries on from there
+      close();
+      return;
+    }
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-    const items = Array.from(rootRef.current?.querySelectorAll<HTMLButtonElement>('[role="menu"] button') ?? []);
+    const items = Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('button') ?? []);
     if (!items.length) return;
     event.preventDefault();
     const i = items.indexOf(document.activeElement as HTMLButtonElement);
@@ -162,9 +175,9 @@ const Menu = ({
   };
 
   return (
-    <div className="jr-menu-root" ref={rootRef} onKeyDown={onKeyDown}>
+    <div className="jr-menu-root">
       <button
-        ref={buttonRef}
+        ref={setButton}
         type="button"
         className="memex-icon-button is-compact"
         aria-label={label}
@@ -175,11 +188,19 @@ const Menu = ({
       >
         {icon}
       </button>
-      {open && (
-        <div className="memex-menu jr-menu" role="menu" aria-label={label}>
-          {children(close)}
-        </div>
-      )}
+      <Popover
+        anchor={button}
+        open={open}
+        placement="top-end"
+        gap={8}
+        popoverRef={menuRef}
+        className="memex-menu jr-menu"
+        role="menu"
+        aria-label={label}
+        onKeyDown={onKeyDown}
+      >
+        {children(close)}
+      </Popover>
     </div>
   );
 };

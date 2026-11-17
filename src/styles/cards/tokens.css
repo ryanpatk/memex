@@ -133,6 +133,14 @@ html:root {
   --mc-m-write: 280ms;
   --mc-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 
+  /* Stacking layers, lowest first. Sheets are <dialog>s in the browser's top
+     layer, above all of these; a popover opened inside a sheet renders into
+     that sheet (cards/popoverPlacement.ts), so it still sits on top. */
+  --mc-z-bar: 40; /* the phone-width tab bar */
+  --mc-z-selbar: 45; /* the selection bar */
+  --mc-z-toast: 80;
+  --mc-z-popover: 1000; /* every popover and ••• menu (cards/Popover.tsx) */
+
   color-scheme: light;
 }
 

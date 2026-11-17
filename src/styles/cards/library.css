@@ -82,12 +82,9 @@
 /* ---------- View panel (d06) ---------- */
 
 .mc-view-panel {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 12px);
-  z-index: 50;
+  /* Placed by cards/Popover.tsx; --mc-pop-max-* is the room it found */
   width: min(600px, calc(100vw - 32px));
-  max-height: min(80vh, 820px);
+  max-height: min(80vh, 820px, var(--mc-pop-max-h, 100vh));
   overflow: auto;
   overscroll-behavior: contain;
   background: var(--mc-paper);
@@ -313,7 +310,7 @@ dialog.mc-sheet.mc-open-card .mc-sheet-scroll {
   left: 50%;
   bottom: calc(32px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  z-index: 45;
+  z-index: var(--mc-z-selbar);
   display: flex;
   align-items: center;
   gap: 12px;

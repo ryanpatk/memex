@@ -22,8 +22,6 @@
   margin-right: 16px;
 }
 .mc-task-picker {
-  left: 24px;
-  top: calc(100% + 8px);
   width: 320px;
 }
 .mc-task-filing {

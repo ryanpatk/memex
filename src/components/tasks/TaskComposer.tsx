@@ -1,5 +1,6 @@
 import { forwardRef, useId, useImperativeHandle, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { Search } from 'lucide-react';
+import Popover from '../cards/Popover';
 import { mentionQuery, parseTaskInput, type JournalSpace } from '@memex/core';
 
 /*
@@ -27,6 +28,8 @@ const TaskComposer = forwardRef<TaskComposerHandle, TaskComposerProps>(({ spaces
   const [pickIndex, setPickIndex] = useState(0);
   const [pickerDismissed, setPickerDismissed] = useState(false);
   const fieldRef = useRef<HTMLInputElement>(null);
+  // The field's box: the @ space picker opens against it
+  const [fieldEl, setFieldEl] = useState<HTMLLabelElement | null>(null);
   const hintId = useId();
   const listId = useId();
 
@@ -123,8 +126,17 @@ const TaskComposer = forwardRef<TaskComposerHandle, TaskComposerProps>(({ spaces
     onClick: syncCaret,
   };
 
-  const picker = pickerOpen && (
-    <div className="mc-menu mc-task-picker" role="listbox" id={listId} aria-label="Spaces">
+  const picker = (
+    <Popover
+      anchor={fieldEl}
+      open={pickerOpen}
+      placement="bottom-start"
+      gap={8}
+      className="mc-menu mc-task-picker"
+      role="listbox"
+      id={listId}
+      aria-label="Spaces"
+    >
       {matches.map((space, i) => (
         <button
           key={space.id}
@@ -143,13 +155,13 @@ const TaskComposer = forwardRef<TaskComposerHandle, TaskComposerProps>(({ spaces
           {space.name}
         </button>
       ))}
-    </div>
+    </Popover>
   );
 
   // Memory Cards (d27): the kit's field, an N key cap, Enter adds
   return (
     <div className="mc-task-composer">
-      <label className="mc-field">
+      <label ref={setFieldEl} className="mc-field">
         <span className="mc-field-glyph" aria-hidden="true">
           <Search />
         </span>

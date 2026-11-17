@@ -18,10 +18,7 @@
 
 /* Menu (Pastel Sky Menu assignment) */
 .memex-menu {
-  position: absolute;
-  top: calc(100% + var(--space-xxs));
-  right: 0;
-  z-index: 40;
+  /* Placed by cards/Popover.tsx (the Journal's entry menus and @ picker) */
   display: flex;
   flex-direction: column;
   gap: var(--space-xxs);

@@ -227,13 +227,7 @@
 }
 
 .jr-menu {
-  left: 0;
-  right: auto;
-  top: auto;
-  bottom: calc(100% + var(--space-xxs));
-  max-height: 320px;
   overflow-y: auto;
-  transform-origin: bottom left;
 }
 
 .jr-menu > button.is-in {
@@ -576,13 +570,6 @@
   font-weight: var(--weight-ui-medium);
 }
 
-.jr-picker {
-  top: auto;
-  bottom: calc(100% - var(--space-xxs));
-  left: var(--space-m);
-  right: auto;
-  transform-origin: bottom left;
-}
 
 .jr-picker > button.is-active {
   background: var(--neutral-3);

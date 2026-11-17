@@ -130,13 +130,9 @@ html:root ::selection {
   pointer-events: none;
 }
 
-/* Account menu anchored to the avatar */
+/* A menu's trigger wrapper; the menu itself opens in a Popover */
 .mc-anchor {
   position: relative;
-}
-.mc-anchor > .mc-menu {
-  right: 0;
-  top: calc(100% + 12px);
 }
 
 /* Toasts float bottom-centre */
@@ -145,7 +141,7 @@ html:root ::selection {
   left: 50%;
   bottom: calc(40px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
-  z-index: 80;
+  z-index: var(--mc-z-toast);
   pointer-events: none;
 }
 .mc-toast-host > * {
@@ -271,7 +267,7 @@ html:root .memex-offline-notice {
     left: 12px;
     right: 12px;
     bottom: calc(12px + env(safe-area-inset-bottom));
-    z-index: 40;
+    z-index: var(--mc-z-bar);
     justify-content: space-around;
     box-shadow: var(--mc-bevel), var(--mc-sh3);
   }

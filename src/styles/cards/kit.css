@@ -1147,15 +1147,16 @@ textarea.mc-inp {
 
 .mc-menu {
   width: 360px;
-  max-width: calc(100vw - 32px);
+  max-width: min(calc(100vw - 32px), var(--mc-pop-max-w, 100vw));
   background: var(--mc-paper);
   border-radius: 28px;
   padding: 12px;
   box-shadow: var(--mc-sh3);
+  /* Placed by cards/Popover.tsx (fixed, on --mc-z-popover); --mc-pop-max-*
+     is the room it found, so a long menu scrolls instead of leaving the window */
   position: absolute;
-  z-index: 60;
   color: var(--mc-ink);
-  max-height: min(70vh, 640px);
+  max-height: min(70vh, 640px, var(--mc-pop-max-h, 100vh));
   overflow: auto;
   overscroll-behavior: contain;
 }
