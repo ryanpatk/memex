@@ -49,32 +49,33 @@ node scripts/bench-grid.mjs "http://localhost:4173/library?look=cards" cards
 node scripts/bench-grid.mjs "http://localhost:4173/library?look=classic" classic
 ```
 
-## Mobile (Expo): not the default yet
+## Mobile (Expo): the only look
 
-The iPhone app has the same idea of a flag: classic stays the default, and `EXPO_PUBLIC_MEMEX_LOOK=cards` (or the in-app switch) turns on Memory Cards. It runs on demo data, with Metro on port 8090 so it doesn't collide with your usual 8081:
+Since **2026-11-17** Memory Cards is the iPhone app's only look. The classic look, its flag (`EXPO_PUBLIC_MEMEX_LOOK`, the account sheet's New look switch, the dev-only “Try the new look”) and the classic-only components are gone from `apps/mobile`. A `memex.look` value a phone saved while the flag existed is removed once on startup (`src/theme/legacyLook.ts`) and ignored either way. Nothing has been built for TestFlight yet.
+
+Run it on demo data, with Metro on a port of its own:
 
 ```bash
-cd /Users/ratkinson/.t3/worktrees/memex/feat-memory-cards-ui-5528a7b043d59171/apps/mobile
+cd apps/mobile
 npm install
-EXPO_PUBLIC_MEMEX_LOOK=cards EXPO_PUBLIC_MEMEX_FIXTURES=1 npx expo start --port 8090 --clear
-# press i for the simulator; leave out EXPO_PUBLIC_MEMEX_LOOK for the classic look
+EXPO_PUBLIC_MEMEX_FIXTURES=1 npx expo start --port 8092
+# press i for the simulator
 ```
-
-To flip on the phone: in the new look, the account button opens a sheet with a **New look** switch. In classic, **dev builds only** add “Try the new look” to the account menu; release builds keep that menu exactly as it is. The choice is saved on the phone (AsyncStorage `memex.look`) and wins over the env variable.
 
 | Phone frame | State |
 |---|---|
 | m01 Cards and Journal (label-strip cards, hero + count, ⌕ + account, fading pills; “Today” Journal) | Done |
-| Tab bar: Journal · Cards · + · Spaces · Inbox (Library renamed Cards) | Done |
-| m02 Spaces as colour tiles with a Tasks tile on top (x03-style); space board header band | Done, apart from the “+ new space” tile |
-| m03 Inbox and Tasks | Partly done: heroes, counts and band headers. Proposal and suggestion cards only have the shared restyle |
-| m07 Account sheet | Partly done: New look, Dark mode, Sign out. No Sounds, Haptics or Font tiles: the phone has no sound, no haptics setting yet, and IBM Plex isn't bundled |
-| m04, m05/m06 (share sheet, offline), m08, m09 | Not built as screens. They only pick up the restyled shared pieces (buttons, paper, type) |
+| Tab bar: Journal · Cards · + · Spaces · Inbox (Library renamed Cards) | Done. The + opens Save something (m05) over whichever tab is showing |
+| m02 Spaces as colour tiles with a Tasks tile on top; space board header band; pinned sites as round buttons | Done, apart from the “+ new space” button: the phone can't make spaces (they're made on the web) |
+| m03 Inbox and Tasks | Done: proposal cards (agent badge, inline diff, reason, label strip), suggestion cards (picture, reason, filled File in pill), one paper row per task, Space · Date in the header, space pills as the filter, the Due sheet (Pick a date… opens the calendar sheet) |
+| m04 Open card and note | Done: picture with Back on it, space pills + “+ Space”, Open / Share / •••; the note under its space's label strip with Saved / Editing. Edit sits beside Back (the mockup has no edit control) |
+| m05 Save something and the share sheet | Done: Jot · Note · Task, the text well, space pills, Save; the share sheet shows the card it will become |
+| m06 Share signed out, offline | Done: the card waits with Sign in; a save kept on the phone is a card with a “Not sent yet” strip (red “Couldn’t save” once refused), Retry and Discard |
+| m07 Sign in and account sheet | Done: sign in as in the mockup; the account sheet has Dark (it follows the system) and Sign out. No Sounds, Haptics or Font tiles: the phone has no sound, no haptics setting, and IBM Plex isn't bundled |
+| m08 Long-press File in and the toast | Done: one menu for every long-press (File in with each space's dot, ticked where it's filed, then Open / Mark done / Delete); the dark toast with a disc in the space's colour and Undo. No Copy link: the app has no clipboard module |
+| m09 Search, empty, loading, error | Done: ⌕ swaps the pills for the field, “N cards”, “Save “…” as a jot”; blank-card loading; the dashed empty slot, red with “!” for errors (with Try again, since not every screen can be pulled) |
 
-`npm run check` passes in `apps/mobile`. No phone screenshots exist: the app has no web target, and running a simulator would have meant taking over yours.
-
-
-The phone app's default stays classic until the remaining frames are built and a TestFlight build is cut. Nothing builds for TestFlight automatically.
+`npm run check` and `npm run check:release` pass in `apps/mobile`. The Cards tab lists saved links only (as the Library did), and the old Library's source filter (From X, Pinterest, YouTube) isn't on the phone any more: the mockups put it behind •••, which the phone doesn't have yet.
 
 ## Choices made along the way (all easy to reverse)
 
