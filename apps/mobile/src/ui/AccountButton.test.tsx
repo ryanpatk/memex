@@ -18,10 +18,10 @@ afterEach(() => {
   mockSession = null;
 });
 
-describe.each(['classic', 'cards'] as const)('AccountButton (%s look)', (look) => {
+describe('AccountButton', () => {
   it('shows the GitHub avatar, sized for the disc', async () => {
     mockSession = signedIn({ avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4', user_name: 'octo', full_name: 'Octo Cat' });
-    await renderWithData(<AccountButton />, undefined, { look });
+    await renderWithData(<AccountButton />);
     const picture = screen.getByLabelText('octo');
     expect(JSON.stringify(picture.props.source)).toContain('avatars.githubusercontent.com/u/1?v=4&s=');
     expect(screen.queryByText('O')).toBeNull();
@@ -29,7 +29,7 @@ describe.each(['classic', 'cards'] as const)('AccountButton (%s look)', (look) =
 
   it('falls back to the letter when the picture fails to load', async () => {
     mockSession = signedIn({ avatar_url: 'https://avatars.githubusercontent.com/u/1?v=4', user_name: 'octo', full_name: 'Octo Cat' });
-    await renderWithData(<AccountButton />, undefined, { look });
+    await renderWithData(<AccountButton />);
     await fireEvent(screen.getByLabelText('octo'), 'error', { nativeEvent: { error: 'failed' } });
     expect(screen.queryByLabelText('octo')).toBeNull();
     expect(screen.getByText('O')).toBeTruthy();
@@ -37,7 +37,7 @@ describe.each(['classic', 'cards'] as const)('AccountButton (%s look)', (look) =
 
   it('shows the letter when the session has no picture', async () => {
     mockSession = signedIn({ full_name: 'Ryan' });
-    await renderWithData(<AccountButton />, undefined, { look });
+    await renderWithData(<AccountButton />);
     expect(screen.getByText('R')).toBeTruthy();
   });
 });

@@ -58,9 +58,9 @@ export const useJournal = () => {
       palette.spaceFallback,
       new Date(),
       dismissed,
-      cards?.spaceColors,
+      cards.spaceColors,
     );
-  }, [isLoading, hidden, dismissed, jots.data, links.data, notes.data, tasks.data, spaces.data, linkRows.data, noteRows.data, taskRows.data, palette.spaceFallback, cards?.spaceColors]);
+  }, [isLoading, hidden, dismissed, jots.data, links.data, notes.data, tasks.data, spaces.data, linkRows.data, noteRows.data, taskRows.data, palette.spaceFallback, cards.spaceColors]);
 
   const refetchers = all.map((q) => q.refetch);
   const refresh = useCallback(async () => {

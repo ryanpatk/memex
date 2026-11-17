@@ -1,60 +1,59 @@
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
-import { Bot, Check, X } from 'lucide-react-native';
+import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
 import { compactDiff, type DiffLine } from '@memex/core/agent';
 import { relativeTime } from '@memex/core';
+import { LabelStrip } from '../cards/MemoryCard';
+import { useCards } from '../cards/useCards';
 import type { ProposalView } from '../data/inbox';
-import { alpha, mix } from '../theme/palette';
-import { FONTS, useTheme } from '../theme/theme';
-import { Paper } from '../ui/Paper';
 import { Button } from '../ui/Pressable';
 import { SpaceChip } from '../ui/SpaceChip';
-import { Text } from '../ui/Text';
 
 /*
- * One agent proposal (web: ProposalRow): which agent, what it wants to do,
- * the item, its reason, and the change itself (core's proposalFields: a
- * line diff for text, before → after for the rest). Nothing changes until
- * Approve; Reject keeps the record. Paper to read, two objects to decide.
+ * One agent proposal (s10, m03; web: ProposalRow) as a memory card: the
+ * agent's badge and what it wants, the item's title, the change (core's
+ * proposalFields: inserted text green, removed red and struck; before →
+ * after for the rest), its reason, Approve and Reject, and the item's label
+ * strip. Nothing changes until Approve; Reject keeps the record.
  */
 
-const MONO = Platform.select({ ios: 'Menlo', default: 'monospace' });
 const DIFF_LINES = 12;
+const VERB = { file: 'wants to file', append: 'wants to add', edit: 'wants to edit' } as const;
 
 const Diff = ({ lines }: { lines: DiffLine[] }) => {
-  const t = useTheme();
-  const { palette } = t;
+  const c = useCards();
   const [all, setAll] = useState(false);
   const compact = compactDiff(lines);
   const shown = all ? compact : compact.slice(0, DIFF_LINES);
   return (
-    <View style={[styles.diff, { backgroundColor: palette.well, borderRadius: t.radius.m }]} accessibilityLabel="Changes to the text">
+    <View style={[styles.diff, { backgroundColor: c.colors.well }]} accessibilityLabel="Changes to the text">
       {shown.map((line, i) =>
         line.op === 'skip' ? (
-          <Text key={i} size="xxs" tone="faint" style={styles.diffLine}>
+          <RNText key={i} style={[c.type.labelUi, { color: c.colors.faint }]}>
             {`⋯ ${line.count} unchanged ${line.count === 1 ? 'line' : 'lines'}`}
-          </Text>
+          </RNText>
         ) : (
-          <Text
+          <RNText
             key={i}
             accessibilityLabel={`${line.op === 'add' ? 'Added: ' : line.op === 'del' ? 'Removed: ' : ''}${line.text}`}
-            style={[
-              styles.diffLine,
-              { fontFamily: MONO, fontSize: 12, lineHeight: 18, color: palette.inkSoft },
-              line.op === 'add' && { backgroundColor: mix(palette.success, palette.well, 0.16), color: palette.ink },
-              line.op === 'del' && { backgroundColor: mix(palette.error, palette.well, 0.12), color: palette.muted, textDecorationLine: 'line-through' },
-            ]}
+            style={[c.type.body, styles.diffLine, { color: c.colors.ink }]}
           >
-            {line.op === 'add' ? '+ ' : line.op === 'del' ? '− ' : '  '}
-            {line.text || ' '}
-          </Text>
+            <RNText
+              style={
+                line.op === 'add'
+                  ? { backgroundColor: c.extra.insBg, color: c.extra.insInk }
+                  : line.op === 'del'
+                    ? { backgroundColor: c.extra.delBg, color: c.extra.delInk, textDecorationLine: 'line-through' }
+                    : undefined
+              }
+            >
+              {line.text || ' '}
+            </RNText>
+          </RNText>
         ),
       )}
       {compact.length > DIFF_LINES && (
-        <Pressable accessibilityRole="button" accessibilityState={{ expanded: all }} onPress={() => setAll((v) => !v)} hitSlop={8}>
-          <Text size="xs" weight="heavy" tone="accent" style={styles.more}>
-            {all ? 'Show less' : `Show all ${compact.length} lines`}
-          </Text>
+        <Pressable accessibilityRole="button" accessibilityState={{ expanded: all }} onPress={() => setAll((v) => !v)} hitSlop={10}>
+          <RNText style={[c.type.label, styles.more, { color: c.colors.primaryInk }]}>{all ? 'Show less' : `Show all ${compact.length} lines`}</RNText>
         </Pressable>
       )}
     </View>
@@ -72,111 +71,84 @@ export const ProposalCard = ({
   onDecide: (decision: 'apply' | 'reject') => void;
   now?: number;
 }) => {
-  const t = useTheme();
-  const { palette } = t;
-  const { proposal, title, space, fields, stale, what, canApply } = view;
+  const c = useCards();
+  const { proposal, title, space, spaces, fields, stale, what, canApply } = view;
+  const first = spaces[0];
   return (
-    <Paper level="s" radius={t.radius.l} style={styles.card} testID={`proposal-${proposal.id}`}>
+    <View style={[styles.card, { backgroundColor: c.colors.paper, boxShadow: c.cardShadow }]} testID={`proposal-${proposal.id}`}>
       <View style={styles.who}>
-        <View style={[styles.bot, { backgroundColor: palette.tint }]}>
-          <Bot size={14} color={palette.tintInk} strokeWidth={2} />
+        <View style={[styles.agent, { backgroundColor: c.colors.agentBg }]}>
+          <RNText style={[c.type.label, { color: c.colors.agent }]} numberOfLines={1}>
+            ✦ {proposal.client_name}
+          </RNText>
         </View>
-        <Text size="xs" weight="heavy" tone="soft" numberOfLines={1} style={styles.flex}>
-          {proposal.client_name}
-        </Text>
-        <Text size="xxs" tone="faint" numeric>
-          {relativeTime(proposal.created_at, now)}
-        </Text>
-      </View>
-      <View style={styles.what}>
-        <Text size="xs" tone="muted">
-          {what}
-          {proposal.kind === 'file' && !space ? ' a space that no longer exists' : ''}
-        </Text>
-        {proposal.kind === 'file' && space && <SpaceChip space={space} />}
+        <RNText style={[c.type.labelUi, { color: c.colors.muted }]} numberOfLines={1}>
+          {VERB[proposal.kind]} · {relativeTime(proposal.created_at, now)}
+        </RNText>
       </View>
       {title !== null ? (
-        <Text size="m" weight="medium" numberOfLines={3}>
+        <RNText style={[c.type.h3, { color: c.colors.ink }]} numberOfLines={3}>
           {title}
-        </Text>
+        </RNText>
       ) : (
-        <Text size="s" tone="muted">
-          This item no longer exists.
-        </Text>
+        <RNText style={[c.type.body, { color: c.colors.muted }]}>This item no longer exists.</RNText>
       )}
-      {proposal.reason ? (
-        <Text size="s" tone="soft" style={styles.reason}>
-          “{proposal.reason}”
-        </Text>
-      ) : null}
-      {stale && (
-        <Text size="xs" style={{ color: palette.warning }}>
-          Edited since this was proposed; the diff shows today’s text.
-        </Text>
+      {proposal.kind === 'file' && (
+        <View style={styles.what}>
+          <RNText style={[c.type.labelUi, { color: c.colors.muted }]}>
+            {what}
+            {!space ? ' a space that no longer exists' : ''}
+          </RNText>
+          {space && <SpaceChip space={space} />}
+        </View>
       )}
       {fields.map((f) =>
         f.field === 'text' ? (
-          <View key={f.field} style={styles.field}>
-            <Text size="xxs" weight="heavy" tone="muted">
-              {f.label}
-            </Text>
-            <Diff lines={f.lines} />
-          </View>
+          <Diff key={f.field} lines={f.lines} />
         ) : (
-          <View key={f.field} style={styles.field} accessible accessibilityLabel={`${f.label}: ${f.before || 'empty'} becomes ${f.after || 'empty'}`}>
-            <Text size="xxs" weight="heavy" tone="muted">
-              {f.label}
-            </Text>
-            <Text size="s">
-              <Text size="s" tone="muted" style={styles.struck}>
-                {f.before || 'empty'}
-              </Text>
-              <Text size="s" tone="faint">
-                {'  →  '}
-              </Text>
-              <Text size="s" weight="medium" style={{ backgroundColor: alpha(palette.success, 0.14) }}>
-                {f.after || 'empty'}
-              </Text>
-            </Text>
+          <View
+            key={f.field}
+            style={[styles.diff, { backgroundColor: c.colors.well }]}
+            accessible
+            accessibilityLabel={`${f.label}: ${f.before || 'empty'} becomes ${f.after || 'empty'}`}
+          >
+            <RNText style={[c.type.labelUi, { color: c.colors.muted }]}>{f.label}</RNText>
+            <RNText style={[c.type.body, { color: c.colors.ink }]}>
+              <RNText style={{ backgroundColor: c.extra.delBg, color: c.extra.delInk, textDecorationLine: 'line-through' }}>{f.before || 'empty'}</RNText>
+              {'  →  '}
+              <RNText style={{ backgroundColor: c.extra.insBg, color: c.extra.insInk }}>{f.after || 'empty'}</RNText>
+            </RNText>
           </View>
         ),
       )}
+      {proposal.reason ? <RNText style={[c.type.labelUi, { color: c.colors.muted }]}>{proposal.reason}</RNText> : null}
+      {stale && <RNText style={[c.type.labelUi, { color: c.colors.warn }]}>Edited since this was proposed; the change shows today’s text.</RNText>}
       <View style={styles.actions}>
         <Button
           compact
           variant="primary"
           label="Approve"
-          icon={<Check size={16} color={palette.onAccent} strokeWidth={2.5} />}
           loading={busy === 'apply'}
           disabled={busy !== null || !canApply}
           onPress={() => onDecide('apply')}
-          style={styles.flex}
         />
-        <Button
-          compact
-          label="Reject"
-          icon={<X size={16} color={palette.ink} strokeWidth={2.25} />}
-          loading={busy === 'reject'}
-          disabled={busy !== null}
-          onPress={() => onDecide('reject')}
-          style={styles.flex}
-        />
+        <Button compact variant="ghost" label="Reject" loading={busy === 'reject'} disabled={busy !== null} onPress={() => onDecide('reject')} />
       </View>
-    </Paper>
+      <View style={styles.strip}>
+        <LabelStrip label={first ? { name: first.name, color: first.color, extra: spaces.length - 1 } : { name: null, color: null }} meta={proposal.item_type} />
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  card: { padding: 14, gap: 8 },
-  who: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  bot: { width: 24, height: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  flex: { flex: 1 },
-  what: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
-  reason: { fontFamily: FONTS.italic },
-  field: { gap: 4 },
-  diff: { paddingVertical: 6, overflow: 'hidden' },
-  diffLine: { paddingHorizontal: 10 },
-  more: { paddingHorizontal: 10, paddingTop: 6 },
-  struck: { textDecorationLine: 'line-through' },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  card: { borderRadius: 28, paddingTop: 20, paddingHorizontal: 20, gap: 14, overflow: 'hidden' },
+  who: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  agent: { height: 32, borderRadius: 16, paddingHorizontal: 12, justifyContent: 'center', maxWidth: '100%' },
+  what: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
+  diff: { borderRadius: 20, paddingHorizontal: 16, paddingVertical: 12, gap: 2 },
+  diffLine: { fontSize: 17, lineHeight: 26 },
+  more: { paddingTop: 8 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, marginBottom: 6 },
+  strip: { marginHorizontal: -20, marginTop: 6 },
 });

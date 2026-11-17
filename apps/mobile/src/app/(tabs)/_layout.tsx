@@ -1,55 +1,34 @@
 import { Tabs } from 'expo-router/tabs';
-import * as Haptics from 'expo-haptics';
-import { BookOpen, Inbox, MessageSquareText, Shapes, type LucideIcon } from 'lucide-react-native';
+import { CaptureHost } from '../../cards/CaptureSheet';
 import { CardsTabBar } from '../../cards/CardsTabBar';
 import { useInbox } from '../../data/useInbox';
-import { typeRole, useTheme } from '../../theme/theme';
+import { useTheme } from '../../theme/theme';
 
 /*
- * The phone layout (decision 16A): a tab bar with Journal, Library, Spaces
- * and Inbox. The bar is paper (lit edge, soft depth); the active tab speaks
- * in the accent. The Inbox shows a count only while something is waiting
- * (filing suggestions and agents' proposals). Tasks, notes and a space's
- * board are pushed screens over the tabs.
+ * The phone layout (decision 16A; Memory Cards s11, m01): Journal, Cards,
+ * the raised + (Save something, m05), Spaces, Inbox. The Inbox shows a count
+ * only while something is waiting (filing suggestions and agents'
+ * proposals). Tasks, notes, a link and a space's board are pushed screens
+ * over the tabs.
  */
-
-const icon = (Icon: LucideIcon) =>
-  function TabIcon({ color, focused }: { color: unknown; focused: boolean }) {
-    return <Icon size={23} color={String(color)} strokeWidth={focused ? 2.25 : 1.75} />;
-  };
-
 export default function TabsLayout() {
-  const t = useTheme();
-  const { palette } = t;
+  const { palette } = useTheme();
   // Filing suggestions plus agents' proposals, like the web's Inbox count.
   const { count: waiting } = useInbox();
 
   return (
-    <Tabs
-      // Memory Cards: its own bar with the centre + (CardsTabBar); classic keeps the stock bar
-      tabBar={t.cards ? (props) => <CardsTabBar {...props} waiting={waiting} /> : undefined}
-      screenListeners={{ tabPress: () => void Haptics.selectionAsync() }}
-      screenOptions={{
-        headerShown: false,
-        sceneStyle: { backgroundColor: palette.canvas },
-        tabBarActiveTintColor: palette.accentText,
-        tabBarInactiveTintColor: palette.muted,
-        tabBarLabelStyle: { ...typeRole('xxs', 'medium'), marginTop: 2 },
-        tabBarStyle: {
-          backgroundColor: palette.paper,
-          borderTopWidth: 0,
-          boxShadow: `inset 0 1px 0 0 ${palette.lit}, 0 -1px 0 0 ${palette.dark ? '#ffffff12' : '#1d21270f'}, 0 -6px 18px -10px ${palette.shadowInk}33`,
-        },
-        tabBarBadgeStyle: { backgroundColor: palette.accent, color: palette.onAccent, ...typeRole('xxs', 'heavy') },
-      }}
-    >
-      <Tabs.Screen name="index" options={{ title: 'Journal', tabBarIcon: icon(MessageSquareText) }} />
-      <Tabs.Screen name="library" options={{ title: t.cards ? 'Cards' : 'Library', tabBarIcon: icon(BookOpen) }} />
-      <Tabs.Screen name="spaces" options={{ title: 'Spaces', tabBarIcon: icon(Shapes) }} />
-      <Tabs.Screen
-        name="inbox"
-        options={{ title: 'Inbox', tabBarIcon: icon(Inbox), tabBarBadge: waiting > 0 ? waiting : undefined }}
-      />
-    </Tabs>
+    <>
+      <Tabs
+        tabBar={(props) => <CardsTabBar {...props} waiting={waiting} />}
+        screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: palette.canvas } }}
+      >
+        <Tabs.Screen name="index" options={{ title: 'Journal' }} />
+        <Tabs.Screen name="library" options={{ title: 'Cards' }} />
+        <Tabs.Screen name="spaces" options={{ title: 'Spaces' }} />
+        <Tabs.Screen name="inbox" options={{ title: 'Inbox' }} />
+      </Tabs>
+      {/* Save something (m05): the + opens it over whichever tab is showing */}
+      <CaptureHost />
+    </>
   );
 }

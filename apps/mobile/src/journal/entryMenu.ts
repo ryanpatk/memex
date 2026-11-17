@@ -1,49 +1,41 @@
-import { ActionSheetIOS, Alert, Platform } from 'react-native';
 import type { Entry, FileableEntry, JournalSpace } from '@memex/core';
-import type { EntryActions } from './useEntryActions';
+import { menuStore, type MenuRow, type MenuSection } from '../cards/menuStore';
+import { entryLabel, type EntryActions } from './useEntryActions';
 
 /*
- * An entry's actions: the long-press menu (iOS action sheet) and the same
- * list as VoiceOver actions. Web equivalent: the hover actions and “File to…”.
+ * An entry's actions: the long-press menu (m08: “File in” with every space,
+ * ticked where it's filed, then Open / Mark done / Delete) and the same
+ * actions as VoiceOver actions. Web equivalent: the card's ••• menu and
+ * “File to…”.
  */
 
-export interface MenuItem {
-  /** VoiceOver action name. */
-  name: string;
-  label: string;
-  destructive?: boolean;
-  run: () => void;
-}
+export type MenuItem = MenuRow;
 
-/** An action sheet (iOS) or alert (elsewhere) of menu items; destructive ones in red. */
+/** Opens the menu (cards/MenuHost) with these rows; destructive ones in red under a rule. */
 export const showMenu = (title: string, items: MenuItem[]) => {
-  if (Platform.OS === 'ios') {
-    const options = [...items.map((i) => i.label), 'Cancel'];
-    ActionSheetIOS.showActionSheetWithOptions(
-      {
-        title,
-        options,
-        cancelButtonIndex: items.length,
-        destructiveButtonIndex: items.flatMap((i, n) => (i.destructive ? [n] : [])),
-      },
-      (index) => items[index]?.run(),
-    );
-    return;
-  }
-  Alert.alert(title, undefined, [
-    ...items.map((i) => ({ text: i.label, style: i.destructive ? ('destructive' as const) : ('default' as const), onPress: i.run })),
-    { text: 'Cancel', style: 'cancel' as const },
-  ]);
+  const main = items.filter((i) => !i.destructive);
+  const danger = items.filter((i) => i.destructive);
+  menuStore.open({ title, sections: [{ items: main }, { items: danger }] });
 };
 
-const pickSpace = (entry: FileableEntry, spaces: JournalSpace[], actions: EntryActions) => {
-  const open = spaces.filter((s) => !entry.spaces.some((x) => x.id === s.id));
-  if (!open.length) return;
-  showMenu(
-    'File in…',
-    open.map((space) => ({ name: space.id, label: space.name, run: () => void actions.file(entry, space) })),
-  );
-};
+/** Every space, ticked where the entry is filed; a row files it there or takes it out (with Undo). */
+export const fileInSection = (entry: FileableEntry, spaces: JournalSpace[], actions: EntryActions): MenuSection => ({
+  header: 'File in',
+  items: spaces.map((space) => {
+    const filed = entry.spaces.some((s) => s.id === space.id);
+    return {
+      name: `space:${space.id}`,
+      label: space.name,
+      dot: space.color,
+      checked: filed,
+      run: () => void (filed ? actions.unfile(entry, space) : actions.file(entry, space)),
+    };
+  }),
+});
+
+/** “File in” on its own: the link page's pills and “+ Space”, the VoiceOver action. */
+export const showFileIn = (entry: FileableEntry, title: string, spaces: JournalSpace[], actions: EntryActions) =>
+  menuStore.open({ title, sections: [fileInSection(entry, spaces, actions)] });
 
 export const entryMenuItems = (entry: Entry, spaces: JournalSpace[], actions: EntryActions): MenuItem[] => {
   const items: MenuItem[] = [];
@@ -51,11 +43,21 @@ export const entryMenuItems = (entry: Entry, spaces: JournalSpace[], actions: En
   if (entry.kind === 'note') items.push({ name: 'open', label: 'Open', run: () => actions.openNote(entry.note.id) });
   if (entry.kind === 'task')
     items.push({ name: 'toggle', label: entry.task.is_done ? 'Mark not done' : 'Mark done', run: () => void actions.toggleTask(entry.task) });
-  if (entry.kind !== 'jot' && spaces.some((s) => !entry.spaces.some((x) => x.id === s.id)))
-    items.push({ name: 'file', label: 'File in…', run: () => pickSpace(entry, spaces, actions) });
+  if (entry.kind !== 'jot' && spaces.length)
+    items.push({ name: 'file', label: 'File in…', run: () => showFileIn(entry, entryLabel(entry), spaces, actions) });
   items.push({ name: 'delete', label: 'Delete', destructive: true, run: () => actions.deleteEntry(entry) });
   return items;
 };
 
-export const showEntryMenu = (entry: Entry, title: string, spaces: JournalSpace[], actions: EntryActions) =>
-  showMenu(title, entryMenuItems(entry, spaces, actions));
+/** The long-press menu: “File in” first (not for jots, which live in one space), then the rest. */
+export const showEntryMenu = (entry: Entry, title: string, spaces: JournalSpace[], actions: EntryActions) => {
+  const items = entryMenuItems(entry, spaces, actions).filter((i) => i.name !== 'file');
+  menuStore.open({
+    title,
+    sections: [
+      ...(entry.kind !== 'jot' && spaces.length ? [fileInSection(entry, spaces, actions)] : []),
+      { items: items.filter((i) => !i.destructive) },
+      { items: items.filter((i) => i.destructive) },
+    ],
+  });
+};

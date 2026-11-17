@@ -6,25 +6,18 @@ interface Props extends ViewProps {
   radius?: number;
 }
 
-/** Paper: a surface you read. Lit edge and soft tinted depth; it never moves. */
+/** Paper: a surface you read. Rounded (rows 24, cards 28), a lit top edge and the look's soft elevation; it never moves. */
 export const Paper = ({ level = 's', radius, style, ...rest }: Props) => {
-  const t = useTheme();
+  const { cards, palette } = useTheme();
   return (
     <View
       {...rest}
       style={[
-        t.cards
-          ? {
-              // Memory Cards: rounder paper (rows 24, cards 28) on the look's soft elevation
-              backgroundColor: t.cards.colors.paper,
-              borderRadius: Math.max(radius ?? 24, 24),
-              boxShadow: level === 'm' ? t.cards.cardShadow : `inset 0 2px 0 0 ${t.palette.lit}, ${t.cards.softShadow}`,
-            }
-          : {
-              backgroundColor: t.palette.paper,
-              borderRadius: radius ?? t.radius.m,
-              boxShadow: t.paperShadow(level),
-            },
+        {
+          backgroundColor: cards.colors.paper,
+          borderRadius: Math.max(radius ?? 24, 24),
+          boxShadow: level === 'm' ? cards.cardShadow : `inset 0 2px 0 0 ${palette.lit}, ${cards.softShadow}`,
+        },
         style,
       ]}
     />

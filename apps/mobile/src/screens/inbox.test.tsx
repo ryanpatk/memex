@@ -35,12 +35,12 @@ afterEach(() => {
 });
 
 describe('Inbox', () => {
-  it('shows agents’ proposals, then filing suggestions, with the count', async () => {
+  it('shows agents’ proposals, then filing suggestions, with the count on the hero', async () => {
     await mount();
-    expect(screen.getByText('9 waiting')).toBeTruthy();
-    expect(screen.getByRole('header', { name: 'From agents' })).toBeTruthy();
-    expect(screen.getByRole('header', { name: 'Filing suggestions' })).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Inbox, 9' })).toBeTruthy();
     const filing = within(screen.getByTestId('proposal-pr1'));
+    expect(filing.getByText('✦ Grok Bot')).toBeTruthy();
+    expect(filing.getByText(/^wants to file · /)).toBeTruthy();
     expect(filing.getByText('File this link in')).toBeTruthy();
     expect(filing.getByText('Progressive disclosure, revisited')).toBeTruthy();
     const append = within(screen.getByTestId('proposal-pr2'));
@@ -48,6 +48,9 @@ describe('Inbox', () => {
     const edit = within(screen.getByTestId('proposal-pr3'));
     expect(edit.getByLabelText(/^Title: Sketch the share sheet flow becomes /)).toBeTruthy();
     expect(within(screen.getByTestId('suggestion-link:l3')).getByLabelText('Likely Reading: Mentions “Reading”')).toBeTruthy();
+    // Proposals come first, then suggestions.
+    const order = screen.getAllByTestId(/^(proposal|suggestion)-/).map((el) => el.props.testID);
+    expect(order.slice(0, 3)).toEqual(['proposal-pr1', 'proposal-pr2', 'proposal-pr3']);
   });
 
   it('approves a proposal through core: the link is filed and the card goes', async () => {
@@ -57,7 +60,7 @@ describe('Inbox', () => {
     expect(await inSpace(repository, 'o5', 'studio')).toBe(true);
     expect(screen.queryByTestId('proposal-pr1')).toBeNull();
     expect(screen.getByText('Approved Grok Bot’s change.')).toBeTruthy();
-    expect(screen.getByText('8 waiting')).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Inbox, 8' })).toBeTruthy();
   });
 
   it('rejects a proposal without changing the item', async () => {
@@ -87,7 +90,7 @@ describe('Inbox', () => {
     await fireEvent.press(within(screen.getByTestId('suggestion-link:l3')).getByRole('button', { name: 'Not now' }));
     await flush();
     expect(screen.queryByTestId('suggestion-link:l3')).toBeNull();
-    expect(screen.getByText('8 waiting')).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Inbox, 8' })).toBeTruthy();
     expect(await inSpace(repository, 'l3', 'reading')).toBe(false);
     await fireEvent.press(screen.getByRole('button', { name: 'Undo' }));
     await flush();
@@ -111,6 +114,6 @@ describe('Inbox', () => {
       await flush();
     }
     expect(screen.getByText('Nothing waiting')).toBeTruthy();
-    expect(screen.getByText('All caught up')).toBeTruthy();
+    expect(screen.getByRole('header', { name: 'Inbox' })).toBeTruthy();
   });
 });

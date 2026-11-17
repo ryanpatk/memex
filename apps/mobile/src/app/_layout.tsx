@@ -25,7 +25,8 @@ import { repository } from '../data/repository';
 import { scrapeLink, scraperEnabled } from '../data/scraper';
 import { useOutboxSync } from '../data/useOutboxSync';
 import { shareDraft } from '../share/shareDraft';
-import { ThemeProvider, useLook, useTheme } from '../theme/theme';
+import { ThemeProvider, useTheme } from '../theme/theme';
+import { MenuHost } from '../cards/MenuHost';
 import { SetupNeeded } from '../ui/SetupNeeded';
 import { ToastProvider } from '../ui/Toast';
 
@@ -51,7 +52,7 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_600SemiBold_Italic,
-    // Memory Cards' display roles (theme/cards.ts); the classic look uses only 900 (the wordmark)
+    // Memory Cards' display roles (theme/cards.ts) and the wordmark
     Nunito_700Bold,
     Nunito_800ExtraBold,
     Nunito_900Black,
@@ -59,13 +60,14 @@ export default function RootLayout() {
   return (
     <ShareIntentProvider options={shareIntentOptions}>
       <SafeAreaProvider>
-        <ThemeProvider lookStorage={AsyncStorage}>
+        <ThemeProvider legacyStorage={AsyncStorage}>
           <QueryClientProvider client={queryClient}>
             <ToastProvider>
               <DataProvider repository={repository} client={CLIENT_NAME} enrich={enrich} dismissalStorage={AsyncStorage} outboxStorage={outboxStorage}>
                 <SessionProvider>
                   <Root fontsReady={fontsLoaded || Boolean(fontError)} />
                 </SessionProvider>
+                <MenuHost />
               </DataProvider>
             </ToastProvider>
           </QueryClientProvider>
@@ -78,8 +80,7 @@ export default function RootLayout() {
 const Root = ({ fontsReady }: { fontsReady: boolean }) => {
   const { session, ready } = useSession();
   const { palette } = useTheme();
-  const { ready: lookReady } = useLook();
-  const loaded = ready && fontsReady && lookReady;
+  const loaded = ready && fontsReady;
   useOutboxSync(session?.user.id ?? null);
   useShareSheetReturn(loaded && isConfigured, Boolean(session));
 

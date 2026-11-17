@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View, type ListRenderItem } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, Pressable, RefreshControl, StyleSheet, View, type ListRenderItem } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { AlertCircle, CheckCheck, ChevronDown, ChevronRight, ListChecks } from 'lucide-react-native';
+import { CheckCheck, ChevronDown, ChevronRight, ListChecks } from 'lucide-react-native';
 import {
   parseTaskGrouping,
   UNFILED_TASKS,
@@ -12,12 +12,13 @@ import {
   type TaskGrouping,
   type TaskWithTags,
 } from '@memex/core';
-import { dueOptions, taskTotals, toTasksView } from '../data/tasks';
+import { taskTotals, toTasksView, type DueOption } from '../data/tasks';
+import { SpacePills } from '../cards/SpacePills';
+import { DueSheet } from '../tasks/DueSheet';
 import { useJournal } from '../data/useJournal';
 import { useEntryActions, entryLabel } from '../journal/useEntryActions';
 import { showMenu } from '../journal/entryMenu';
 import { DueDateSheet } from '../tasks/DueDateSheet';
-import { showDueMenu } from '../tasks/dueMenu';
 import { TaskAdd } from '../tasks/TaskAdd';
 import { TaskRow } from '../tasks/TaskRow';
 import { taskMenuItems } from '../tasks/taskMenu';
@@ -25,8 +26,6 @@ import { useTaskActions } from '../tasks/useTaskActions';
 import { useTheme } from '../theme/theme';
 import { Canvas } from '../ui/Canvas';
 import { FeedError, FeedSkeleton } from '../ui/FeedStates';
-import { FilterChip } from '../ui/FilterChip';
-import { Paper } from '../ui/Paper';
 import { Placeholder } from '../ui/Placeholder';
 import { Button } from '../ui/Pressable';
 import { Segmented } from '../ui/Segmented';
@@ -44,13 +43,14 @@ import { useToast } from '../ui/Toast';
  */
 
 const DONE_PAGE = 50;
+/** How long a sheet takes to slide away before the next one opens (iOS presents one modal at a time). */
+const SHEET_GAP_MS = 350;
 const countFmt = new Intl.NumberFormat();
 
 type Item = { kind: 'group'; group: TaskGroup<TaskWithTags, JournalSpace> } | { kind: 'empty' } | { kind: 'done' };
 
 export default function TasksScreen() {
-  const t = useTheme();
-  const { palette } = t;
+  const { cards: c } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const toast = useToast();
@@ -63,6 +63,8 @@ export default function TasksScreen() {
   const [showDone, setShowDone] = useState(params.done === '1');
   const [donePage, setDonePage] = useState(1);
   const [picking, setPicking] = useState<TaskWithTags | null>(null);
+  // The Due sheet (m03)
+  const [dueFor, setDueFor] = useState<TaskWithTags | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -94,19 +96,23 @@ export default function TasksScreen() {
   const filterSpace = space && space !== UNFILED_TASKS ? spaces.find((s) => s.id === space) : undefined;
   const totals = journal ? taskTotals(journal.tasks) : null;
 
-  const openDue = (task: TaskWithTags) =>
-    showDueMenu(task.title, dueOptions(task), (option) => {
-      if (option.value === 'pick') setPicking(task);
-      else void taskActions.setDue(task, option.value);
-    });
+  const openDue = (task: TaskWithTags) => setDueFor(task);
+
+  const chooseDue = (task: TaskWithTags, option: DueOption) => {
+    setDueFor(null);
+    // One sheet at a time: the calendar opens once the Due sheet has slid away.
+    if (option.value === 'pick') setTimeout(() => setPicking(task), SHEET_GAP_MS);
+    else void taskActions.setDue(task, option.value);
+  };
 
   const menuFor = (task: TaskWithTags) => {
     const entry = entries.get(task.id);
-    return entry ? taskMenuItems(entry, spaces, entryActions, taskActions, () => openDue(task)) : [];
+    // From the long-press menu, the Due sheet waits for the menu to close.
+    return entry ? taskMenuItems(entry, spaces, entryActions, taskActions, () => setTimeout(() => openDue(task), SHEET_GAP_MS)) : [];
   };
 
   const rows = (tasks: TaskWithTags[], groupSpace?: string) =>
-    tasks.map((task, i) => {
+    tasks.map((task) => {
       const filed = view?.membership.get(task.id) ?? [];
       const chips = spaces.filter((s) => filed.includes(s.id) && s.id !== groupSpace);
       const menu = menuFor(task);
@@ -117,7 +123,6 @@ export default function TasksScreen() {
           task={task}
           checked={task.is_done}
           chips={chips}
-          first={i === 0}
           menu={menu}
           onToggle={() => void taskActions.toggle(task)}
           onDue={() => openDue(task)}
@@ -149,19 +154,17 @@ export default function TasksScreen() {
             style={styles.groupHead}
             hitSlop={8}
           >
-            {showDone ? <ChevronDown size={16} color={palette.muted} strokeWidth={2.25} /> : <ChevronRight size={16} color={palette.muted} strokeWidth={2.25} />}
-            <Text size="xs" weight="heavy" tone="muted">
+            {showDone ? <ChevronDown size={22} color={c.colors.muted} strokeWidth={2.75} /> : <ChevronRight size={22} color={c.colors.muted} strokeWidth={2.75} />}
+            <Text size="m" weight="heavy" tone="muted">
               Done
             </Text>
-            <Text size="xs" tone="faint" numeric>
+            <Text size="s" tone="faint" numeric>
               {countFmt.format(done.length)}
             </Text>
           </Pressable>
           {showDone && (
             <>
-              <Paper radius={t.radius.l} style={styles.card}>
-                {rows(shown)}
-              </Paper>
+              <View style={styles.rows}>{rows(shown)}</View>
               {done.length > shown.length && (
                 <Button label={`Show ${Math.min(DONE_PAGE, done.length - shown.length)} more`} variant="ghost" onPress={() => setDonePage((p) => p + 1)} />
               )}
@@ -174,108 +177,66 @@ export default function TasksScreen() {
     const overdue = group.bucket === 'overdue';
     return (
       <View style={styles.group}>
-        {t.cards ? (
-          // Memory Cards (d27, m03): each group opens on a molded band in its space's colour
-          <View
-            style={[
-              styles.cardsBand,
-              {
-                backgroundColor: group.space?.color ?? (overdue ? t.cards.colors.error : t.cards.colors.line),
-                boxShadow: t.cards.molded(),
-              },
-            ]}
-            accessibilityRole="header"
-            accessible
-            accessibilityLabel={`${group.label}, ${group.tasks.length}`}
-          >
-            <Text size="m" weight="heavy" numberOfLines={1} style={[styles.shrink, { color: overdue && !group.space ? '#ffffff' : t.cards.colors.onColor }]}>
-              {group.label}
-            </Text>
-            <Text size="s" weight="heavy" numeric style={{ color: overdue && !group.space ? '#ffffff' : t.cards.colors.onColor, opacity: 0.75 }}>
-              {countFmt.format(group.tasks.length)}
-            </Text>
-          </View>
-        ) : (
-        <View style={styles.groupHead} accessibilityRole="header" accessible accessibilityLabel={`${group.label}, ${group.tasks.length}`}>
-          {group.space ? (
-            <View style={[styles.dot, { backgroundColor: group.space.color }]} />
-          ) : overdue ? (
-            <AlertCircle size={14} color={palette.error} strokeWidth={2.25} />
-          ) : null}
-          <Text size="xs" weight="heavy" tone={overdue ? 'error' : 'soft'} numberOfLines={1} style={styles.shrink}>
+        {/* d27, m03: each group opens on a molded band in its space's colour */}
+        <View
+          style={[styles.band, { backgroundColor: group.space?.color ?? (overdue ? c.colors.error : c.colors.line), boxShadow: c.molded() }]}
+          accessibilityRole="header"
+          accessible
+          accessibilityLabel={`${group.label}, ${group.tasks.length}`}
+        >
+          <Text size="m" weight="heavy" numberOfLines={1} style={[styles.shrink, { color: overdue && !group.space ? '#ffffff' : c.colors.onColor }]}>
             {group.label}
           </Text>
-          <Text size="xs" tone="faint" numeric>
+          <Text size="s" weight="heavy" numeric style={{ color: overdue && !group.space ? '#ffffff' : c.colors.onColor, opacity: 0.75 }}>
             {countFmt.format(group.tasks.length)}
           </Text>
         </View>
-        )}
-        <Paper radius={t.radius.l} style={styles.card}>
-          {rows(group.tasks, group.space?.id)}
-        </Paper>
+        <View style={styles.rows}>{rows(group.tasks, group.space?.id)}</View>
       </View>
     );
   };
 
+  const grouping = (
+    <Segmented
+      label="Group tasks"
+      options={[
+        { value: 'space', label: 'Space', a11y: 'By space' },
+        { value: 'date', label: 'Date', a11y: 'By due date' },
+      ]}
+      value={by}
+      onChange={(next) => {
+        setBy(next);
+        sync({ group: next });
+      }}
+    />
+  );
+
+  const pickSpace = (next: string | null) => {
+    setSpace(next);
+    sync({ space: next });
+  };
+
+  // The space pills (with open counts) filter; the add field under them
   const filters = !journal || !view ? undefined : (
     <View style={styles.controls}>
-      <Segmented
-        label="Group tasks"
-        options={[
-          { value: 'space', label: 'By space' },
-          { value: 'date', label: 'By due date' },
-        ]}
-        value={by}
-        onChange={(next) => {
-          setBy(next);
-          sync({ group: next });
-        }}
-      />
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} style={styles.chipScroll} accessibilityLabel="Filter by space">
-        <FilterChip label="Every space" count={totals?.open} on={!space} onPress={() => (setSpace(null), sync({ space: null }))} />
-        {spaces
-          .filter((s) => (view.counts.get(s.id) ?? 0) > 0 || s.id === space)
-          .map((s) => (
-            <FilterChip
-              key={s.id}
-              label={s.name}
-              count={view.counts.get(s.id) ?? 0}
-              on={space === s.id}
-              onPress={() => {
-                const next = space === s.id ? null : s.id;
-                setSpace(next);
-                sync({ space: next });
-              }}
-            />
-          ))}
-        {((view.counts.get(UNFILED_TASKS) ?? 0) > 0 || space === UNFILED_TASKS) && (
-          <FilterChip
-            label="Unfiled"
-            count={view.counts.get(UNFILED_TASKS) ?? 0}
-            on={space === UNFILED_TASKS}
-            onPress={() => {
-              const next = space === UNFILED_TASKS ? null : UNFILED_TASKS;
-              setSpace(next);
-              sync({ space: next });
-            }}
-          />
-        )}
-      </ScrollView>
+      <View style={styles.pills}>
+        <SpacePills
+          label="Filter by space"
+          spaces={spaces.filter((s) => (view.counts.get(s.id) ?? 0) > 0 || s.id === space)}
+          selected={space}
+          onSelect={pickSpace}
+          allCount={totals?.open}
+          counts={view.counts}
+          extra={(view.counts.get(UNFILED_TASKS) ?? 0) > 0 || space === UNFILED_TASKS ? [{ id: UNFILED_TASKS, name: 'Unfiled' }] : []}
+        />
+      </View>
       <TaskAdd spaces={spaces} defaultSpace={filterSpace} onAdd={taskActions.add} />
     </View>
   );
 
-  const subtitle = totals && !unavailable
-    ? totals.open === 0
-      ? 'All clear'
-      : [`${countFmt.format(totals.open)} open`, totals.overdue ? `${countFmt.format(totals.overdue)} overdue` : null, totals.today ? `${countFmt.format(totals.today)} due today` : null]
-          .filter(Boolean)
-          .join(' · ')
-    : undefined;
-
   return (
     <Canvas>
-      <StackHeader title="Tasks" subtitle={t.cards ? undefined : subtitle} count={t.cards && totals && !unavailable ? totals.open : undefined} />
+      <StackHeader title="Tasks" count={totals && !unavailable ? totals.open : undefined} trailing={journal && view ? grouping : undefined} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.fill}>
         {isLoading ? (
           <FeedSkeleton />
@@ -290,12 +251,13 @@ export default function TasksScreen() {
             contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 33 }]}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
-            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={palette.muted} />}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.colors.muted} />}
             accessibilityLabel="Tasks"
             testID="tasks-list"
           />
         )}
       </KeyboardAvoidingView>
+      <DueSheet task={dueFor} onChoose={chooseDue} onClose={() => setDueFor(null)} />
       {picking && (
         <DueDateSheet
           title={picking.title}
@@ -312,36 +274,29 @@ export default function TasksScreen() {
   );
 }
 
-/** Nothing open: no tasks at all, everything done (an “on” state, so the disc is glossy), or the filter hides it all. */
+/** Nothing open: no tasks at all, everything done, or the filter hides it all. */
 const Empty = ({ total, filter, onShowAll }: { total: number; filter: string | null; onShowAll: () => void }) => {
-  const { palette } = useTheme();
   if (filter)
     return (
-      <Placeholder icon={<ListChecks size={26} color={palette.onAccent} strokeWidth={2} />} title={`Nothing open in ${filter}`} body="Every task here is done.">
+      <Placeholder icon={<ListChecks />} title={`Nothing open in ${filter}`} body="Every task here is done.">
         <Button label="Show every space" onPress={onShowAll} />
       </Placeholder>
     );
   return total === 0 ? (
-    <Placeholder
-      icon={<ListChecks size={26} color={palette.onAccent} strokeWidth={2} />}
-      title="Nothing to do yet"
-      body="Add a task above, or start a line with “[] ” in the Journal."
-    />
+    <Placeholder icon={<ListChecks />} title="Nothing to do yet" body="Add a task above, or start a line with “[] ” in the Journal." />
   ) : (
-    <Placeholder icon={<CheckCheck size={26} color={palette.onAccent} strokeWidth={2} />} title="All clear" body="Everything’s done. Nice." />
+    <Placeholder icon={<CheckCheck />} title="All clear" body="Everything’s done. Nice." />
   );
 };
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  list: { paddingHorizontal: 17, gap: 17 },
+  list: { paddingHorizontal: 20, gap: 20 },
   controls: { gap: 12, marginBottom: 4 },
-  chipScroll: { marginHorizontal: -17 },
-  chips: { gap: 8, paddingHorizontal: 17, paddingVertical: 2 },
-  group: { gap: 8 },
-  cardsBand: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 56, borderRadius: 24, paddingHorizontal: 20 },
-  groupHead: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 4, minHeight: 24 },
-  dot: { width: 9, height: 9, borderRadius: 5 },
+  pills: { marginHorizontal: -20 },
+  group: { gap: 12 },
+  rows: { gap: 12 },
+  band: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 56, borderRadius: 24, paddingHorizontal: 20 },
+  groupHead: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4, minHeight: 44 },
   shrink: { flexShrink: 1 },
-  card: { overflow: 'hidden' },
 });

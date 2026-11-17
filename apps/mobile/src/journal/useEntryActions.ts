@@ -130,7 +130,7 @@ export const useEntryActions = () => {
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         try {
           await actions.file(kind as FileableEntry['kind'], id, space.id);
-          toast.show(`Filed in “${space.name}”.`, { action: { label: 'Undo', onPress: () => void unfile(entry, space) } });
+          toast.show(`Filed in “${space.name}”.`, { accent: space.color, action: { label: 'Undo', onPress: () => void unfile(entry, space) } });
         } catch (error) {
           fail(`Couldn’t file it in “${space.name}”.`, error);
         }

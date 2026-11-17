@@ -5,8 +5,8 @@ import * as Haptics from 'expo-haptics';
 import { Plus } from 'lucide-react-native';
 import { parseTaskInput, type JournalSpace } from '@memex/core';
 import { pickerFor, insertMention } from '../journal/composerModel';
-import { alpha } from '../theme/palette';
-import { typeRole, useTheme } from '../theme/theme';
+import { SpaceToggle } from '../cards/Pills';
+import { useCards } from '../cards/useCards';
 import { usePressSettle } from '../ui/Pressable';
 import { Text } from '../ui/Text';
 
@@ -26,8 +26,7 @@ export const TaskAdd = ({
   /** Resolves when saved; rejecting puts the text back. */
   onAdd: (title: string, spaces: JournalSpace[]) => Promise<unknown>;
 }) => {
-  const t = useTheme();
-  const { palette } = t;
+  const c = useCards();
   const [text, setText] = useState('');
   const [caret, setCaret] = useState(0);
   const [focused, setFocused] = useState(false);
@@ -64,21 +63,15 @@ export const TaskAdd = ({
           returnKeyType="done"
           enablesReturnKeyAutomatically
           placeholder={defaultSpace ? `Add a task to ${defaultSpace.name}…` : 'Add a task, @ files it…'}
-          placeholderTextColor={palette.faint}
-          selectionColor={palette.accent}
+          placeholderTextColor={c.colors.faint}
+          selectionColor={c.colors.primary}
           accessibilityLabel="Add a task"
           accessibilityHint="Type @ and a space's name to file it there"
           style={[
-            typeRole('m'),
+            c.type.body,
             styles.input,
-            {
-              color: palette.ink,
-              backgroundColor: palette.well,
-              borderRadius: t.radius.m,
-              boxShadow: palette.dark
-                ? `inset 0 1px 2px 0 #13171d33, inset 0 -1px 0 0 #f9fafb1f, 0 0 0 2px ${focused ? alpha(palette.accent, 0.55) : 'transparent'}`
-                : `inset 0 1px 2px 0 #1d212714, inset 0 -1px 0 0 #ffffff59, 0 0 0 2px ${focused ? alpha(palette.accent, 0.45) : 'transparent'}`,
-            },
+            // s04: the field is a paper pill, ring on focus
+            { color: c.colors.ink, backgroundColor: c.colors.paper, boxShadow: focused ? `0 0 0 4px ${c.colors.ring}, ${c.softShadow}` : c.softShadow },
           ]}
         />
         <Pressable
@@ -91,36 +84,27 @@ export const TaskAdd = ({
           hitSlop={4}
         >
           <Animated.View
-            style={[
-              styles.add,
-              { backgroundColor: parsed ? palette.accent : palette.well, boxShadow: parsed ? `${t.objectShadow}, ${t.glow(palette.accent)}` : undefined },
-              settle.style,
-            ]}
+            style={[styles.add, { backgroundColor: parsed ? c.colors.primary : c.colors.well, boxShadow: parsed ? c.molded() : undefined }, settle.style]}
           >
-            <Plus size={20} color={parsed ? palette.onAccent : palette.faint} strokeWidth={2.5} />
+            <Plus size={26} color={parsed ? '#ffffff' : c.colors.faint} strokeWidth={3} />
           </Animated.View>
         </Pressable>
       </View>
       {picker ? (
         <View style={styles.picker} accessibilityLabel="Spaces">
           {picker.matches.map((space) => (
-            <Pressable
+            <SpaceToggle
               key={space.id}
-              accessibilityRole="button"
+              name={space.name}
+              color={space.color}
+              on={false}
               accessibilityLabel={`File in ${space.name}`}
               onPress={() => {
-                void Haptics.selectionAsync();
                 const next = insertMention(text, caret, picker.query, space);
                 setText(next.text);
                 setCaret(next.caret);
               }}
-              style={[styles.pick, { backgroundColor: palette.paper, boxShadow: t.objectShadow }]}
-            >
-              <View style={[styles.dot, { backgroundColor: space.color }]} />
-              <Text size="xs" weight="medium" numberOfLines={1}>
-                {space.name}
-              </Text>
-            </Pressable>
+            />
           ))}
         </View>
       ) : (focused || text) && (
@@ -133,12 +117,10 @@ export const TaskAdd = ({
 };
 
 const styles = StyleSheet.create({
-  root: { gap: 6 },
+  root: { gap: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  input: { flex: 1, minHeight: 44, paddingHorizontal: 14, paddingVertical: 10 },
-  add: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  picker: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  pick: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 30, paddingHorizontal: 10, borderRadius: 9999 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  hint: { paddingHorizontal: 4 },
+  input: { flex: 1, minHeight: 56, borderRadius: 28, paddingHorizontal: 22, paddingVertical: 14 },
+  add: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  picker: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  hint: { paddingHorizontal: 6 },
 });

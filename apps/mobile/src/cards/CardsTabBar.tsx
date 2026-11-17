@@ -1,15 +1,15 @@
 import { Pressable, StyleSheet, Text as RNText, View } from 'react-native';
-import { useRouter } from 'expo-router';
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import * as Haptics from 'expo-haptics';
 import { BookOpen, Inbox, MessageSquareText, Plus, Shapes, type LucideIcon } from 'lucide-react-native';
 import { useCards } from './useCards';
+import { captureStore } from './capture';
 
 /*
  * The Memory Cards tab bar (s11, m01; decision 9: the centre +): Journal,
  * Cards, a raised blue + in the thumb spot, Spaces, Inbox. The active tab
  * fills its icon tile with ink; the Inbox carries a coral count. The + opens
- * the Journal with the composer focused (capture is the primary action).
+ * Save something (m05) over whichever tab is showing (capture is the primary action).
  */
 
 const TABS: Record<string, { title: string; icon: LucideIcon }> = {
@@ -21,7 +21,6 @@ const TABS: Record<string, { title: string; icon: LucideIcon }> = {
 
 export const CardsTabBar = ({ state, navigateToTab, insets, waiting }: BottomTabBarProps & { waiting: number }) => {
   const c = useCards();
-  const router = useRouter();
   const routes = state.routes.filter((route) => TABS[route.name]);
   const half = Math.ceil(routes.length / 2);
 
@@ -83,7 +82,7 @@ export const CardsTabBar = ({ state, navigateToTab, insets, waiting }: BottomTab
       <Pressable
         onPress={() => {
           void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          router.navigate({ pathname: '/', params: { compose: String(Date.now()) } });
+          captureStore.open();
         }}
         accessibilityRole="button"
         accessibilityLabel="Save something"
