@@ -1,0 +1,77 @@
+/* Memory Cards — the ⌘K Go-to palette (d33). */
+
+dialog.mc-sheet.mc-goto {
+  --mc-sheet-w: 760px;
+  padding: 16px;
+  margin-top: 120px;
+  margin-bottom: auto;
+}
+.mc-goto-field {
+  height: 72px;
+}
+.mc-goto-list {
+  max-height: min(60vh, 560px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 4px 8px;
+  margin-top: 8px;
+}
+.mc-goto-list .mc-mhd {
+  padding: 16px 16px 6px;
+}
+.mc-goto-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 56px;
+  border-radius: 18px;
+  padding: 0 16px;
+  font: 800 20px / 1.2 var(--mc-font-display);
+  color: var(--mc-ink);
+  cursor: pointer;
+}
+.mc-goto-row.is-active {
+  background: var(--mc-well);
+}
+.mc-goto-icon {
+  width: 28px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: var(--mc-mut);
+}
+.mc-goto-icon svg {
+  width: 20px;
+  height: 20px;
+}
+.mc-goto-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--c, var(--mc-line));
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.14);
+}
+.mc-goto-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mc-goto-meta {
+  font: 600 16px var(--mc-font-ui);
+  color: var(--mc-faint);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.mc-goto-empty {
+  color: var(--mc-mut);
+  padding: 24px 16px;
+}
+@media (max-width: 760px) {
+  dialog.mc-sheet.mc-goto {
+    margin-top: auto;
+    margin-bottom: 0;
+    padding: 16px 12px calc(16px + env(safe-area-inset-bottom));
+  }
+}

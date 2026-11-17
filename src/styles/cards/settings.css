@@ -1,0 +1,389 @@
+/* Memory Cards — settings (filled in by its screen). */
+
+/* Keys sheet (d34) */
+.mc-keys-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 40px;
+  margin-top: 8px;
+}
+.mc-keys-grid .mc-h3 {
+  margin-bottom: 16px;
+}
+.mc-keys-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+}
+.mc-keys-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.mc-keys-row dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+/* ---------- Settings sheet (d31) ---------- */
+
+.mc-sheet-lede {
+  color: var(--mc-mut);
+  margin: -8px 0 24px;
+}
+.mc-settings-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.mc-settings-tiles .mc-stile {
+  justify-content: space-between;
+}
+.mc-settings-tiles .mc-stile .mc-h3 {
+  padding-right: 88px;
+}
+.mc-stile .mc-tg {
+  background: var(--mc-paper);
+  align-self: flex-start;
+  max-width: 100%;
+}
+.mc-set-canvas {
+  flex-wrap: wrap;
+  padding: 12px 0;
+}
+.mc-swatches {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mc-set-account {
+  border-bottom: 0;
+}
+.mc-set-who {
+  font: 600 18px / 1.3 var(--mc-font-ui);
+  color: var(--mc-mut);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.mc-setrow small span {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Token sheets (d32, d45) ---------- */
+
+.mc-copyrow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 64px;
+  border-radius: 24px;
+  background: var(--mc-well);
+  padding: 8px 8px 8px 24px;
+}
+.mc-copyrow code {
+  flex: 1;
+  min-width: 0;
+  font: 600 18px / 1.35 var(--mc-font-ui);
+  color: var(--mc-mut);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.mc-token-live:not(:empty) {
+  margin-top: 16px;
+}
+.mc-token-list {
+  list-style: none;
+  margin: 24px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mc-token-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 88px;
+  padding: 16px 16px 16px 20px;
+  border-radius: 24px;
+  background: var(--mc-paper);
+  box-shadow: var(--mc-bevel), var(--mc-sh1), 0 0 0 2px var(--mc-well) inset;
+}
+.mc-token-row > div {
+  min-width: 0;
+}
+.mc-token-row.is-inactive {
+  opacity: 0.55;
+}
+.mc-token-name {
+  margin: 0 0 4px;
+  font: 800 22px / 1.2 var(--mc-font-display);
+  overflow-wrap: anywhere;
+}
+.mc-token-empty {
+  color: var(--mc-mut);
+  margin: 24px 0;
+}
+.mc-token-foot {
+  margin-top: 16px;
+  text-align: center;
+}
+.mc-token-foot code {
+  font-family: var(--font-code, ui-monospace, monospace);
+}
+.mc-linkbtn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--mc-pri-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  min-height: 24px;
+}
+.mc-linkbtn.is-danger {
+  color: var(--mc-err);
+}
+.mc-linkbtn:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.mc-token-scope {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.mc-token-scope .mc-choice {
+  align-items: flex-start;
+  text-align: left;
+  justify-content: flex-start;
+  padding: 24px;
+  min-height: 132px;
+  font-size: 24px;
+}
+.mc-token-scope .mc-choice[aria-checked='true'] {
+  background: var(--mc-pri);
+  color: #fff;
+}
+.mc-token-scope .mc-choice[aria-checked='true'] small {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+@media (max-width: 760px) {
+  .mc-settings-tiles,
+  .mc-token-scope {
+    grid-template-columns: 1fr;
+  }
+  .mc-copyrow {
+    flex-wrap: wrap;
+  }
+}
+
+/* ---------- Note document (d15) ----------
+   Lives here because styles/cards/index.ts is shared; the note opens on its
+   label strip, then a paper document column on the Memory Cards type scale. */
+
+.mc-note {
+  max-width: 880px;
+  margin: 8px auto 0;
+  min-height: calc(100dvh - 140px);
+  background: var(--mc-paper);
+  border-radius: var(--mc-r-sheet) var(--mc-r-sheet) 0 0;
+  box-shadow: var(--mc-sh2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  color: var(--mc-ink);
+}
+.mc-note-band {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 0 24px 0 72px;
+  background: var(--c, var(--mc-line));
+  color: var(--mc-on-c);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.4);
+  font: 800 18px / 1 var(--mc-font-display);
+  flex: none;
+}
+.mc-note-band.is-unfiled {
+  color: var(--mc-mut);
+}
+.mc-note-space {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.mc-note-addspace {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  opacity: 0.62;
+  font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 44px;
+  padding: 0 8px;
+  border-radius: 12px;
+  cursor: pointer;
+  margin-right: auto;
+}
+.mc-note-addspace svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 3;
+}
+.mc-note-addspace:hover {
+  opacity: 1;
+}
+.mc-note-addspace:focus-visible,
+.mc-note-retry:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 2px;
+}
+.mc-note-status {
+  font: 700 16px / 1 var(--mc-font-ui);
+  opacity: 0.8;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  white-space: nowrap;
+}
+.mc-note-status.is-error {
+  opacity: 1;
+  color: var(--mc-err);
+  background: var(--mc-paper);
+  border-radius: 999px;
+  padding: 6px 6px 6px 14px;
+}
+.mc-note-retry {
+  appearance: none;
+  border: 0;
+  background: var(--mc-err);
+  color: #fff;
+  font: 800 16px / 1 var(--mc-font-display);
+  border-radius: 999px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.mc-note-band .mc-rb {
+  box-shadow: var(--mc-bevel), inset 0 -3px 0 var(--mc-line);
+}
+.mc-note-doc.memex-note-doc {
+  padding: 48px 72px 80px;
+  overflow: visible;
+}
+.mc-note-doc.memex-note-doc > * {
+  max-width: 736px;
+  margin-inline: 0;
+}
+.mc-note-doc .memex-note-title-input {
+  font: 900 48px / 1.1 var(--mc-font-display);
+  letter-spacing: -0.015em;
+  color: var(--mc-ink);
+}
+html[data-cards-font='plex'] .mc-note-doc .memex-note-title-input {
+  font-weight: 700;
+}
+.mc-note-doc .memex-note-title-input::placeholder {
+  color: var(--mc-faint);
+}
+.mc-note-doc .memex-note-title-input:focus-visible {
+  box-shadow: inset 0 -3px 0 0 var(--mc-ring);
+}
+.mc-note-doc .memex-note-meta {
+  font: 600 16px / 1.3 var(--mc-font-ui);
+  color: var(--mc-faint);
+  letter-spacing: 0;
+  margin: 12px 0 24px;
+}
+.mc-note-doc .memex-md-editor,
+.mc-note-doc .memex-markdown {
+  font: 500 20px / 1.6 var(--mc-font-ui);
+  letter-spacing: 0;
+  color: var(--mc-ink);
+}
+.mc-note-doc .memex-md-editor .cm-md-h {
+  font-family: var(--mc-font-display);
+  font-weight: 900;
+  color: var(--mc-ink);
+}
+.mc-note-doc .memex-md-editor .cm-md-h1 {
+  font-size: 36px;
+  line-height: 1.25;
+}
+.mc-note-doc .memex-md-editor .cm-md-h2 {
+  font-size: 28px;
+  line-height: 1.4;
+}
+.mc-note-doc .memex-md-editor .cm-md-syntax,
+.mc-note-doc .memex-md-editor .cm-md-listmark,
+.mc-note-doc .memex-md-editor .cm-md-bullet,
+.mc-note-doc .memex-md-editor .cm-placeholder {
+  color: var(--mc-faint);
+}
+.mc-note-doc .memex-md-editor .cm-content {
+  caret-color: var(--mc-pri);
+}
+.mc-note-doc .memex-md-editor .cm-cursor {
+  border-left: 3px solid var(--mc-pri);
+}
+.mc-note-doc .memex-md-editor ::selection {
+  background: color-mix(in srgb, var(--mc-pri) 28%, transparent);
+}
+.mc-note-doc .memex-md-editor .cm-md-link {
+  color: var(--mc-pri-ink);
+}
+/* Task checkboxes become the kit's 40px molded checks */
+.mc-note-doc .memex-md-editor .cm-md-task {
+  width: 52px;
+  height: 52px;
+  vertical-align: middle;
+}
+.mc-note-doc .memex-md-editor .cm-md-task input {
+  appearance: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--mc-paper);
+  box-shadow: 0 0 0 3px var(--mc-line) inset, inset 0 -3px 0 var(--mc-line);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.mc-note-doc .memex-md-editor .cm-md-task input:checked {
+  background: var(--mc-ok)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+    center / 22px no-repeat;
+  box-shadow: var(--mc-shade);
+}
+.mc-note-doc .memex-md-editor .cm-md-task input:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .mc-note {
+    margin: 0 -16px;
+    border-radius: 32px 32px 0 0;
+  }
+  .mc-note-band {
+    padding: 0 12px 0 24px;
+  }
+  .mc-note-doc.memex-note-doc {
+    padding: 32px 24px 64px;
+  }
+  .mc-note-doc .memex-note-title-input {
+    font-size: 36px;
+  }
+}

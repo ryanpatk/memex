@@ -13,6 +13,8 @@ export const LEGACY_HOME_PATH = '/home';
 export const SPACES_PATH = '/spaces';
 /** The Tasks view: open tasks across spaces, grouped by space or due date. */
 export const TASKS_PATH = '/tasks';
+/** The Inbox as its own page (Memory Cards look, d25); the classic look keeps it as the Journal's tray (`/?inbox=1`). */
+export const INBOX_PATH = '/inbox';
 
 export const spacePath = (spaceId: string) => `${SPACES_PATH}/${spaceId}`;
 

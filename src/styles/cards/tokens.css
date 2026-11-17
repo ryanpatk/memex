@@ -1,0 +1,166 @@
+/*
+ * Memory Cards — design tokens (design/memory-cards/mc_css.ts is the design
+ * source; @memex/core tokens/memoryCards.ts mirrors these literals for the
+ * Expo app, and src/styles/memoryCards.test.ts fails if they drift).
+ *
+ * Everything is scoped to html[data-look="cards"] (src/look/look.ts), so the
+ * classic Pastel Sky look never sees these. Names carry an `--mc-` prefix so
+ * they never collide with Pastel Sky's.
+ *
+ * Dark mode follows the app's own switch: html[data-theme="dark"].
+ * The heading font switches with html[data-cards-font="plex"].
+ */
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('../../fonts/plex/ibm-plex-sans-latin-400-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url('../../fonts/plex/ibm-plex-sans-latin-500-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('../../fonts/plex/ibm-plex-sans-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url('../../fonts/plex/ibm-plex-sans-latin-700-normal.woff2') format('woff2');
+}
+
+html[data-look='cards'] {
+  /* Type families: display (Nunito, rounded black) and UI (Inter) */
+  --mc-font-display: 'Nunito', ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
+  --mc-font-ui: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Type scale (nothing under 16px) */
+  --mc-t-hero: 80px;
+  --mc-t-hero-m: 52px;
+  --mc-t-h1: 44px;
+  --mc-t-h2: 32px;
+  --mc-t-h3: 26px;
+  --mc-t-body: 18px;
+  --mc-t-lab: 16px;
+
+  /* Spacing */
+  --mc-s1: 4px;
+  --mc-s2: 8px;
+  --mc-s3: 12px;
+  --mc-s4: 16px;
+  --mc-s5: 24px;
+  --mc-s6: 32px;
+  --mc-s7: 40px;
+  --mc-s8: 48px;
+  --mc-s9: 64px;
+
+  /* Radii */
+  --mc-r-chip: 12px;
+  --mc-r-pic: 16px;
+  --mc-r-card: 28px;
+  --mc-r-sheet: 40px;
+  --mc-r-pill: 999px;
+
+  /* Sizes */
+  --mc-hit: 44px;
+  --mc-ctl: 60px;
+  --mc-ctl-sm: 48px;
+  --mc-label-h: 44px;
+  --mc-tint: 22%;
+
+  /* Colours */
+  --mc-ink: #1d2127;
+  --mc-mut: #62676e;
+  --mc-faint: #8d939b;
+  --mc-line: #dde0e5;
+  --mc-bg-base: #eef2f8;
+  --mc-paper: #ffffff;
+  --mc-well: #f1f4f9;
+  --mc-notep: #fff6cc;
+  --mc-pri: #5077ff;
+  --mc-pri-ink: #2f55d6;
+  --mc-ring: #3d63f0;
+  --mc-ok: #1f9d55;
+  --mc-warn: #b7791f;
+  --mc-err: #e5484d;
+  --mc-err-bg: #fdecec;
+  --mc-toast: #1d2127;
+  --mc-agent: #6a43d8;
+  --mc-agent-bg: #ece5ff;
+  --mc-on-c: #1d2127;
+  --mc-today-bg: #fff1c7;
+  --mc-today-ink: #7a5400;
+
+  /* Space colours */
+  --mc-coral: #ff5a6f;
+  --mc-cyan: #00b8f0;
+  --mc-gold: #ffc928;
+  --mc-blue: #5077ff;
+  --mc-vio: #b38cfd;
+  --mc-green: #2fbf71;
+  --mc-orange: #ff9f2e;
+  --mc-pink: #ff8fc8;
+
+  /* The canvas swatch tints the page a little (Settings → Canvas) */
+  --mc-bg: color-mix(in oklab, var(--bookmark-canvas-base, #eef2f8) 28%, var(--mc-bg-base));
+
+  /* Molded plastic: a lit top edge and a darker lip that flattens on press */
+  --mc-bevel: inset 0 2px 0 rgba(255, 255, 255, 0.8);
+  --mc-shade: inset 0 -5px 0 rgba(0, 0, 0, 0.16);
+  --mc-lit: inset 0 2px 0 rgba(255, 255, 255, 0.35);
+
+  /* Elevation */
+  --mc-sh1: 0 2px 0 rgba(29, 33, 39, 0.05), 0 8px 18px -10px rgba(29, 33, 39, 0.25);
+  --mc-sh2: 0 2px 0 rgba(29, 33, 39, 0.05), 0 18px 36px -18px rgba(29, 33, 39, 0.32);
+  --mc-sh3: 0 40px 80px -30px rgba(0, 0, 0, 0.5);
+
+  /* Motion */
+  --mc-m-press: 120ms;
+  --mc-m-base: 200ms;
+  --mc-m-write: 280ms;
+  --mc-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  color-scheme: light;
+}
+
+html[data-look='cards'][data-cards-font='plex'] {
+  --mc-font-display: 'IBM Plex Sans', system-ui, sans-serif;
+  --mc-font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+}
+
+html[data-look='cards'][data-theme='dark'] {
+  --mc-ink: #eef1f6;
+  --mc-mut: #a9b0ba;
+  --mc-faint: #838a94;
+  --mc-line: #363c46;
+  --mc-bg-base: #14171d;
+  --mc-paper: #1f242c;
+  --mc-well: #2a3039;
+  --mc-notep: #3d3826;
+  --mc-err-bg: #3a2224;
+  --mc-toast: #3a414d;
+  --mc-ring: #9db2ff;
+  --mc-pri-ink: #9db2ff;
+  --mc-agent: #c9b8ff;
+  --mc-agent-bg: #352c5c;
+  --mc-today-bg: #4a3d16;
+  --mc-today-ink: #ffd970;
+  --mc-tint: 30%;
+  --mc-bevel: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --mc-bg: color-mix(in oklab, var(--bookmark-canvas-base, #14171d) 12%, var(--mc-bg-base));
+  --mc-sh1: 0 2px 0 rgba(0, 0, 0, 0.3), 0 8px 18px -10px rgba(0, 0, 0, 0.6);
+  --mc-sh2: 0 2px 0 rgba(0, 0, 0, 0.3), 0 18px 36px -18px rgba(0, 0, 0, 0.7);
+
+  color-scheme: dark;
+}

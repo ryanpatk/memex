@@ -1,0 +1,291 @@
+/*
+ * Memory Cards — the space page (d03, m02), New space and Space details
+ * (d29, d30) and the move sheet (d14).
+ */
+
+/* ---------- Header band ---------- */
+
+.mc-sp-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 32px 40px 36px;
+  margin-bottom: 32px;
+}
+.mc-sp-band-text {
+  min-width: 0;
+  flex: 1 1 420px;
+}
+.mc-sp-hero {
+  color: var(--mc-on-c);
+}
+.mc-sp-hero sup {
+  color: var(--mc-on-c);
+  opacity: 0.6;
+}
+.mc-sp-summary {
+  margin: 12px 0 0;
+  font: 600 18px / 1.4 var(--mc-font-ui);
+  opacity: 0.72;
+}
+.mc-sp-band-tools {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: none;
+}
+/* On the colour: the toggle's well is a translucent white */
+.mc-sp-band .mc-tg {
+  background: rgba(255, 255, 255, 0.42);
+}
+.mc-sp-band .mc-tg button {
+  color: var(--mc-on-c);
+}
+.mc-sp-band .mc-tg button[aria-checked='true'] {
+  color: var(--mc-ink);
+}
+html[data-theme='dark'] .mc-sp-band .mc-tg button[aria-checked='true'] {
+  color: var(--mc-ink);
+}
+.mc-sp-band-sk {
+  display: block;
+  width: 360px;
+  max-width: 100%;
+  height: 72px;
+  background: rgba(0, 0, 0, 0.06);
+}
+.mc-sp-band:has(.mc-sp-band-sk) {
+  min-height: 160px;
+}
+
+/* ---------- Board ---------- */
+
+.mc-sp-board {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) 2fr;
+  gap: 32px;
+  align-items: start;
+}
+.mc-sp-side {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  min-width: 0;
+}
+.mc-sp-side .mc-sec {
+  margin-bottom: 16px;
+}
+.mc-sp-sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.mc-sp-sec-head .mc-sec {
+  margin-bottom: 0;
+}
+.mc-sp-sec-head .mc-btn svg {
+  width: 18px;
+  height: 18px;
+}
+.mc-sp-pins {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.mc-sp-pin img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+.mc-sp-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mc-sp-hint a {
+  color: var(--mc-pri-ink);
+}
+.mc-sp-hint-icon {
+  width: 20px;
+  height: 20px;
+}
+.mc-sp-more {
+  margin-top: 12px;
+}
+.mc-sp-more svg,
+.mc-sp-all svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* The board's rows sit in a narrow column: keep titles roomy */
+.mc-sp-side .mc-task-meta {
+  max-width: 50%;
+}
+
+/* Cards: two columns of memory cards, masonry by CSS columns */
+.mc-sp-cards {
+  min-width: 0;
+}
+.mc-sp-grid {
+  columns: 2 300px;
+  column-gap: 32px;
+}
+.mc-sp-cell {
+  break-inside: avoid;
+  margin-bottom: 32px;
+  position: relative;
+  /* Room for the hover lift */
+  padding-top: 4px;
+}
+.mc-sp-cell .mc-pin {
+  display: none;
+}
+.mc-sp-pin-toggle {
+  position: absolute !important;
+  left: 20px;
+  top: 24px;
+  z-index: 4;
+  opacity: 0;
+  transition: opacity var(--mc-m-base) var(--mc-ease);
+}
+.mc-sp-cell:hover .mc-sp-pin-toggle,
+.mc-sp-cell:focus-within .mc-sp-pin-toggle,
+.mc-sp-pin-toggle.is-pinned {
+  opacity: 1;
+}
+.mc-sp-pin-toggle.is-pinned {
+  background: var(--mc-gold);
+  color: #5a4500;
+  box-shadow: var(--mc-shade);
+}
+@media (hover: none) {
+  .mc-sp-pin-toggle {
+    opacity: 1;
+  }
+}
+.mc-sp-all {
+  margin-top: 8px;
+}
+
+/* Journal side: the scoped feed on a paper sheet */
+.mc-sp-journal {
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .mc-sp-board {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .mc-sp-band {
+    margin: 0 -16px 24px;
+    padding: 24px 20px 28px;
+    border-radius: 0 0 36px 36px;
+  }
+  .mc-sp-band-tools {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .mc-sp-grid {
+    columns: 1;
+  }
+  .mc-sp-pins .mc-rb.is-large {
+    width: 56px;
+    height: 56px;
+  }
+}
+
+/* ---------- Colour picker (New space, Space details) ---------- */
+
+.mc-colors {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 4px;
+}
+.mc-color-cell {
+  display: inline-flex;
+  padding: 2px;
+}
+.mc-sw.mc-color-auto {
+  margin: 2px;
+  font: 900 20px / 1 var(--mc-font-display);
+  outline: 3px dashed rgba(255, 255, 255, 0.85);
+  outline-offset: -9px;
+}
+.mc-sw.mc-color-auto span {
+  color: var(--mc-on-c);
+}
+.mc-sw.mc-color-auto:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 8px;
+}
+.mc-color-note {
+  font-weight: 600;
+  color: var(--mc-faint);
+}
+
+/* Space details footer */
+.mc-sd-delete {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.mc-sd-confirm {
+  flex: 1 1 260px;
+  color: var(--mc-ink);
+}
+
+/* ---------- Move sheet (d14) ---------- */
+
+.mc-move-sub {
+  color: var(--mc-mut);
+  margin: -8px 0 24px;
+}
+.mc-move-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  padding: 10px;
+  margin: -10px;
+}
+.mc-move-tile {
+  min-height: 120px;
+}
+.mc-move-tile small {
+  font-weight: 700;
+}
+.mc-move-tile .mc-tile-name {
+  font-size: 22px;
+}
+.mc-move-tile[aria-pressed='true'] .mc-tile-check {
+  background: var(--mc-paper);
+}
+.mc-move-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 800 20px / 1 var(--mc-font-display);
+}
+.mc-move-new svg {
+  width: 22px;
+  height: 22px;
+  stroke-width: 3;
+}
+
+@media (max-width: 760px) {
+  .mc-move-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

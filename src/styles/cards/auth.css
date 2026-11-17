@@ -1,0 +1,94 @@
+/* Memory Cards — sign in, sign up and their errors (d35–d37). */
+
+.mc-auth {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 40px 16px;
+  background: var(--mc-bg);
+  color: var(--mc-ink);
+}
+.mc-auth-card {
+  width: min(600px, 100%);
+  background: var(--mc-paper);
+  border-radius: var(--mc-r-sheet);
+  padding: 80px 56px 56px;
+  box-shadow: var(--mc-bevel), var(--mc-sh3);
+}
+.mc-auth-wm {
+  font-size: 64px;
+  line-height: 1;
+}
+.mc-auth-title {
+  margin: 32px 0 8px;
+}
+.mc-auth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 32px;
+}
+.mc-auth-ok {
+  margin: 12px 0 0;
+  font: 600 16px / 1.4 var(--mc-font-ui);
+  color: var(--mc-ok);
+}
+.mc-auth-foot {
+  margin: 32px 0 0;
+  text-align: center;
+  font: 600 16px / 1.4 var(--mc-font-ui);
+  color: var(--mc-mut);
+}
+.mc-auth-link {
+  color: inherit;
+  text-decoration: none;
+  display: inline-block;
+  padding: 10px 8px;
+  border-radius: 12px;
+}
+.mc-auth-link strong {
+  color: var(--mc-pri-ink);
+}
+.mc-auth-link:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.mc-auth-link:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  .mc-auth-card {
+    padding: 48px 24px 32px;
+  }
+  .mc-auth-wm {
+    font-size: 52px;
+  }
+}
+
+/* ---------- Standalone states: 404, a page that failed (d40, d41) ---------- */
+
+.mc-standalone {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 40px 16px;
+  background: var(--mc-bg);
+  color: var(--mc-ink);
+}
+.mc-empty .mc-slot > span > span {
+  font: 900 32px / 1 var(--mc-font-display);
+}
+.mc-error-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.mc-route-error {
+  display: grid;
+  place-items: center;
+  min-height: 60vh;
+}

@@ -1,0 +1,711 @@
+/*
+ * Memory Cards — the Journal (d23, d24) and the Inbox page (d25, d26).
+ *
+ * The Journal keeps its classic markup and behaviour (components/journal/*):
+ * these rules, scoped to html[data-look='cards'], re-dress it as one big
+ * paper column under a “Today” hero, with jot bubbles, filled space strips,
+ * the dashed “File in X?” strip, memory cards for links and notes, chunky
+ * task rows and the kit's field for the composer. Space pages (decision
+ * 14B) render the same feed, so they pick this up too.
+ */
+
+/* ---------- Page: one paper column, the feed scrolls inside it ---------- */
+
+.mc-jr-page {
+  /* The top bar above is 24px + a 60px nav (shell.css .mc-top) */
+  height: calc(100dvh - 84px);
+  padding: 28px clamp(16px, 13.9vw, 200px) 0;
+  display: flex;
+  min-height: 420px;
+}
+
+.mc-jr-paper {
+  flex: 1;
+  min-width: 0;
+  max-width: 1040px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--mc-paper);
+  border-radius: var(--mc-r-sheet) var(--mc-r-sheet) 0 0;
+  box-shadow: var(--mc-bevel), var(--mc-sh2);
+  padding: 40px 56px 0;
+}
+
+.mc-jr-hero {
+  flex: none;
+  font-size: 64px;
+}
+
+/* The classic feed surface melts into the paper */
+html[data-look='cards'] .mc-jr-paper .jr-main {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+}
+
+html[data-look='cards'] .jr-scroll {
+  scrollbar-gutter: auto;
+  /* Room for focus rings and card lifts without clipping */
+  margin: 0 -24px;
+  padding: 0 24px;
+}
+
+html[data-look='cards'] .jr-feed {
+  gap: 24px;
+  padding: 24px 0 16px;
+}
+
+html[data-look='cards'] .jr-earlier {
+  font: 800 16px / 1.2 var(--mc-font-display);
+  color: var(--mc-pri-ink);
+  min-height: var(--mc-hit);
+  padding: 0 16px;
+}
+html[data-look='cards'] .jr-earlier:hover {
+  background: var(--mc-well);
+}
+html[data-look='cards'] .jr-earlier:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 2px;
+}
+
+/* Day separators: a quiet heading, no pill */
+html[data-look='cards'] .jr-day {
+  justify-content: flex-start;
+  margin: 16px 0 0;
+  padding: 0;
+}
+html[data-look='cards'] .jr-day span {
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--mc-mut);
+  font: 900 24px / 1.2 var(--mc-font-display);
+  letter-spacing: 0;
+}
+
+/* ---------- Entries ---------- */
+
+html[data-look='cards'] .jr-entry {
+  gap: 8px;
+}
+html[data-look='cards'] .jr-entry-row {
+  gap: 8px;
+  align-items: flex-start;
+}
+html[data-look='cards'] .jr-entry--link .jr-entry-row,
+html[data-look='cards'] .jr-entry--note .jr-entry-row,
+html[data-look='cards'] .jr-entry--picture .jr-entry-row {
+  max-width: none;
+  width: auto;
+}
+
+html[data-look='cards'] .jr-time {
+  font: 600 16px / 1.3 var(--mc-font-ui);
+  color: var(--mc-faint);
+}
+
+/* Jot: a paper bubble with the time after the words */
+html[data-look='cards'] .jr-bubble {
+  max-width: 640px;
+  padding: 16px 24px;
+  border-radius: 28px;
+  background: var(--mc-paper);
+  box-shadow: var(--mc-bevel), 0 0 0 2px var(--mc-well), var(--mc-sh1);
+  color: var(--mc-ink);
+  font: 600 22px / 1.4 var(--mc-font-ui);
+  letter-spacing: 0;
+}
+html[data-look='cards'] .jr-bubble .jr-time {
+  float: none;
+  display: inline;
+  margin: 0 0 0 12px;
+  vertical-align: 1px;
+}
+html[data-look='cards'] .jr-entry--jot.is-cont {
+  margin-top: -18px;
+}
+html[data-look='cards'] .jr-entry--jot.is-cont .jr-bubble {
+  border-top-left-radius: 12px;
+}
+html[data-look='cards'] .jr-entry--jot.is-held .jr-bubble {
+  border-bottom-left-radius: 12px;
+}
+html[data-look='cards'] .jr-bubble--edit {
+  width: min(640px, 100%);
+  box-shadow: 0 0 0 4px var(--mc-ring), var(--mc-sh1);
+}
+html[data-look='cards'] .jr-edit-input {
+  font: 600 22px / 1.4 var(--mc-font-ui);
+  min-height: 30px;
+}
+html[data-look='cards'] .jr-edit-hint {
+  font: 600 16px / 1.3 var(--mc-font-ui);
+  color: var(--mc-mut);
+}
+
+/* Links and notes: memory cards */
+.mc-jr-card {
+  width: 440px;
+  max-width: 100%;
+  min-width: 0;
+}
+html[data-look='cards'] .mc-jr-card .mc-card-pic {
+  /* A feed card shows a band of its picture, not the whole thing */
+  aspect-ratio: auto !important;
+  height: 140px;
+}
+html[data-look='cards'] .mc-jr-card .mc-card-title {
+  -webkit-line-clamp: 3;
+}
+html[data-look='cards'] .mc-jr-card .mc-card.is-note .mc-card-title {
+  font-size: 24px;
+  -webkit-line-clamp: 4;
+}
+
+/* Tasks: a chunky row */
+.mc-jr-task {
+  width: min(640px, 100%);
+}
+.mc-jr-task .jr-time {
+  flex: none;
+}
+
+/* Filing: filled strips for the spaces, the dashed suggestion strip */
+html[data-look='cards'] .mc-jr-filing {
+  gap: 8px;
+  padding-left: 0;
+  align-items: center;
+}
+.mc-jr-strip {
+  cursor: default;
+}
+.mc-jr-strip::after {
+  display: none;
+}
+html[data-look='cards'] .mc-jr-filing .mc-strip.is-suggest:hover {
+  background: color-mix(in srgb, var(--c) 14%, var(--mc-paper));
+}
+html[data-look='cards'] .mc-jr-filing .mc-strip.is-suggest:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 3px;
+}
+
+/* Hover actions: round buttons beside the entry */
+html[data-look='cards'] .jr-actions {
+  gap: 8px;
+  padding-top: 4px;
+}
+html[data-look='cards'] .jr-actions .memex-icon-button {
+  width: var(--mc-hit);
+  height: var(--mc-hit);
+  min-height: 0;
+  border-radius: 50%;
+  border: 0;
+  background: var(--mc-paper);
+  color: var(--mc-ink);
+  box-shadow: var(--mc-bevel), 0 0 0 2px var(--mc-line) inset, inset 0 -4px 0 var(--mc-line);
+  display: inline-grid;
+  place-items: center;
+}
+html[data-look='cards'] .jr-actions .memex-icon-button svg {
+  width: 20px;
+  height: 20px;
+}
+html[data-look='cards'] .jr-actions .memex-icon-button:hover {
+  transform: translateY(-2px);
+}
+html[data-look='cards'] .jr-actions .memex-icon-button:active {
+  transform: scale(0.94);
+  box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.1), 0 0 0 2px var(--mc-line) inset;
+}
+html[data-look='cards'] .jr-actions .memex-icon-button:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 3px;
+}
+
+/* Menus (File to…, jot actions) and the @ picker: the kit's menu */
+html[data-look='cards'] .jr-menu.memex-menu,
+html[data-look='cards'] .jr-picker.memex-menu {
+  min-width: 300px;
+  max-width: calc(100vw - 32px);
+  max-height: 420px;
+  padding: 12px;
+  border-radius: 28px;
+  background: var(--mc-paper);
+  box-shadow: var(--mc-sh3);
+  border: 0;
+  z-index: 60;
+}
+html[data-look='cards'] .jr-menu.memex-menu > button,
+html[data-look='cards'] .jr-picker.memex-menu > button {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 56px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  color: var(--mc-ink);
+  font: 700 20px / 1.2 var(--mc-font-display);
+  text-align: left;
+  cursor: pointer;
+}
+html[data-look='cards'] .jr-menu.memex-menu > button svg {
+  width: 22px;
+  height: 22px;
+  color: var(--mc-mut);
+  flex: none;
+}
+html[data-look='cards'] .jr-menu.memex-menu > button:hover,
+html[data-look='cards'] .jr-picker.memex-menu > button:hover,
+html[data-look='cards'] .jr-picker.memex-menu > button.is-active {
+  background: var(--mc-well);
+}
+html[data-look='cards'] .jr-menu.memex-menu > button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--mc-ring) inset;
+}
+html[data-look='cards'] .jr-menu.memex-menu > button.is-danger,
+html[data-look='cards'] .jr-menu.memex-menu > button.is-danger svg {
+  color: var(--mc-err);
+}
+html[data-look='cards'] .jr-menu.memex-menu > button.is-in svg.jr-push {
+  color: var(--mc-pri);
+}
+html[data-look='cards'] .jr-menu .jr-dot,
+html[data-look='cards'] .jr-picker .jr-dot {
+  width: 24px;
+  height: 24px;
+  margin: 0 2px;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.14);
+}
+html[data-look='cards'] .jr-menu-empty {
+  font: 600 16px / 1.3 var(--mc-font-ui);
+  color: var(--mc-mut);
+  padding: 12px 16px;
+}
+
+/* A run of saves from one platform: a card holding the gallery */
+html[data-look='cards'] .jr-gallery {
+  width: 440px;
+  padding: 16px;
+  border-radius: var(--mc-r-card);
+  background: var(--mc-paper);
+  box-shadow: var(--mc-bevel), 0 0 0 2px var(--mc-well), var(--mc-sh2);
+}
+html[data-look='cards'] .jr-run-head {
+  gap: 12px;
+  padding: 4px 4px 12px;
+  color: var(--mc-mut);
+  font: 600 16px / 1.3 var(--mc-font-ui);
+}
+html[data-look='cards'] .jr-run-head strong {
+  color: var(--mc-ink);
+  font: 800 18px / 1.2 var(--mc-font-display);
+}
+html[data-look='cards'] .jr-fav {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: var(--mc-well);
+  color: var(--mc-mut);
+  font: 900 12px / 1 var(--mc-font-display);
+}
+html[data-look='cards'] .jr-gallery-grid {
+  gap: 8px;
+}
+html[data-look='cards'] .jr-gallery-item,
+html[data-look='cards'] .jr-gallery-item .jr-tile {
+  border-radius: var(--mc-r-pic);
+}
+html[data-look='cards'] .jr-gallery-item:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 3px;
+}
+html[data-look='cards'] .jr-more {
+  min-height: var(--mc-hit);
+  margin-top: 8px;
+  padding: 0 12px;
+  border-radius: var(--mc-r-pill);
+  color: var(--mc-pri-ink);
+  font: 800 16px / 1.2 var(--mc-font-display);
+}
+html[data-look='cards'] .jr-more:hover {
+  background: var(--mc-well);
+}
+
+/* Reached from ⌘K: a wash in the primary colour */
+html[data-look='cards'] .jr-entry.is-found::before {
+  inset: -8px -12px;
+  border-radius: 32px;
+  background: color-mix(in srgb, var(--mc-pri) 14%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mc-pri) 40%, transparent);
+}
+html[data-look='cards'] .jr-entry:focus-visible:not(.is-found) {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 6px;
+  border-radius: 28px;
+}
+
+/* Empty and failed feeds sit in the middle of the paper */
+html[data-look='cards'] .jr-feed > .mc-empty {
+  margin-block: auto;
+}
+
+/* ---------- Composer: the kit's field with the round + ---------- */
+
+html[data-look='cards'] .mc-jr-composer {
+  padding: 16px 0 32px;
+}
+html[data-look='cards'] .mc-jr-composer .jr-composer-field.mc-field {
+  height: auto;
+  min-height: 76px;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 8px 8px 32px;
+  border-radius: 38px;
+  background: var(--mc-paper);
+  box-shadow: var(--mc-bevel), 0 0 0 2px var(--mc-well), var(--mc-sh2);
+}
+html[data-look='cards'] .mc-jr-composer .jr-composer-field.mc-field:hover {
+  box-shadow: 0 0 0 2px var(--mc-line), var(--mc-sh2);
+}
+html[data-look='cards'] .mc-jr-composer .jr-composer-field.mc-field:focus-within {
+  box-shadow: 0 0 0 4px var(--mc-ring), var(--mc-sh2);
+}
+html[data-look='cards'] .mc-jr-composer .jr-composer-input {
+  padding: 14px 0;
+  font: 500 20px / 1.4 var(--mc-font-ui);
+  letter-spacing: 0;
+  color: var(--mc-ink);
+}
+html[data-look='cards'] .mc-jr-composer .jr-composer-input::placeholder {
+  color: var(--mc-faint);
+}
+html[data-look='cards'] .mc-jr-composer .jr-send.mc-plus {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  align-self: flex-end;
+}
+html[data-look='cards'] .mc-jr-composer .jr-send.mc-plus svg {
+  width: 30px;
+  height: 30px;
+}
+/* The syntax hint shows only once you're writing (one obvious action first) */
+html[data-look='cards'] .mc-jr-composer .jr-hint {
+  display: none;
+  gap: 8px 16px;
+  margin: 12px 0 0;
+  padding-left: 32px;
+  color: var(--mc-mut);
+  font: 600 16px / 1.3 var(--mc-font-ui);
+  letter-spacing: 0;
+}
+html[data-look='cards'] .mc-jr-composer.has-text:focus-within .jr-hint {
+  display: flex;
+}
+html[data-look='cards'] .mc-jr-composer .jr-hint .memex-kbd {
+  display: inline-block;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  padding: 0 8px;
+  border: 0;
+  background: var(--mc-well);
+  box-shadow: inset 0 -3px 0 var(--mc-line);
+  font: 700 16px / 32px var(--mc-font-ui);
+  color: var(--mc-mut);
+  text-align: center;
+}
+html[data-look='cards'] .mc-jr-composer .jr-hint-spaces {
+  color: var(--mc-pri-ink);
+  font-weight: 700;
+}
+html[data-look='cards'] .mc-jr-composer .jr-picker {
+  left: 16px;
+  bottom: calc(100% - 8px);
+}
+
+/* ---------- Inbox page (d25, d26) ---------- */
+
+.mc-inbox-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 40px;
+  margin-top: 8px;
+  align-items: start;
+}
+.mc-inbox-grid.is-single {
+  grid-template-columns: minmax(0, 720px);
+}
+.mc-inbox-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.mc-inbox-empty {
+  margin-top: 32px;
+}
+
+/* Inbox cards hold buttons; the card itself isn't one */
+.mc-inbox-card.mc-card {
+  cursor: auto;
+}
+@media (hover: hover) {
+  .mc-inbox-card.mc-card:hover {
+    transform: none;
+    box-shadow: var(--mc-bevel), var(--mc-sh2);
+  }
+}
+.mc-inbox-card.mc-card:active {
+  transform: none;
+  box-shadow: var(--mc-bevel), var(--mc-sh2);
+}
+.mc-inbox-card[aria-busy='true'] {
+  opacity: 0.8;
+}
+
+.mc-proposal.mc-card {
+  padding: 28px 28px 0;
+}
+.mc-proposal .mc-lb {
+  margin: auto -28px 0;
+}
+.mc-suggestion.mc-card {
+  padding: 20px 20px 0;
+}
+.mc-suggestion .mc-lb {
+  margin: auto -20px 0;
+}
+
+.mc-inbox-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.mc-inbox-title {
+  margin-top: 16px;
+  overflow-wrap: anywhere;
+}
+.mc-suggestion .mc-inbox-title {
+  margin-top: 0;
+  font-size: 24px;
+}
+.mc-inbox-gone {
+  margin-top: 16px;
+  color: var(--mc-mut);
+}
+.mc-inbox-line {
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+.mc-inbox-line strong {
+  color: var(--mc-ink);
+}
+.mc-inbox-diff {
+  margin: 16px 0 0;
+  max-height: 360px;
+  overflow: auto;
+}
+pre.mc-inbox-diff {
+  font: 500 20px / 1.5 var(--mc-font-ui);
+}
+.mc-inbox-diff .mc-diff-skip {
+  color: var(--mc-faint);
+  font: 600 16px / 1.6 var(--mc-font-ui);
+}
+.mc-inbox-diff .is-ins,
+.mc-inbox-diff .is-del {
+  display: inline;
+}
+.mc-inbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  flex-wrap: wrap;
+}
+.mc-suggestion .mc-inbox-actions {
+  margin: 20px 0;
+  gap: 8px;
+}
+.mc-inbox-file .mc-pill-name {
+  max-width: 24ch;
+}
+.mc-inbox-file > .mc-pill-dot svg {
+  stroke-width: 3.5;
+}
+
+.mc-inbox-row {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  min-width: 0;
+}
+.mc-inbox-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.mc-inbox-thumb {
+  width: 112px;
+  height: 88px;
+  border-radius: var(--mc-r-pic);
+  flex: none;
+  overflow: hidden;
+  background: var(--mc-well);
+  display: grid;
+  place-items: center;
+  color: var(--mc-mut);
+  font: 900 30px / 1 var(--mc-font-display);
+}
+.mc-inbox-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mc-inbox-thumb.is-glyph svg {
+  width: 30px;
+  height: 30px;
+}
+
+/* ---------- Narrow windows ---------- */
+
+@media (max-width: 1100px) {
+  .mc-jr-page {
+    height: calc(100dvh - 76px);
+    padding-top: 20px;
+  }
+  .mc-jr-paper {
+    padding: 32px 40px 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .mc-inbox-grid,
+  .mc-inbox-grid.is-single {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .mc-jr-page {
+    /* Top bar (12px + 56px avatar) above; the tab bar floats over the bottom */
+    height: calc(100dvh - 68px - env(safe-area-inset-top));
+    padding: 12px 0 0;
+    min-height: 0;
+  }
+  .mc-jr-paper {
+    padding: 24px 16px 0;
+    border-radius: 32px 32px 0 0;
+  }
+  .mc-jr-hero {
+    font-size: var(--mc-t-hero-m);
+  }
+  html[data-look='cards'] .jr-scroll {
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  html[data-look='cards'] .jr-bubble {
+    font-size: 19px;
+    padding: 12px 18px;
+  }
+  html[data-look='cards'] .mc-jr-composer {
+    /* Clear the floating tab bar */
+    padding: 12px 0 calc(96px + env(safe-area-inset-bottom));
+  }
+  html[data-look='cards'] .mc-jr-composer .jr-composer-field.mc-field {
+    min-height: 60px;
+    padding: 6px 6px 6px 20px;
+  }
+  html[data-look='cards'] .mc-jr-composer .jr-composer-input {
+    font-size: 18px;
+    padding: 10px 0;
+  }
+  html[data-look='cards'] .mc-jr-composer .jr-send.mc-plus {
+    width: 48px;
+    height: 48px;
+  }
+  .mc-jr-card,
+  html[data-look='cards'] .jr-gallery {
+    width: 100%;
+  }
+  html[data-look='cards'] .jr-entry--link .jr-entry-row,
+  html[data-look='cards'] .jr-entry--note .jr-entry-row,
+  html[data-look='cards'] .jr-entry--picture .jr-entry-row {
+    width: 100%;
+  }
+  html[data-look='cards'] .jr-actions {
+    flex-direction: column;
+  }
+  .mc-proposal.mc-card {
+    padding: 20px 20px 0;
+  }
+  .mc-proposal .mc-lb {
+    margin: auto -20px 0;
+  }
+  pre.mc-inbox-diff,
+  .mc-inbox-diff {
+    font-size: 18px;
+    padding: 12px 16px;
+  }
+  .mc-inbox-thumb {
+    width: 88px;
+    height: 72px;
+  }
+}
+
+/* Inbox: the agent badge sits in the row, not pinned to the corner; diff lines are blocks */
+.mc-inbox-card .mc-agent {
+  position: static;
+  margin: 0;
+}
+pre.mc-inbox-diff {
+  white-space: normal;
+}
+.mc-inbox-diff .mc-diff-line {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 0 4px;
+  border-radius: 6px;
+}
+.mc-inbox-diff .mc-diff-line + .mc-diff-line {
+  margin-top: 2px;
+}
+.mc-inbox-diff .mc-diff-line.is-ins,
+.mc-inbox-diff .mc-diff-line.is-del {
+  display: block;
+}
+
+/* The feed fades out under the hero instead of cutting entries off */
+html[data-look='cards'] .mc-jr-paper .jr-scroll {
+  mask-image: linear-gradient(to bottom, transparent 0, #000 28px);
+}
+html[data-look='cards'] .mc-jr-paper .jr-feed {
+  padding-bottom: 24px;
+}
+
+/* Entry menus open leftward from their button, so the feed's scroller never clips them */
+html[data-look='cards'] .jr-menu.memex-menu {
+  left: auto;
+  right: 0;
+  transform-origin: bottom right;
+}

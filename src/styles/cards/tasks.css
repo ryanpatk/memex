@@ -1,0 +1,253 @@
+/*
+ * Memory Cards — Tasks (d27, d28) and task rows wherever they appear (the
+ * space page's board too). Rows are the kit's `.mc-trow`; groups are
+ * coloured bands (the space's colour, or a colour per due bucket).
+ */
+
+.mc-tasks-tools {
+  max-width: 860px;
+  flex-basis: 640px;
+}
+
+/* The add field (TaskComposer, cards branch) */
+.mc-task-composer {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.mc-task-composer .mc-field {
+  cursor: text;
+}
+.mc-task-composer .mc-field .mc-kb {
+  margin-right: 16px;
+}
+.mc-task-picker {
+  left: 24px;
+  top: calc(100% + 8px);
+  width: 320px;
+}
+.mc-task-filing {
+  position: absolute;
+  left: 32px;
+  top: calc(100% + 8px);
+  white-space: nowrap;
+}
+
+.mc-tasks-filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -8px 0 16px;
+}
+
+/* Groups: two columns of bands on wide windows */
+.mc-task-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr));
+  gap: 32px;
+  align-items: start;
+}
+.mc-task-group {
+  min-width: 0;
+}
+.mc-task-band {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  min-height: 64px;
+  margin: 0 0 12px;
+  padding: 0 24px;
+  border-radius: 24px;
+  font: 800 24px / 1.15 var(--mc-font-display);
+}
+.mc-task-band-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.mc-task-band-count {
+  font: 800 20px / 1 var(--mc-font-ui);
+  opacity: 0.72;
+  font-variant-numeric: tabular-nums;
+}
+.mc-task-band-sk {
+  height: 64px;
+  border-radius: 24px;
+  margin-bottom: 12px;
+}
+.mc-task-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* A row */
+.mc-task-row {
+  transition:
+    transform var(--mc-m-press) var(--mc-ease),
+    box-shadow var(--mc-m-base) var(--mc-ease),
+    opacity var(--mc-m-base) var(--mc-ease);
+}
+.mc-task-title {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  margin: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: text;
+  border-radius: 8px;
+}
+.mc-task-title:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 2px;
+}
+.mc-task-rename {
+  flex: 1;
+  min-height: 48px;
+  font: 800 21px / 1.25 var(--mc-font-display);
+  padding: 0 16px;
+}
+.mc-task-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  max-width: 60%;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.mc-task-strip {
+  cursor: default;
+  height: 36px;
+  max-width: 200px;
+}
+.mc-task-strip > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mc-task-strip > b {
+  width: 20px;
+  height: 20px;
+}
+.mc-task-due {
+  cursor: pointer;
+}
+.mc-task-due:hover {
+  filter: brightness(0.97);
+}
+.mc-task-due:focus-within {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 2px;
+}
+.mc-task-due.is-empty {
+  background: transparent;
+  box-shadow: 0 0 0 2px var(--mc-line) inset;
+  opacity: 0;
+}
+.mc-task-row:hover .mc-task-due.is-empty,
+.mc-task-row:focus-within .mc-task-due.is-empty {
+  opacity: 1;
+}
+@media (hover: none) {
+  .mc-task-due.is-empty {
+    display: none;
+  }
+}
+/* The native date field sits invisible over the chip: press = picker */
+.mc-task-due-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+}
+.mc-task-more {
+  box-shadow: none;
+  background: transparent;
+  opacity: 0.35;
+}
+.mc-task-row:hover .mc-task-more,
+.mc-task-row:focus-within .mc-task-more,
+.mc-task-more[aria-expanded='true'] {
+  opacity: 1;
+}
+@media (hover: none) {
+  .mc-task-more {
+    opacity: 1;
+  }
+}
+.mc-task-row .mc-menu {
+  top: calc(100% + 8px);
+}
+
+/* Ticked: struck through for a beat, then it moves to Done */
+.mc-task-row.is-done .mc-task-title {
+  color: var(--mc-faint);
+  text-decoration: line-through;
+}
+.mc-task-row.is-settling {
+  opacity: 0.6;
+}
+.mc-task-row.is-new {
+  animation: mc-card-write var(--mc-m-write) var(--mc-ease) both;
+}
+
+/* Done */
+.mc-task-done {
+  margin-top: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+.mc-task-done-toggle svg {
+  width: 18px;
+  height: 18px;
+  transition: transform var(--mc-m-base) var(--mc-ease);
+}
+.mc-task-done-toggle svg.is-open {
+  transform: rotate(90deg);
+}
+.mc-task-rows--done {
+  width: 100%;
+  max-width: 760px;
+}
+
+@media (max-width: 760px) {
+  .mc-tasks-tools {
+    flex-wrap: wrap;
+  }
+  .mc-task-composer {
+    flex-basis: 100%;
+  }
+  .mc-trow {
+    font-size: 19px;
+  }
+  .mc-task-band {
+    font-size: 22px;
+    min-height: 56px;
+  }
+  .mc-task-meta {
+    max-width: 45%;
+  }
+  .mc-task-strip {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mc-task-row.is-new {
+    animation: none;
+  }
+}

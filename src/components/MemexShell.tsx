@@ -6,6 +6,8 @@ import GoToPalette from './GoToPalette';
 import ShellNotices from './ShellNotices';
 import { useProfiles } from '../hooks/useProfiles';
 import { useItemDragSource } from '../hooks/useItemDragSource';
+import { useCardsLook } from '../look/look';
+import CardsTopBar from './cards/CardsTopBar';
 
 /**
  * The signed-in frame: sidebar + the current page (an Outlet, or the Journal
@@ -24,6 +26,24 @@ const MemexShell = ({ children }: { children?: ReactNode }) => {
     const space = spaceId ? profiles?.find((p) => p.id === spaceId) : undefined;
     document.title = space ? `${space.name} · memex` : pathname === TASKS_PATH ? 'Tasks · memex' : 'memex';
   }, [pathname, profiles, spaceId]);
+
+  const cards = useCardsLook();
+  if (cards) {
+    // Memory Cards (x01): a top bar over one scrolling column, no sidebar
+    return (
+      <div className="mc-shell">
+        <a className="mc-btn is-primary mc-skip" href="#mc-main">
+          Skip to content
+        </a>
+        <div className="mc-shell-main" id="mc-main" tabIndex={-1}>
+          <CardsTopBar />
+          {children ?? <Outlet />}
+          <ShellNotices />
+        </div>
+        <GoToPalette />
+      </div>
+    );
+  }
 
   return (
     <div className="memex-shell">

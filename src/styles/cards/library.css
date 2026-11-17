@@ -1,0 +1,456 @@
+/*
+ * Memory Cards — the Cards page (the Library, d01–d22, d38–d40): hero +
+ * save/search field + •••, the space pill row, the virtualized grid of
+ * memory cards, the View panel, the capture and open-card sheets, the
+ * selection bar, and List / Table behind •••.
+ */
+
+.mc-cards-page {
+  position: relative;
+}
+.mc-cards-page .mc-page-tools {
+  position: relative;
+}
+.mc-cards-page .mc-page-head {
+  align-items: center;
+}
+
+/* The ••• button shows a dot while the view isn't the default */
+.mc-dot-badge {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--mc-pri);
+  box-shadow: 0 0 0 3px var(--mc-bg);
+}
+
+/* The grid: 3 columns at 1440, 32px gaps (MasonryLayout reads the gaps) */
+.memex-stream-body.mc-stream {
+  margin-top: 20px;
+  min-height: 50vh;
+  padding: 0;
+  gap: 0;
+}
+.memex-masonry.mc-grid {
+  column-gap: 32px;
+  row-gap: 32px;
+  position: relative;
+}
+.memex-masonry.mc-grid .memex-masonry-cell {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+@media (max-width: 760px) {
+  .memex-masonry.mc-grid {
+    column-gap: 16px;
+    row-gap: 16px;
+  }
+}
+
+/* Loading cards (d39) */
+.mc-skeleton {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+}
+.mc-skeleton-col {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+@media (max-width: 1100px) {
+  .mc-skeleton {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .mc-skeleton-col:nth-child(3) {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .mc-skeleton {
+    grid-template-columns: 1fr;
+  }
+  .mc-skeleton-col:nth-child(n + 2) {
+    display: none;
+  }
+}
+
+/* ---------- View panel (d06) ---------- */
+
+.mc-view-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 12px);
+  z-index: 50;
+  width: min(600px, calc(100vw - 32px));
+  max-height: min(80vh, 820px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--mc-paper);
+  color: var(--mc-ink);
+  border-radius: var(--mc-r-sheet);
+  box-shadow: var(--mc-sh3);
+  padding: 32px;
+  animation: mc-sheet-in var(--mc-m-base) var(--mc-ease) both;
+}
+.mc-view-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.mc-view-layouts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.mc-view-sec {
+  margin: 24px 0 12px;
+}
+.mc-view-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.mc-view-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+}
+.mc-view-saved .mc-chip {
+  text-decoration: none;
+}
+.mc-view-saved-more {
+  box-shadow: none !important;
+  background: transparent !important;
+}
+.mc-view-name {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  align-items: center;
+}
+.mc-view-name .mc-inp {
+  min-height: 48px;
+  font-size: 18px;
+}
+.mc-view-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 2px solid var(--mc-well);
+}
+@media (max-width: 760px) {
+  .mc-view-panel {
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    top: auto;
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    width: auto;
+    padding: 24px;
+    max-height: 70vh;
+  }
+}
+
+/* ---------- Capture sheet (d18–d20) ---------- */
+
+.mc-capture {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 40px;
+  align-items: start;
+}
+.mc-capture-text {
+  min-height: 80px;
+  resize: none;
+  line-height: 1.4;
+  padding-top: 20px;
+  padding-bottom: 20px;
+}
+.mc-capture-kind {
+  margin-top: 16px;
+}
+.mc-capture-spaces {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.mc-capture-spaces .mc-pill {
+  width: 100%;
+}
+.mc-capture-preview .mc-flab {
+  margin-top: 0;
+}
+.mc-capture-preview .mc-card {
+  cursor: default;
+  transform: none;
+  animation: none;
+}
+.mc-capture-preview .mc-lb {
+  transition: background-color var(--mc-m-write) var(--mc-ease);
+}
+.mc-capture-pic {
+  height: 140px;
+  background: linear-gradient(165deg, #fff0a8, #f2a93b);
+}
+@media (max-width: 860px) {
+  .mc-capture {
+    grid-template-columns: 1fr;
+  }
+  .mc-capture-preview {
+    display: none;
+  }
+}
+
+/* ---------- Open card (d11) ---------- */
+
+dialog.mc-sheet.mc-open-card {
+  padding: 24px;
+  overflow: visible;
+}
+dialog.mc-sheet.mc-open-card .mc-sheet-scroll {
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  max-height: none;
+}
+.mc-open {
+  display: grid;
+  grid-template-columns: minmax(0, 560px) minmax(0, 1fr);
+  gap: 48px;
+  min-height: min(708px, calc(100dvh - 120px));
+  position: relative;
+  padding-bottom: 24px;
+}
+.mc-open::after {
+  content: '';
+  position: absolute;
+  left: -24px;
+  right: -24px;
+  bottom: -24px;
+  height: 24px;
+  border-radius: 0 0 var(--mc-r-sheet) var(--mc-r-sheet);
+  background: var(--c, var(--mc-line));
+}
+.mc-open-pic {
+  width: 100%;
+  height: 100%;
+  max-height: calc(100dvh - 140px);
+  object-fit: cover;
+  border-radius: var(--mc-r-card);
+  background: var(--mc-well);
+  display: block;
+}
+.mc-open-pic.is-empty {
+  display: grid;
+  place-items: center;
+  font: 900 120px / 1 var(--mc-font-display);
+  color: var(--mc-faint);
+  min-height: 360px;
+}
+.mc-open-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px 24px 0 0;
+  min-width: 0;
+}
+.mc-open-spaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.mc-open-title {
+  font-size: 52px;
+  line-height: 1.04;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+.mc-open-desc {
+  color: var(--mc-mut);
+  margin-top: 16px;
+  overflow-wrap: anywhere;
+}
+.mc-open-actions {
+  margin-top: auto;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding-top: 24px;
+}
+@media (max-width: 960px) {
+  .mc-open {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    min-height: 0;
+  }
+  .mc-open-pic {
+    max-height: 40vh;
+  }
+  .mc-open-title {
+    font-size: 36px;
+  }
+  .mc-open-body {
+    padding: 0;
+  }
+}
+
+/* ---------- Selection bar (d09) ---------- */
+
+.mc-selbar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(32px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 32px;
+  border-radius: var(--mc-r-pill);
+  background: var(--mc-paper);
+  box-shadow: var(--mc-bevel), var(--mc-sh3);
+  max-width: calc(100vw - 32px);
+  animation: mc-toast-in var(--mc-m-base) var(--mc-ease) both;
+}
+.mc-selbar-count {
+  margin: 0 12px 0 0;
+  font: 800 22px / 1.2 var(--mc-font-display);
+  white-space: nowrap;
+}
+.mc-cards-page.has-selection-bar {
+  padding-bottom: 160px;
+}
+@media (max-width: 760px) {
+  .mc-selbar {
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    padding-left: 20px;
+    gap: 8px;
+  }
+  .mc-selbar .mc-btn {
+    padding: 0 16px;
+    height: 48px;
+    font-size: 17px;
+  }
+  .mc-selbar .mc-btn svg {
+    display: none;
+  }
+  .mc-selbar-count {
+    font-size: 18px;
+  }
+  .mc-selbar-count .mc-lab {
+    display: none;
+  }
+}
+
+/* ---------- List (d07) and Table (d08), on the classic components ---------- */
+
+html[data-look='cards'] .mc-list .memex-list-group {
+  margin-bottom: 32px;
+}
+html[data-look='cards'] .mc-list .memex-list-label {
+  font: 900 24px / 1.2 var(--mc-font-display);
+  color: var(--mc-mut);
+  margin: 16px 0;
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  letter-spacing: 0;
+  text-transform: none;
+}
+html[data-look='cards'] .mc-list .memex-list-count {
+  font: 700 16px var(--mc-font-ui);
+  color: var(--mc-faint);
+}
+html[data-look='cards'] .mc-list .memex-list-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+html[data-look='cards'] .mc-list .memex-row {
+  min-height: 108px;
+  padding: 16px 24px 16px 16px;
+  border-radius: var(--mc-r-card);
+  background: var(--mc-paper);
+  box-shadow: var(--mc-bevel), var(--mc-sh1);
+  gap: 24px;
+  color: var(--mc-ink);
+}
+html[data-look='cards'] .mc-list .memex-row:hover {
+  box-shadow: 0 0 0 2px var(--mc-line) inset, var(--mc-sh2);
+}
+html[data-look='cards'] .mc-list .memex-row.is-selected {
+  box-shadow: 0 0 0 4px var(--mc-pri), var(--mc-sh1);
+}
+html[data-look='cards'] .mc-list .memex-row-title {
+  font: 800 24px / 1.2 var(--mc-font-display);
+}
+html[data-look='cards'] .mc-list .memex-row-meta {
+  font: 600 16px / 1.3 var(--mc-font-ui);
+  color: var(--mc-mut);
+}
+html[data-look='cards'] .mc-list .memex-row-thumb {
+  width: 76px;
+  height: 76px;
+  border-radius: 18px;
+}
+
+html[data-look='cards'] .mc-list {
+  max-width: none;
+}
+html[data-look='cards'] .mc-table-wrap .memex-table-wrap {
+  max-width: none;
+  border-radius: var(--mc-r-card);
+  background: var(--mc-paper);
+  box-shadow: var(--mc-bevel), var(--mc-sh1);
+  color: var(--mc-ink);
+  overflow: hidden;
+}
+html[data-look='cards'] .mc-table-wrap .memex-table {
+  color: var(--mc-ink);
+  table-layout: auto;
+}
+html[data-look='cards'] .mc-table-wrap .memex-table th {
+  top: 0;
+  height: 60px;
+  font: 800 17px / 1.2 var(--mc-font-display);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--mc-mut);
+  background: var(--mc-well);
+}
+html[data-look='cards'] .mc-table-wrap .memex-table td {
+  height: 76px;
+  font: 600 16px / 1.3 var(--mc-font-ui);
+  border-bottom: 2px solid var(--mc-well);
+}
+html[data-look='cards'] .mc-table-wrap .memex-table-title,
+html[data-look='cards'] .mc-table-wrap .memex-table-title * {
+  font: 800 20px / 1.2 var(--mc-font-display);
+}
+html[data-look='cards'] .mc-table-wrap .memex-table td:not(:has(.memex-table-title)) {
+  white-space: nowrap;
+}
+html[data-look='cards'] .mc-table-wrap .memex-table tr.is-selected td {
+  background: color-mix(in srgb, var(--mc-pri) 12%, var(--mc-paper));
+}
+
+@media (max-width: 760px) {
+  .mc-cards-page .mc-field .mc-kb {
+    display: none;
+  }
+  .mc-cards-page .mc-page-tools {
+    flex-basis: 100%;
+  }
+}

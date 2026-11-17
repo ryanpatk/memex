@@ -16,6 +16,7 @@ import { initCanvasColor } from './utils/canvasColor';
 import { initSound } from './utils/sound';
 import { initLinkCaptions } from './utils/linkCaptions';
 import { installChunkReloadHandler } from './utils/chunkReload';
+import { initCardsFont, initLook, loadCardsStyles } from './look/look';
 
 // First, so a stale tab after a deploy reloads instead of going blank
 installChunkReloadHandler();
@@ -24,9 +25,17 @@ initCanvasColor();
 initLinkCaptions();
 initSound();
 bind();
+const look = initLook();
+initCardsFont();
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    {repositoryConfigError ? <MissingEnv missing={repositoryConfigError.missing} /> : <RouterProvider router={router} />}
-  </React.StrictMode>,
-);
+const render = () =>
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      {repositoryConfigError ? <MissingEnv missing={repositoryConfigError.missing} /> : <RouterProvider router={router} />}
+    </React.StrictMode>,
+  );
+
+// The Memory Cards look (behind a flag, src/look/look.ts) paints only once
+// its stylesheet is in, so it never flashes classic styles first
+if (look === 'cards') void loadCardsStyles().finally(render);
+else render();

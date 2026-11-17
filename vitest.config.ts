@@ -14,7 +14,7 @@ export default defineConfig({
     include: ['packages/*/src/**/*.test.ts', 'src/**/*.test.ts', 'api/src/**/*.test.ts', 'extension/sources/**/*.test.ts'],
     environment: 'node',
     // Vitest blanks CSS imports by default; the token drift test reads the
-    // theme stylesheets with `?raw`, so let those two through.
-    css: { include: [/src\/styles\/(pastel-sky|components)\.css/] },
+    // theme stylesheets with `?raw`, so let those through.
+    css: { include: [/src\/styles\/(pastel-sky|components|cards\/tokens)\.css/] },
   },
 });
