@@ -3,9 +3,11 @@
  * source; @memex/core tokens/memoryCards.ts mirrors these literals for the
  * Expo app, and src/styles/memoryCards.test.ts fails if they drift).
  *
- * Everything is scoped to html[data-look="cards"] (src/look/look.ts), so the
- * classic Pastel Sky look never sees these. Names carry an `--mc-` prefix so
- * they never collide with Pastel Sky's.
+ * Tokens and the rules that re-dress shared base classes (the Journal's
+ * `jr-*`, the List and Table rows) are scoped to `html:root`: the same
+ * specificity they had under the retired look flag (`html[data-look]`), so
+ * they still win over the base styles they override. Names carry an `--mc-`
+ * prefix so they never collide with the base theme's.
  *
  * Dark mode follows the app's own switch: html[data-theme="dark"].
  * The heading font switches with html[data-cards-font="plex"].
@@ -40,7 +42,7 @@
   src: url('../../fonts/plex/ibm-plex-sans-latin-700-normal.woff2') format('woff2');
 }
 
-html[data-look='cards'] {
+html:root {
   /* Type families: display (Nunito, rounded black) and UI (Inter) */
   --mc-font-display: 'Nunito', ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
   --mc-font-ui: 'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -134,12 +136,12 @@ html[data-look='cards'] {
   color-scheme: light;
 }
 
-html[data-look='cards'][data-cards-font='plex'] {
+html:root[data-cards-font='plex'] {
   --mc-font-display: 'IBM Plex Sans', system-ui, sans-serif;
   --mc-font-ui: 'IBM Plex Sans', system-ui, sans-serif;
 }
 
-html[data-look='cards'][data-theme='dark'] {
+html:root[data-theme='dark'] {
   --mc-ink: #eef1f6;
   --mc-mut: #a9b0ba;
   --mc-faint: #838a94;

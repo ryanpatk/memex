@@ -3,12 +3,11 @@
  * variables (the Expo app, OG images, MCP renders). The look Ryan approved on
  * 2026-11-16 (design/memory-cards/: README.md, REFINEMENT-NOTES.md; the token
  * source there is mc_css.ts). The web app's source of truth is
- * src/styles/cards/tokens.css, scoped to html[data-look="cards"]; a unit test
+ * src/styles/cards/tokens.css (`html:root`); a unit test
  * (src/styles/memoryCards.test.ts) fails if these drift from it.
  *
- * These live beside the Pastel Sky tokens (tokens/pastelSky.ts) while both
- * looks ship: Pastel Sky stays the default, Memory Cards is behind the look
- * flag (web: src/look/look.ts).
+ * Memory Cards is memex's only look since 2026-11-17 (the classic Pastel Sky
+ * look is the tag `classic-design-final`).
  */
 
 /** Type scale in px. Nothing smaller than `label` anywhere. */

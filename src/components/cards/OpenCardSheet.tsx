@@ -15,11 +15,13 @@ import { useProfiles } from '../../hooks/useProfiles';
 import { useSpaceColors } from '../../hooks/useSpaceColors';
 import { useProfileLinkMembership } from '../../hooks/useProfileLinks';
 import { cue } from '../../utils/sound';
-import type { RescrapeResult } from '../stream/LinkExpandedCard';
 import EditLinkSheet from './EditLinkSheet';
 import Menu from './Menu';
 import Sheet from './Sheet';
 import SpacePill from './SpacePill';
+
+/** What “Refresh preview” found: new metadata, nothing new, or no answer from the scraper. */
+export type RescrapeResult = 'updated' | 'unchanged' | 'failed';
 
 const RESCRAPE_COPY: Record<RescrapeResult, string> = {
   updated: 'Preview refreshed.',

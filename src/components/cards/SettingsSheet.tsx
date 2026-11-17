@@ -8,7 +8,7 @@ import { useApiTokens } from '../../hooks/useApiTokens';
 import { agentTokenStatus, useAgentTokens } from '../../hooks/useAgentTokens';
 import { useSession } from '../../context/SessionContext';
 import { repository } from '../../data/repository';
-import { setCardsFont, setLook, useCardsFont, useLook, type CardsFont, type Look } from '../../look/look';
+import { setCardsFont, useCardsFont, type CardsFont } from '../../utils/cardsFont';
 import { userDisplayName } from '../../utils/userDisplay';
 import Sheet from './Sheet';
 import { Swatch, Switch, ToggleGroup } from './Controls';
@@ -19,17 +19,12 @@ const FONT_OPTIONS: readonly { value: CardsFont; label: string }[] = [
   { value: 'rounded', label: 'Rounded' },
   { value: 'plex', label: 'Plex' },
 ];
-const LOOK_OPTIONS: readonly { value: Look; label: string }[] = [
-  { value: 'cards', label: 'Cards' },
-  { value: 'classic', label: 'Classic' },
-];
 
 /**
- * Settings in the Memory Cards look (d31): four tiles (Dark mode, Sounds,
- * Font, Look), the canvas swatches, rows into Access tokens and Agent tokens,
- * and the account with Sign out. Card captions are gone: picture cards always
- * caption below in this look (decision 12). The Look tile flips back to the
- * classic look in this browser.
+ * Settings (d31): three tiles (Dark mode, Sounds, Font), the canvas
+ * swatches, rows into Access tokens and Agent tokens, and the account with
+ * Sign out. Card captions are gone: picture cards always caption below
+ * (decision 12).
  */
 const SettingsSheet = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const navigate = useNavigate();
@@ -38,7 +33,6 @@ const SettingsSheet = ({ open, onClose }: { open: boolean; onClose: () => void }
   const { isDark, toggleDarkMode } = useDarkMode();
   const sound = useSoundPreference();
   const font = useCardsFont();
-  const look = useLook();
   const { colorId, setColorId, options } = useCanvasColor();
   const { tokens: apiTokens } = useApiTokens(open);
   const { tokens: agentTokens } = useAgentTokens(open);
@@ -77,10 +71,6 @@ const SettingsSheet = ({ open, onClose }: { open: boolean; onClose: () => void }
           <div className="mc-stile">
             <h3 className="mc-h3">Font</h3>
             <ToggleGroup label="Heading font" value={font} options={FONT_OPTIONS} onChange={setCardsFont} />
-          </div>
-          <div className="mc-stile">
-            <h3 className="mc-h3">Look</h3>
-            <ToggleGroup label="Look" value={look} options={LOOK_OPTIONS} onChange={(next) => void setLook(next)} />
           </div>
         </div>
 

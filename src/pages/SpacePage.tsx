@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Ellipsis, LayoutGrid, LayoutPanelLeft, Library, ListTodo, Pencil } from 'lucide-react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Ellipsis, LayoutGrid, ListTodo, Pencil } from 'lucide-react';
 import {
   entriesInSpace,
   relativeTime,
@@ -19,16 +19,13 @@ import { useProfileLinkMembership, useSetProfileLinkSuperFavorite } from '../hoo
 import { useProfileTaskMembership } from '../hooks/useProfileTasks';
 import { useTaskActions } from '../hooks/useTaskActions';
 import JournalFeed, { type JournalFeedHandle } from '../components/journal/JournalFeed';
-import SpaceBoard from '../components/space/SpaceBoard';
-import SpaceDetailsModal from '../components/SpaceDetailsModal';
 import { FeedbackToast } from '../components/ui';
 import LoadErrorState from '../components/LoadErrorState';
 import { HANDLES_ERRORS } from '../utils/mutationErrors';
 import { loadStateOf } from '../utils/loadState';
 import { JOURNAL_PATH, LIBRARY_PATH, LINK_PARAM, NOTE_PARAM, SPACE_PARAM, TASKS_PATH } from '../constants/modules';
 import { cue } from '../utils/sound';
-import { useCardsLook } from '../look/look';
-import CardsSpaceBoard from '../components/space/CardsSpaceBoard';
+import SpaceBoard from '../components/space/SpaceBoard';
 import SpaceDetailsSheet from '../components/cards/SpaceDetailsSheet';
 import MoveSheet from '../components/cards/MoveSheet';
 import CardsMenu from '../components/cards/Menu';
@@ -38,25 +35,22 @@ import '../styles/tasks.css';
 import '../styles/space.css';
 
 /*
- * A space page, `/spaces/:spaceId` (decision 14B, ROADMAP.md Phase 1): the
- * space's own Journal (every jot written here and every item filed here, in
- * time order, with the composer filing into the space) and a board column
- * beside it: pinned sites, open tasks, saves, notes. The feed is the home
- * Journal's own component, so decision 17's layout applies here too. Narrow
- * windows fold the board behind a header button (`?board=1`). The Library
- * still shows the space as a grid: “Open in Library” (`/library?space=<id>`).
- * Notes: docs/space-page.md.
+ * A space page, `/spaces/:spaceId` (decision 14B; Memory Cards d03, m02):
+ * a colour band with the space's name, count and summary, then its board
+ * (pinned sites, open tasks, saves, notes) or, behind the Board · Journal
+ * toggle (`?show=journal`), the space's own Journal (every jot written here
+ * and every item filed here, with the composer filing into the space; the
+ * home Journal's own component). “Open in Cards” shows the space as a grid
+ * (`/library?space=<id>`). Notes: docs/space-page.md.
  */
 
-const BOARD_PARAM = 'board';
-/** Memory Cards: which side of the space page shows (`?show=journal`; the board is the default). */
+/** Which side of the space page shows (`?show=journal`; the board is the default). */
 const SHOW_PARAM = 'show';
 
 const SpacePage = () => {
   const { spaceId = '' } = useParams<{ spaceId: string }>();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const boardOpen = searchParams.get(BOARD_PARAM) === '1';
   const { isLoading, loadState, refetch, spaces, entries, filer } = useJournal();
   const profilesQuery = useProfiles();
   const profiles = profilesQuery.data;
@@ -68,7 +62,6 @@ const SpacePage = () => {
   const { toast, flash, dismiss, handleAnimationEnd } = useFeedbackToast();
   const feedRef = useRef<JournalFeedHandle>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const cards = useCardsLook();
   const showJournal = searchParams.get(SHOW_PARAM) === 'journal';
   const [fileInKey, setFileInKey] = useState<string | null>(null);
 
@@ -96,20 +89,6 @@ const SpacePage = () => {
     () => ({ link: board.saves.length, note: board.notes.length, task: board.openTasks.length + board.doneTasks.length }),
     [board],
   );
-
-  const today = new Date().toDateString();
-  const todayCount = scoped.filter((e) => new Date(e.at).toDateString() === today).length;
-
-  const setBoardOpen = (open: boolean) =>
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        if (open) next.set(BOARD_PARAM, '1');
-        else next.delete(BOARD_PARAM);
-        return next;
-      },
-      { replace: true },
-    );
 
   const togglePin = useCallback(
     (link: LinkWithTag, pinned: boolean) => {
@@ -144,17 +123,10 @@ const SpacePage = () => {
   );
 
   const addTask = useCallback(() => {
-    if (cards) {
-      // The composer lives on the Journal side
-      if (!showJournal) setShowJournal(true);
-      setTimeout(() => feedRef.current?.focusComposer('[] '), 60);
-      return;
-    }
-    if (boardOpen) setBoardOpen(false);
-    requestAnimationFrame(() => feedRef.current?.focusComposer('[] '));
-    // setBoardOpen is rebuilt each render from the URL
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [boardOpen, cards, setShowJournal, showJournal]);
+    // The composer lives on the Journal side
+    if (!showJournal) setShowJournal(true);
+    setTimeout(() => feedRef.current?.focusComposer('[] '), 60);
+  }, [setShowJournal, showJournal]);
 
   const openLinkCard = useCallback(
     (link: LinkWithTag) =>
@@ -166,240 +138,106 @@ const SpacePage = () => {
 
   /* ---------- Memory Cards (d03, m02) ---------- */
 
-  if (cards) {
-    if (spaceLoad === 'failed') {
-      return (
-        <main className="mc-page">
-          <LoadErrorState what="this space" onRetry={() => profilesQuery.refetch()} />
-        </main>
-      );
-    }
-    if (!space || !profile) {
-      return (
-        <main className="mc-page" aria-busy="true">
-          <div className="mc-band mc-sp-band" style={{ '--c': 'var(--mc-well)' } as CSSProperties}>
-            <span className="mc-sk mc-sp-band-sk" aria-label="Loading space" />
-          </div>
-        </main>
-      );
-    }
-    const cardCount = board.saves.length + board.notes.length + board.openTasks.length + board.doneTasks.length;
-    const lastSave = [...board.saves.map((l) => l.created_at), ...board.notes.map((n) => n.updated_at)].sort().pop();
-    const openTaskCount = board.openTasks.length;
-    const summary = [
-      openTaskCount ? `${openTaskCount} open task${openTaskCount === 1 ? '' : 's'}` : 'No open tasks',
-      lastSave ? `last save ${relativeTime(lastSave)}` : '',
-      board.jotCount ? `${board.jotCount} jot${board.jotCount === 1 ? '' : 's'}` : '',
-    ]
-      .filter(Boolean)
-      .join(' · ');
-
+  if (spaceLoad === 'failed') {
     return (
-      <main className="mc-page mc-sp" aria-label={space.name} style={{ '--c': space.color } as CSSProperties}>
-        <header className="mc-band mc-sp-band">
-          <div className="mc-sp-band-text">
-            <h1 className="mc-hero mc-sp-hero">
-              <span translate="no">{space.name}</span>
-              {loadState === 'ready' && <sup aria-label={`${cardCount} cards`}>{cardCount}</sup>}
-            </h1>
-            <p className="mc-sp-summary">{loadState === 'ready' ? summary : isLoading ? 'Loading…' : ' '}</p>
-          </div>
-          <div className="mc-sp-band-tools">
-            <ToggleGroup
-              label="Show"
-              value={showJournal ? 'journal' : 'board'}
-              options={[
-                { value: 'board', label: 'Board' },
-                { value: 'journal', label: 'Journal' },
-              ]}
-              onChange={(value) => setShowJournal(value === 'journal')}
-            />
-            <CardsMenu
-              label={`${space.name} options`}
-              entries={[
-                { id: 'details', label: 'Space details…', icon: <Pencil />, onSelect: () => setDetailsOpen(true) },
-                {
-                  id: 'cards',
-                  label: 'Open in Cards',
-                  icon: <LayoutGrid />,
-                  onSelect: () => navigate(`${LIBRARY_PATH}?${SPACE_PARAM}=${encodeURIComponent(space.id)}`),
-                },
-                {
-                  id: 'tasks',
-                  label: 'Tasks in this space',
-                  icon: <ListTodo />,
-                  onSelect: () => navigate(`${TASKS_PATH}?${SPACE_PARAM}=${encodeURIComponent(space.id)}`),
-                },
-              ]}
-              trigger={(props) => (
-                <button {...props} type="button" className="mc-rb" aria-label={`${space.name} options`}>
-                  <Ellipsis aria-hidden="true" />
-                </button>
-              )}
-            />
-          </div>
-        </header>
-
-        {showJournal ? (
-          <div className="mc-sp-journal">
-            <JournalFeed
-              ref={feedRef}
-              entries={scoped}
-              spaces={spaces}
-              filer={filer}
-              isLoading={isLoading}
-              scope={space}
-              label={`${space.name} Journal`}
-              flash={flash}
-              dismiss={dismiss}
-              failure={loadState === 'failed' ? <LoadErrorState what="this space" onRetry={refetch} /> : undefined}
-              empty={
-                <p className="mc-body mc-sp-hint">
-                  Everything you write here is filed in {space.name}. Jot a thought, paste a link, or start a line with
-                  “[]&nbsp;” for a task.
-                </p>
-              }
-            />
-          </div>
-        ) : loadState === 'failed' ? (
-          <LoadErrorState what="this space" onRetry={refetch} />
-        ) : (
-          <CardsSpaceBoard
-            space={space}
-            board={board}
-            linkMembership={linkRows ?? []}
-            taskSpaces={taskSpaces}
-            settling={settling}
-            hidden={hidden}
-            renamingId={renamingId}
-            taskHandlers={taskHandlers}
-            onTogglePin={togglePin}
-            onOpenLink={openLinkCard}
-            onOpenNote={openNoteCard}
-            onAddTask={addTask}
-            onFileIn={setFileInKey}
-          />
-        )}
-
-        <SpaceDetailsSheet
-          space={profile}
-          open={detailsOpen}
-          onClose={() => setDetailsOpen(false)}
-          typeTotals={typeTotals}
-          onFeedback={flash}
-        />
-        <MoveSheet
-          open={fileInKey !== null}
-          onClose={() => setFileInKey(null)}
-          itemKeys={fileInKey ? [fileInKey] : []}
-          onFeedback={flash}
-        />
-
-        {toast !== null && (
-          <FeedbackToast message={toast.message} phase={toast.phase} action={toast.action} onAnimationEnd={handleAnimationEnd} />
-        )}
+      <main className="mc-page">
+        <LoadErrorState what="this space" onRetry={() => profilesQuery.refetch()} />
       </main>
     );
   }
-
-  // The spaces didn't load: say so (the title skeleton would otherwise stay forever)
-  if (spaceLoad === 'failed') {
-    return (
-      <div className="jr-page sp-page">
-        <LoadErrorState what="this space" onRetry={() => profilesQuery.refetch()} />
-      </div>
-    );
-  }
-
   if (!space || !profile) {
     return (
-      <div className="jr-page sp-page" aria-busy="true">
-        <header className="memex-page-header jr-head">
-          <div className="memex-page-header-row">
-            <div className="memex-page-heading">
-              <h1 className="memex-page-title">
-                <span className="memex-page-title-text sp-title-skeleton" aria-label="Loading space" />
-              </h1>
-            </div>
-          </div>
-        </header>
-      </div>
+      <main className="mc-page" aria-busy="true">
+        <div className="mc-band mc-sp-band" style={{ '--c': 'var(--mc-well)' } as CSSProperties}>
+          <span className="mc-sk mc-sp-band-sk" aria-label="Loading space" />
+        </div>
+      </main>
     );
   }
-
-  const subtitle =
-    loadState === 'failed'
-      ? '\u00a0'
-      : isLoading
-        ? 'Loading…'
-        : scoped.length === 0
-          ? 'Nothing here yet'
-          : `${scoped.length} ${scoped.length === 1 ? 'entry' : 'entries'}${todayCount ? ` · ${todayCount} today` : ''}`;
+  const cardCount = board.saves.length + board.notes.length + board.openTasks.length + board.doneTasks.length;
+  const lastSave = [...board.saves.map((l) => l.created_at), ...board.notes.map((n) => n.updated_at)].sort().pop();
+  const openTaskCount = board.openTasks.length;
+  const summary = [
+    openTaskCount ? `${openTaskCount} open task${openTaskCount === 1 ? '' : 's'}` : 'No open tasks',
+    lastSave ? `last save ${relativeTime(lastSave)}` : '',
+    board.jotCount ? `${board.jotCount} jot${board.jotCount === 1 ? '' : 's'}` : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
-    <div className={`jr-page sp-page${boardOpen ? ' has-board' : ''}`} style={{ '--hue': space.color } as CSSProperties}>
-      <header className="memex-page-header jr-head">
-        <div className="memex-page-header-row">
-          <div className="memex-page-heading">
-            <h1 className="memex-page-title">
-              <span className="memex-space-dot" style={{ background: space.color }} aria-hidden="true" />
-              <span className="memex-page-title-text">{space.name}</span>
-            </h1>
-            <p className="memex-page-subtitle">{subtitle}</p>
-          </div>
-          <div className="memex-page-actions">
-            <button
-              type="button"
-              className={`btn-secondary btn-compact sp-board-toggle${boardOpen ? ' is-open' : ''}`}
-              aria-expanded={boardOpen}
-              aria-controls="space-board"
-              onClick={() => setBoardOpen(!boardOpen)}
-            >
-              <LayoutPanelLeft aria-hidden="true" />
-              Board
-            </button>
-            <Link className="btn-secondary btn-compact" to={`${LIBRARY_PATH}?${SPACE_PARAM}=${encodeURIComponent(space.id)}`}>
-              <Library aria-hidden="true" />
-              <span className="sp-hide-narrow">Open in </span>Library
-            </Link>
-            <button type="button" className="btn-secondary btn-compact" onClick={() => setDetailsOpen(true)} aria-haspopup="dialog">
-              <Pencil aria-hidden="true" />
-              Edit space
-            </button>
-          </div>
+    <main className="mc-page mc-sp" aria-label={space.name} style={{ '--c': space.color } as CSSProperties}>
+      <header className="mc-band mc-sp-band">
+        <div className="mc-sp-band-text">
+          <h1 className="mc-hero mc-sp-hero">
+            <span translate="no">{space.name}</span>
+            {loadState === 'ready' && <sup aria-label={`${cardCount} cards`}>{cardCount}</sup>}
+          </h1>
+          <p className="mc-sp-summary">{loadState === 'ready' ? summary : isLoading ? 'Loading…' : ' '}</p>
+        </div>
+        <div className="mc-sp-band-tools">
+          <ToggleGroup
+            label="Show"
+            value={showJournal ? 'journal' : 'board'}
+            options={[
+              { value: 'board', label: 'Board' },
+              { value: 'journal', label: 'Journal' },
+            ]}
+            onChange={(value) => setShowJournal(value === 'journal')}
+          />
+          <CardsMenu
+            label={`${space.name} options`}
+            entries={[
+              { id: 'details', label: 'Space details…', icon: <Pencil />, onSelect: () => setDetailsOpen(true) },
+              {
+                id: 'cards',
+                label: 'Open in Cards',
+                icon: <LayoutGrid />,
+                onSelect: () => navigate(`${LIBRARY_PATH}?${SPACE_PARAM}=${encodeURIComponent(space.id)}`),
+              },
+              {
+                id: 'tasks',
+                label: 'Tasks in this space',
+                icon: <ListTodo />,
+                onSelect: () => navigate(`${TASKS_PATH}?${SPACE_PARAM}=${encodeURIComponent(space.id)}`),
+              },
+            ]}
+            trigger={(props) => (
+              <button {...props} type="button" className="mc-rb" aria-label={`${space.name} options`}>
+                <Ellipsis aria-hidden="true" />
+              </button>
+            )}
+          />
         </div>
       </header>
 
-      <div className="jr-body">
-        <JournalFeed
-          ref={feedRef}
-          entries={scoped}
-          spaces={spaces}
-          filer={filer}
-          isLoading={isLoading}
-          scope={space}
-          label={`${space.name} Journal`}
-          flash={flash}
-          dismiss={dismiss}
-          failure={loadState === 'failed' ? <LoadErrorState what="this space" onRetry={refetch} /> : undefined}
-          empty={
-            <div className="sp-empty" role="status">
-              <span className="sp-empty-disc" aria-hidden="true">
-                <i />
-              </span>
-              <p className="jr-empty-title">A fresh space</p>
-              <p>
+      {showJournal ? (
+        <div className="mc-sp-journal">
+          <JournalFeed
+            ref={feedRef}
+            entries={scoped}
+            spaces={spaces}
+            filer={filer}
+            isLoading={isLoading}
+            scope={space}
+            label={`${space.name} Journal`}
+            flash={flash}
+            dismiss={dismiss}
+            failure={loadState === 'failed' ? <LoadErrorState what="this space" onRetry={refetch} /> : undefined}
+            empty={
+              <p className="mc-body mc-sp-hint">
                 Everything you write here is filed in {space.name}. Jot a thought, paste a link, or start a line with
                 “[]&nbsp;” for a task.
               </p>
-            </div>
-          }
-        />
+            }
+          />
+        </div>
+      ) : loadState === 'failed' ? (
+        <LoadErrorState what="this space" onRetry={refetch} />
+      ) : (
         <SpaceBoard
-          id="space-board"
           space={space}
           board={board}
-          spaces={spaces}
           linkMembership={linkRows ?? []}
           taskSpaces={taskSpaces}
           settling={settling}
@@ -407,18 +245,31 @@ const SpacePage = () => {
           renamingId={renamingId}
           taskHandlers={taskHandlers}
           onTogglePin={togglePin}
-          onOpenNote={openNote}
+          onOpenLink={openLinkCard}
+          onOpenNote={openNoteCard}
           onAddTask={addTask}
-          onClose={boardOpen ? () => setBoardOpen(false) : undefined}
+          onFileIn={setFileInKey}
         />
-      </div>
+      )}
 
-      <SpaceDetailsModal space={profile} isOpen={detailsOpen} onClose={() => setDetailsOpen(false)} typeTotals={typeTotals} onFeedback={flash} />
+      <SpaceDetailsSheet
+        space={profile}
+        open={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+        typeTotals={typeTotals}
+        onFeedback={flash}
+      />
+      <MoveSheet
+        open={fileInKey !== null}
+        onClose={() => setFileInKey(null)}
+        itemKeys={fileInKey ? [fileInKey] : []}
+        onFeedback={flash}
+      />
 
       {toast !== null && (
         <FeedbackToast message={toast.message} phase={toast.phase} action={toast.action} onAnimationEnd={handleAnimationEnd} />
       )}
-    </div>
+    </main>
   );
 };
 

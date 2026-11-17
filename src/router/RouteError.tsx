@@ -1,7 +1,5 @@
 import { useEffect } from 'react';
 import { useRouteError } from 'react-router-dom';
-import { EmptyState } from '../components/ui';
-import { useCardsLook } from '../look/look';
 import { EmptySlot } from '../components/cards/Controls';
 
 /**
@@ -13,58 +11,32 @@ import { EmptySlot } from '../components/cards/Controls';
  */
 const RouteError = ({ variant = 'page' }: { variant?: 'page' | 'panel' }) => {
   const error = useRouteError();
-  const cards = useCardsLook();
 
   useEffect(() => {
     console.error('A page failed to render:', error);
   }, [error]);
 
-  if (cards) {
-    // d40: a red empty slot with a “!”, Reload first
-    const slot = (
-      <EmptySlot
-        headingLevel={variant === 'page' ? 'h1' : 'h2'}
-        color="var(--mc-err)"
-        glyph={<span aria-hidden="true">!</span>}
-        title="Something went wrong"
-        body="memex hit a problem showing this page. Reloading usually sorts it out."
-        action={
-          <div className="mc-error-actions" role="group" aria-label="Recover">
-            <button type="button" className="mc-btn is-primary" onClick={() => window.location.reload()}>
-              Reload
-            </button>
-            <a className="mc-btn" href="/">
-              Go to the Journal
-            </a>
-          </div>
-        }
-      />
-    );
-    return variant === 'panel' ? <div className="mc-page mc-route-error" role="alert">{slot}</div> : <main className="mc-standalone" role="alert">{slot}</main>;
-  }
-
-  const body = (
-    <EmptyState
+  // d40: a red empty slot with a “!”, Reload first
+  const slot = (
+    <EmptySlot
+      headingLevel={variant === 'page' ? 'h1' : 'h2'}
+      color="var(--mc-err)"
+      glyph={<span aria-hidden="true">!</span>}
       title="Something went wrong"
-      subtitle="memex hit a problem showing this page. Reloading usually sorts it out."
-      role="alert"
-    >
-      <div className="memex-route-error-actions">
-        <button type="button" className="btn-primary btn-compact" onClick={() => window.location.reload()}>
-          Reload
-        </button>
-        <a className="btn-secondary btn-compact" href="/">
-          Go to the Journal
-        </a>
-      </div>
-    </EmptyState>
+      body="memex hit a problem showing this page. Reloading usually sorts it out."
+      action={
+        <div className="mc-error-actions" role="group" aria-label="Recover">
+          <button type="button" className="mc-btn is-primary" onClick={() => window.location.reload()}>
+            Reload
+          </button>
+          <a className="mc-btn" href="/">
+            Go to the Journal
+          </a>
+        </div>
+      }
+    />
   );
-
-  return variant === 'panel' ? (
-    <div className="memex-route-error is-panel">{body}</div>
-  ) : (
-    <div className="app-surface page-shell memex-route-error">{body}</div>
-  );
+  return variant === 'panel' ? <div className="mc-page mc-route-error" role="alert">{slot}</div> : <main className="mc-standalone" role="alert">{slot}</main>;
 };
 
 export default RouteError;

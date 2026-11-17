@@ -41,6 +41,10 @@
 .mc-settings-tiles .mc-stile {
   justify-content: space-between;
 }
+/* An odd tile out (Font, since Look went with the classic look) spans the row */
+.mc-settings-tiles > .mc-stile:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
 .mc-settings-tiles .mc-stile .mc-h3 {
   padding-right: 88px;
 }

@@ -26,8 +26,8 @@ const block = (selector: string) => {
 const vars = (text: string) =>
   Object.fromEntries([...text.matchAll(/--mc-([\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
 
-const light = vars(block("html[data-look='cards']"));
-const dark = { ...light, ...vars(block("html[data-look='cards'][data-theme='dark']")) };
+const light = vars(block('html:root'));
+const dark = { ...light, ...vars(block("html:root[data-theme='dark']")) };
 const px = (v: string) => Number(v.replace(/px$/, ''));
 
 const COLOR_VARS: Record<keyof Omit<MemoryCardsColors, 'noteTint'>, string> = {

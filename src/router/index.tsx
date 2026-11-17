@@ -1,14 +1,11 @@
+import { lazy, Suspense } from "react";
 import { createBrowserRouter } from "react-router-dom";
 import RootRoute from "./RootRoute.tsx";
 import SignInPage from "../pages/auth/SignInPage.tsx";
 import SignUpPage from "../pages/auth/SignUpPage.tsx";
-import ProtectedPage from "../pages/ProtectedPage.tsx";
 import StreamPage from "../pages/StreamPage.tsx";
 import TasksPage from "../pages/TasksPage.tsx";
 import SpacePage from "../pages/SpacePage.tsx";
-import ProjectPage from "../pages/ProjectPage.tsx";
-import StyleguidePage from "../pages/StyleguidePage.tsx";
-import MocksPage from "../pages/MocksPage.tsx";
 import NotFoundPage from "../pages/404Page.tsx";
 import AuthProtectedRoute from "./AuthProtectedRoute.tsx";
 import LegacyModuleRedirect from "./LegacyModuleRedirect.tsx";
@@ -16,8 +13,11 @@ import OAuthLanding from "./OAuthLanding.tsx";
 import MemexShell from "../components/MemexShell.tsx";
 import Providers from "../Providers.tsx";
 import RouteError from "./RouteError.tsx";
-import InboxRoute from "./InboxRoute.tsx";
+import InboxPage from "../pages/InboxPage.tsx";
 import { INBOX_PATH, LEGACY_HOME_PATH, LIBRARY_PATH, TASKS_PATH } from "../constants/modules.ts";
+
+// The component kit: its own chunk (and stylesheet), never part of the app
+const StyleguidePage = lazy(() => import("../pages/StyleguidePage.tsx"));
 
 const router = createBrowserRouter([
   // I recommend you reflect the routes here in the pages folder
@@ -46,13 +46,13 @@ const router = createBrowserRouter([
         path: "/",
         element: <AuthProtectedRoute />,
         children: [
-          // memex shell: sidebar (Journal, Library, Tasks, spaces) around the page
+          // memex shell: the top bar (Journal, Cards, Tasks, Inbox, account) over the page
           {
             element: <MemexShell />,
             errorElement: <RouteError />,
             children: [
               {
-                // A page that fails keeps the sidebar: the panel fills the main column
+                // A page that fails keeps the top bar: the panel fills the main column
                 errorElement: <RouteError variant="panel" />,
                 children: [
                   {
@@ -69,9 +69,9 @@ const router = createBrowserRouter([
                     element: <TasksPage />,
                   },
                   {
-                    // The Inbox page (Memory Cards look); the classic look redirects to /?inbox=1
+                    // The Inbox: agent proposals and filing suggestions
                     path: INBOX_PATH,
-                    element: <InboxRoute />,
+                    element: <InboxPage />,
                   },
                 ],
               },
@@ -99,25 +99,27 @@ const router = createBrowserRouter([
           // and not linked from in-app navigation
           {
             path: "/styleguide",
-            element: <StyleguidePage />,
-          },
-          // Design mocks for choosing directions — unlinked, like /styleguide
-          {
-            path: "/mocks",
-            element: <MocksPage />,
+            element: (
+              <Suspense fallback={null}>
+                <StyleguidePage />
+              </Suspense>
+            ),
           },
           // GitHub OAuth returns here; continues to the page sign-in started from
           {
             path: "/dashboard",
             element: <OAuthLanding />,
           },
+          // The original template's project page and test page: retired with
+          // the classic look (tag classic-design-final), so old links land in
+          // the Library
           {
             path: "/project/:projectId",
-            element: <ProjectPage />,
+            element: <LegacyModuleRedirect />,
           },
           {
             path: "/protected",
-            element: <ProtectedPage />,
+            element: <LegacyModuleRedirect />,
           },
         ],
       },

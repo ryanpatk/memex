@@ -3,20 +3,20 @@
  * scrolling column), page padding, the shared toast and the offline line.
  */
 
-html[data-look='cards'],
-html[data-look='cards'] body {
+html:root,
+html:root body {
   background: var(--mc-bg);
   color: var(--mc-ink);
 }
-html[data-look='cards'] body {
+html:root body {
   font-family: var(--mc-font-ui);
   font-variant-numeric: tabular-nums;
 }
-html[data-look='cards'] body::before,
-html[data-look='cards'] body::after {
+html:root body::before,
+html:root body::after {
   display: none;
 }
-html[data-look='cards'] ::selection {
+html:root ::selection {
   background: color-mix(in srgb, var(--mc-pri) 28%, transparent);
 }
 
@@ -189,7 +189,7 @@ html[data-look='cards'] ::selection {
 }
 
 /* Offline line */
-html[data-look='cards'] .memex-offline-notice {
+html:root .memex-offline-notice {
   font: 700 16px / 1.3 var(--mc-font-ui);
   border-radius: var(--mc-r-pill);
   background: var(--mc-paper);
@@ -200,8 +200,8 @@ html[data-look='cards'] .memex-offline-notice {
 
 /* Classic surfaces shown inside the cards look (route errors, the note
    editor's markdown) pick up the paper and ink */
-html[data-look='cards'] .memex-shell-main,
-html[data-look='cards'] .bookmark-dashboard {
+html:root .memex-shell-main,
+html:root .bookmark-dashboard {
   background: transparent;
 }
 
@@ -218,13 +218,13 @@ html[data-look='cards'] .bookmark-dashboard {
     margin: 0 -32px;
     padding: 4px 32px 12px;
   }
-  html[data-look='cards'] {
+  html:root {
     --mc-t-hero: 64px;
   }
 }
 
 @media (max-width: 760px) {
-  html[data-look='cards'] {
+  html:root {
     --mc-t-hero: var(--mc-t-hero-m);
     --mc-t-h3: 24px;
   }

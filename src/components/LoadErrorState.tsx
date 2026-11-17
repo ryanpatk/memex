@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useOnline } from '../hooks/useOnline';
 import { loadErrorCopy } from '../utils/loadState';
-import { EmptyState } from './ui';
-import { useCardsLook } from '../look/look';
 import { EmptySlot } from './cards/Controls';
 
 interface LoadErrorStateProps {
@@ -19,7 +17,6 @@ interface LoadErrorStateProps {
  */
 const LoadErrorState = ({ what, onRetry }: LoadErrorStateProps) => {
   const online = useOnline();
-  const cards = useCardsLook();
   const [retrying, setRetrying] = useState(false);
   const { title, subtitle } = loadErrorCopy(what, online);
 
@@ -34,35 +31,19 @@ const LoadErrorState = ({ what, onRetry }: LoadErrorStateProps) => {
     }
   };
 
-  if (cards) {
-    // d40: a red slot (orange while offline) with Retry
-    return (
-      <EmptySlot
-        color={online ? 'var(--mc-err)' : 'var(--mc-orange)'}
-        glyph={<span aria-hidden="true">!</span>}
-        title={title}
-        body={subtitle}
-        action={
-          <button type="button" className="mc-btn is-primary" onClick={() => void retry()} disabled={retrying} aria-busy={retrying || undefined}>
-            Retry
-          </button>
-        }
-      />
-    );
-  }
-
+  // d40: a red slot (orange while offline) with Retry
   return (
-    <EmptyState title={title} subtitle={subtitle} role="status">
-      <button
-        type="button"
-        className="btn-secondary btn-compact"
-        onClick={() => void retry()}
-        disabled={retrying}
-        aria-busy={retrying}
-      >
-        {retrying ? 'Retrying…' : 'Retry'}
-      </button>
-    </EmptyState>
+    <EmptySlot
+      color={online ? 'var(--mc-err)' : 'var(--mc-orange)'}
+      glyph={<span aria-hidden="true">!</span>}
+      title={title}
+      body={subtitle}
+      action={
+        <button type="button" className="mc-btn is-primary" onClick={() => void retry()} disabled={retrying} aria-busy={retrying || undefined}>
+          Retry
+        </button>
+      }
+    />
   );
 };
 

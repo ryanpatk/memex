@@ -1,8 +1,7 @@
 /*
- * The Memory Cards look's stylesheet and fonts, loaded as one chunk only when
- * the look is on (src/look/look.ts → loadCardsStyles), so the classic look
- * never downloads them. Order matters: tokens, then the kit, then the shell
- * and pages, which compose the kit.
+ * The Memory Cards stylesheet and fonts (imported by main.tsx). Order
+ * matters: tokens, then the kit, then the shell and pages, which compose
+ * the kit.
  */
 import '@fontsource/nunito/latin-700.css';
 import '@fontsource/nunito/latin-800.css';

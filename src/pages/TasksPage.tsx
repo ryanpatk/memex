@@ -6,15 +6,11 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type ReactNode,
 } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  AlertCircle,
-  CalendarDays,
   Check,
-  ChevronDown,
   ChevronRight,
   Ellipsis,
   ListTodo,
@@ -46,9 +42,7 @@ import { useProfiles } from '../hooks/useProfiles';
 import { useSpaceColors } from '../hooks/useSpaceColors';
 import { useFeedbackToast } from '../hooks/useFeedbackToast';
 import { useTaskActions } from '../hooks/useTaskActions';
-import { TaskRow } from '../components/tasks/TaskRow';
 import { focusTaskRow, nextFocusAfter, taskListKeyDown } from '../components/tasks/taskList';
-import MenuButton, { type MenuEntry } from '../components/library/MenuButton';
 import TaskComposer, { type TaskComposerHandle } from '../components/tasks/TaskComposer';
 import { FeedbackToast } from '../components/ui';
 import LoadErrorState from '../components/LoadErrorState';
@@ -56,8 +50,7 @@ import { HANDLES_ERRORS } from '../utils/mutationErrors';
 import { loadStateOf } from '../utils/loadState';
 import { DONE_PARAM, GROUP_PARAM, SPACE_PARAM } from '../constants/modules';
 import { cue } from '../utils/sound';
-import { useCardsLook } from '../look/look';
-import { CardsTaskRow } from '../components/tasks/CardsTaskRow';
+import { TaskRow } from '../components/tasks/TaskRow';
 import CardsMenu, { type MenuEntry as CardsMenuEntry } from '../components/cards/Menu';
 import MoveSheet from '../components/cards/MoveSheet';
 import { EmptySlot, ToggleGroup } from '../components/cards/Controls';
@@ -118,7 +111,6 @@ const TasksPage = () => {
   const filterSpace = spaceFilter.length === 1 ? spaceById.get(spaceFilter[0]) : undefined;
 
   const [doneLimit, setDoneLimit] = useState(DONE_PAGE);
-  const cards = useCardsLook();
   /** Memory Cards: the task whose “File in…” sheet is open. */
   const [fileInKey, setFileInKey] = useState<string | null>(null);
   const composerRef = useRef<TaskComposerHandle>(null);
@@ -162,7 +154,7 @@ const TasksPage = () => {
 
   const now = useMemo(() => new Date(), [tasks]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { open, done, groups, counts, overdueCount, todayCount } = useMemo(() => {
+  const { open, done, groups, counts } = useMemo(() => {
     const visible = (tasks ?? []).filter((t) => !hidden.has(t.id));
     // Optimistic rows have no spaces yet; keep them on screen whatever the filter
     const filtered = filterTasksBySpace(visible, membership, spaceFilter).concat(
@@ -254,38 +246,6 @@ const TasksPage = () => {
   // Rows: ↑/↓ (Home/End) move between rows, keeping the column; Delete deletes
   const onListKeyDown = taskListKeyDown(listRef, (id) => (tasks ?? []).find((t) => t.id === id), rowHandlers.onDelete);
 
-  /* ---------- Menus ---------- */
-
-  const spaceEntries = useMemo<MenuEntry[]>(
-    () => [
-      {
-        key: UNFILED_TASKS,
-        label: <MenuCountLabel label="Unfiled" count={counts.get(UNFILED_TASKS) ?? 0} />,
-        role: 'checkbox',
-        checked: spaceFilter.includes(UNFILED_TASKS),
-        onSelect: () => toggleSpaceFilter(UNFILED_TASKS),
-      },
-      ...(spaces.length ? [{ key: 'divider-spaces', divider: true as const }] : []),
-      ...spaces.map((space) => ({
-        key: space.id,
-        label: <MenuCountLabel label={space.name} count={counts.get(space.id) ?? 0} />,
-        role: 'checkbox' as const,
-        checked: spaceFilter.includes(space.id),
-        icon: <span className="memex-space-dot" style={{ background: space.color }} aria-hidden="true" />,
-        onSelect: () => toggleSpaceFilter(space.id),
-      })),
-      ...(spaceFilter.length
-        ? [
-            { key: 'divider-clear', divider: true as const },
-            { key: 'clear', label: 'Every space', onSelect: () => setParam(SPACE_PARAM, null) },
-          ]
-        : []),
-    ],
-    // toggleSpaceFilter is rebuilt each render from spaceFilter
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [counts, setParam, spaceFilter, spaces],
-  );
-
   const spaceSummary =
     spaceFilter.length === 0
       ? 'Space'
@@ -295,28 +255,8 @@ const TasksPage = () => {
           : (filterSpace?.name ?? 'Space')
         : `Space · ${spaceFilter.length}`;
 
-  const subtitleParts = [
-    loadState === 'failed' ? '\u00a0' : isLoading ? 'Loading…' : openCount === 0 ? 'Nothing open' : `${openCount} open`,
-    todayCount > 0 ? `${todayCount} due today` : '',
-    overdueCount > 0 ? `${overdueCount} overdue` : '',
-  ].filter(Boolean);
-
   const spacesOf = (task: TaskWithTags) =>
     (membership.get(task.id) ?? []).map((id) => spaceById.get(id)).filter((s): s is JournalSpace => !!s);
-
-  const renderRow = (task: TaskWithTags, groupSpaceId?: string) => (
-    <TaskRow
-      key={task.id}
-      task={task}
-      taskSpaces={spacesOf(task)}
-      groupSpaceId={groupSpaceId}
-      allSpaces={spaces}
-      settling={settling.has(task.id)}
-      renaming={renamingId === task.id}
-      now={now}
-      handlers={rowHandlers}
-    />
-  );
 
   /* ---------- Render ---------- */
 
@@ -324,452 +264,214 @@ const TasksPage = () => {
   const failed = loadState === 'failed';
   const nothingAtAll = loadState === 'ready' && open.length === 0 && done.length === 0;
 
-
   /* ---------- Memory Cards (d27, d28) ---------- */
 
-  if (cards) {
-    const bandColor = (group: (typeof groups)[number]) =>
-      group.space
-        ? group.space.color
-        : group.bucket === 'overdue'
-          ? 'var(--mc-coral)'
-          : group.bucket === 'today'
-            ? 'var(--mc-gold)'
-            : group.bucket === 'tomorrow'
-              ? 'var(--mc-cyan)'
-              : group.bucket === 'week'
-                ? 'var(--mc-blue)'
-                : group.bucket === 'later'
-                  ? 'var(--mc-vio)'
-                  : 'var(--mc-line)';
+  const bandColor = (group: (typeof groups)[number]) =>
+    group.space
+      ? group.space.color
+      : group.bucket === 'overdue'
+        ? 'var(--mc-coral)'
+        : group.bucket === 'today'
+          ? 'var(--mc-gold)'
+          : group.bucket === 'tomorrow'
+            ? 'var(--mc-cyan)'
+            : group.bucket === 'week'
+              ? 'var(--mc-blue)'
+              : group.bucket === 'later'
+                ? 'var(--mc-vio)'
+                : 'var(--mc-line)';
 
-    const menuEntries: CardsMenuEntry[] = [
-      { kind: 'header', id: 'h-space', label: 'Show' },
-      {
-        id: UNFILED_TASKS,
-        label: `Unfiled · ${counts.get(UNFILED_TASKS) ?? 0}`,
-        checked: spaceFilter.includes(UNFILED_TASKS),
-        onSelect: () => toggleSpaceFilter(UNFILED_TASKS),
-      },
-      ...spaces.map<CardsMenuEntry>((space) => ({
-        id: space.id,
-        label: `${space.name} · ${counts.get(space.id) ?? 0}`,
-        color: space.color,
-        checked: spaceFilter.includes(space.id),
-        onSelect: () => toggleSpaceFilter(space.id),
-      })),
-      ...(spaceFilter.length
-        ? [{ id: 'every', label: 'Every space', onSelect: () => setParam(SPACE_PARAM, null) } as CardsMenuEntry]
-        : []),
-      { kind: 'separator', id: 'sep' },
-      {
-        id: 'done',
-        label: showDone ? 'Hide done' : `Show done · ${done.length}`,
-        icon: <Check />,
-        disabled: done.length === 0,
-        onSelect: () => setParam(DONE_PARAM, showDone ? null : '1'),
-      },
-    ];
+  const menuEntries: CardsMenuEntry[] = [
+    { kind: 'header', id: 'h-space', label: 'Show' },
+    {
+      id: UNFILED_TASKS,
+      label: `Unfiled · ${counts.get(UNFILED_TASKS) ?? 0}`,
+      checked: spaceFilter.includes(UNFILED_TASKS),
+      onSelect: () => toggleSpaceFilter(UNFILED_TASKS),
+    },
+    ...spaces.map<CardsMenuEntry>((space) => ({
+      id: space.id,
+      label: `${space.name} · ${counts.get(space.id) ?? 0}`,
+      color: space.color,
+      checked: spaceFilter.includes(space.id),
+      onSelect: () => toggleSpaceFilter(space.id),
+    })),
+    ...(spaceFilter.length
+      ? [{ id: 'every', label: 'Every space', onSelect: () => setParam(SPACE_PARAM, null) } as CardsMenuEntry]
+      : []),
+    { kind: 'separator', id: 'sep' },
+    {
+      id: 'done',
+      label: showDone ? 'Hide done' : `Show done · ${done.length}`,
+      icon: <Check />,
+      disabled: done.length === 0,
+      onSelect: () => setParam(DONE_PARAM, showDone ? null : '1'),
+    },
+  ];
 
-    const renderCardsRow = (task: TaskWithTags, groupSpaceId?: string) => (
-      <CardsTaskRow
-        key={task.id}
-        task={task}
-        taskSpaces={spacesOf(task)}
-        groupSpaceId={groupSpaceId}
-        settling={settling.has(task.id)}
-        renaming={renamingId === task.id}
-        now={now}
-        handlers={rowHandlers}
-        onFileIn={(t) => setFileInKey(`task:${t.id}`)}
-      />
-    );
-
-    return (
-      <main className="mc-page mc-tasks" aria-label="Tasks">
-        <div className="mc-page-head">
-          <h1 className="mc-hero">
-            Tasks
-            {loadState === 'ready' && <sup aria-label={`${openCount} open`}>{openCount}</sup>}
-          </h1>
-          <div className="mc-page-tools mc-tasks-tools">
-            <TaskComposer ref={composerRef} spaces={spaces} defaultSpace={filterSpace} onSubmit={handleCreate} />
-            <ToggleGroup
-              label="Group by"
-              value={grouping}
-              options={[
-                { value: 'space', label: 'By space' },
-                { value: 'date', label: 'By date' },
-              ]}
-              onChange={setGrouping}
-            />
-            <CardsMenu
-              label="Tasks options"
-              entries={menuEntries}
-              trigger={(props) => (
-                <button {...props} type="button" className="mc-rb" aria-label="Tasks options">
-                  <Ellipsis aria-hidden="true" />
-                </button>
-              )}
-            />
-          </div>
-        </div>
-
-        {filtered && (
-          <p className="mc-lab mc-tasks-filter" role="status">
-            Showing {spaceFilter.length === 1 ? spaceSummary : `${spaceFilter.length} spaces`}
-            <button type="button" className="mc-btn is-quiet is-small" onClick={() => setParam(SPACE_PARAM, null)}>
-              Show every space
-            </button>
-          </p>
-        )}
-
-        <div className="mc-task-list" ref={listRef} onKeyDown={onListKeyDown}>
-          {isLoading && (
-            <div className="mc-task-groups" aria-busy="true" aria-label="Loading tasks">
-              {[0, 1].map((n) => (
-                <section key={n} className="mc-task-group">
-                  <span className="mc-sk mc-task-band-sk" />
-                  <ul className="mc-task-rows">
-                    {[64, 48, 72].map((w) => (
-                      <li key={w} className="mc-trow">
-                        <span className="mc-sk" style={{ width: 40, height: 40, borderRadius: 12 }} />
-                        <span className="mc-sk" style={{ width: `${w}%`, height: 20 }} />
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
-            </div>
-          )}
-
-          {failed && <LoadErrorState what="your tasks" onRetry={() => tasksQuery.refetch()} />}
-
-          {nothingAtAll && !filtered && (
-            <EmptySlot
-              glyph={<ListTodo />}
-              color="var(--mc-blue)"
-              title="Nothing to do yet"
-              body="Add one above. In the Journal, start a line with [] and it lands here too."
-            />
-          )}
-
-          {loadState === 'ready' && open.length === 0 && (done.length > 0 || filtered) &&
-            (filtered ? (
-              <EmptySlot
-                glyph={<ListTodo />}
-                title={`Nothing open in ${spaceFilter.length === 1 ? spaceSummary : 'these spaces'}`}
-                body={done.length > 0 ? `${done.length} done here.` : 'Add one above and it’s filed here.'}
-                action={
-                  <button type="button" className="mc-btn" onClick={() => setParam(SPACE_PARAM, null)}>
-                    Show every space
-                  </button>
-                }
-              />
-            ) : (
-              <EmptySlot glyph={<Check />} color="var(--mc-green)" title="All clear" body={`Every task is done. ${done.length} so far.`} />
-            ))}
-
-          {groups.length > 0 && (
-            <div className="mc-task-groups">
-              {groups.map((group) => (
-                <section
-                  key={group.key}
-                  className="mc-task-group"
-                  aria-labelledby={`mc-tk-group-${group.key}`}
-                  style={{ '--c': bandColor(group) } as CSSProperties}
-                >
-                  <h2 className="mc-band mc-task-band" id={`mc-tk-group-${group.key}`}>
-                    <span className="mc-task-band-name" translate={group.space ? 'no' : undefined}>
-                      {group.label}
-                    </span>
-                    <span className="mc-task-band-count">{group.tasks.filter((t) => !t.is_done).length}</span>
-                  </h2>
-                  <ul className="mc-task-rows">
-                    {group.tasks.map((task) => renderCardsRow(task, grouping === 'space' ? group.space?.id : undefined))}
-                  </ul>
-                </section>
-              ))}
-            </div>
-          )}
-
-          {done.length > 0 && (
-            <section className="mc-task-done" aria-label="Done">
-              <button
-                type="button"
-                className="mc-btn is-quiet is-small mc-task-done-toggle"
-                aria-expanded={showDone}
-                aria-controls="mc-tk-done-list"
-                onClick={() => setParam(DONE_PARAM, showDone ? null : '1')}
-              >
-                <ChevronRight aria-hidden="true" className={showDone ? 'is-open' : undefined} />
-                Done ({done.length})
-              </button>
-              {showDone && (
-                <>
-                  <ul className="mc-task-rows mc-task-rows--done" id="mc-tk-done-list">
-                    {done.slice(0, doneLimit).map((task) => renderCardsRow(task))}
-                  </ul>
-                  {done.length > doneLimit && (
-                    <button type="button" className="mc-btn is-small" onClick={() => setDoneLimit((n) => n + DONE_PAGE)}>
-                      Show {Math.min(DONE_PAGE, done.length - doneLimit)} more
-                    </button>
-                  )}
-                </>
-              )}
-            </section>
-          )}
-        </div>
-
-        <MoveSheet
-          open={fileInKey !== null}
-          onClose={() => setFileInKey(null)}
-          itemKeys={fileInKey ? [fileInKey] : []}
-          onFeedback={flash}
-          title="File this task in…"
-        />
-
-        {toast !== null && (
-          <FeedbackToast message={toast.message} phase={toast.phase} action={toast.action} onAnimationEnd={handleAnimationEnd} />
-        )}
-      </main>
-    );
-  }
+  const renderCardsRow = (task: TaskWithTags, groupSpaceId?: string) => (
+    <TaskRow
+      key={task.id}
+      task={task}
+      taskSpaces={spacesOf(task)}
+      groupSpaceId={groupSpaceId}
+      settling={settling.has(task.id)}
+      renaming={renamingId === task.id}
+      now={now}
+      handlers={rowHandlers}
+      onFileIn={(t) => setFileInKey(`task:${t.id}`)}
+    />
+  );
 
   return (
-    <div className="tk-page">
-      <header className="memex-page-header tk-head">
-        <div className="memex-page-header-row">
-          <div className="memex-page-heading">
-            <h1 className="memex-page-title">
-              <span className="memex-page-title-text">Tasks</span>
-            </h1>
-            <p className="memex-page-subtitle tk-subtitle">
-              {subtitleParts.map((part, i) => (
-                <span key={part} className={part.endsWith('overdue') ? 'is-overdue' : undefined}>
-                  {i > 0 && <span aria-hidden="true"> · </span>}
-                  {part}
-                </span>
-              ))}
-            </p>
-          </div>
-          <div className="memex-page-actions tk-actions">
-            <MenuButton
-              triggerClassName={`bookmark-tag-chip memex-filter-menu${spaceFilter.length ? ' is-active' : ''}`}
-              triggerLabel={spaceFilter.length ? `Space: ${spaceSummary}` : 'Filter by space'}
-              menuLabel="Space"
-              entries={spaceEntries}
-              menuClassName="memex-filter-menu-list"
-              align="end"
-            >
-              {filterSpace && (
-                <span className="memex-space-dot" style={{ background: filterSpace.color }} aria-hidden="true" />
-              )}
-              <span className="bookmark-tag-chip-label">{spaceSummary}</span>
-              <ChevronDown aria-hidden="true" className="memex-filter-menu-caret" />
-            </MenuButton>
-            <div className="memex-view-toggle tk-segment" role="group" aria-label="Group by">
-              <button
-                type="button"
-                className={grouping === 'space' ? 'is-active' : ''}
-                aria-pressed={grouping === 'space'}
-                onClick={() => setGrouping('space')}
-              >
-                By space
+    <main className="mc-page mc-tasks" aria-label="Tasks">
+      <div className="mc-page-head">
+        <h1 className="mc-hero">
+          Tasks
+          {loadState === 'ready' && <sup aria-label={`${openCount} open`}>{openCount}</sup>}
+        </h1>
+        <div className="mc-page-tools mc-tasks-tools">
+          <TaskComposer ref={composerRef} spaces={spaces} defaultSpace={filterSpace} onSubmit={handleCreate} />
+          <ToggleGroup
+            label="Group by"
+            value={grouping}
+            options={[
+              { value: 'space', label: 'By space' },
+              { value: 'date', label: 'By date' },
+            ]}
+            onChange={setGrouping}
+          />
+          <CardsMenu
+            label="Tasks options"
+            entries={menuEntries}
+            trigger={(props) => (
+              <button {...props} type="button" className="mc-rb" aria-label="Tasks options">
+                <Ellipsis aria-hidden="true" />
               </button>
-              <button
-                type="button"
-                className={grouping === 'date' ? 'is-active' : ''}
-                aria-pressed={grouping === 'date'}
-                onClick={() => setGrouping('date')}
-              >
-                By due date
-              </button>
-            </div>
-          </div>
+            )}
+          />
         </div>
-      </header>
-
-      <div className="tk-body">
-        <main className="tk-main" aria-label="Tasks">
-          <div className="tk-scroll">
-            <div className="tk-column">
-              <TaskComposer ref={composerRef} spaces={spaces} defaultSpace={filterSpace} onSubmit={handleCreate} />
-
-              <div className="tk-list" ref={listRef} onKeyDown={onListKeyDown}>
-                {isLoading && <TaskSkeleton />}
-
-                {failed && <LoadErrorState what="your tasks" onRetry={() => tasksQuery.refetch()} />}
-
-                {nothingAtAll && !filtered && (
-                  <TasksEmpty
-                    tone="start"
-                    title="Nothing to do yet"
-                    body={
-                      <>
-                        Add one above. In the Journal, start a line with <kbd className="memex-kbd">[]</kbd> and it
-                        lands here too.
-                      </>
-                    }
-                  />
-                )}
-
-                {loadState === 'ready' && open.length === 0 && (done.length > 0 || filtered) && (
-                  filtered ? (
-                    <TasksEmpty
-                      tone="start"
-                      title={`Nothing open in ${spaceFilter.length === 1 ? spaceSummary : 'these spaces'}`}
-                      body={done.length > 0 ? `${done.length} done here.` : 'Add one above and it’s filed here.'}
-                      action={{ label: 'Show every space', onClick: () => setParam(SPACE_PARAM, null) }}
-                    />
-                  ) : (
-                    <TasksEmpty
-                      tone="clear"
-                      title="All clear"
-                      body={`Every task is done. ${done.length} so far.`}
-                    />
-                  )
-                )}
-
-                {groups.map((group) => (
-                  <section
-                    key={group.key}
-                    className={`tk-group${group.bucket === 'overdue' ? ' is-overdue' : ''}`}
-                    aria-labelledby={`tk-group-${group.key}`}
-                    style={group.space ? ({ '--hue': group.space.color } as CSSProperties) : undefined}
-                  >
-                    <h2 className="tk-group-head" id={`tk-group-${group.key}`}>
-                      {group.space ? (
-                        <i className="jr-dot" aria-hidden="true" />
-                      ) : group.bucket === 'overdue' ? (
-                        <AlertCircle aria-hidden="true" className="tk-group-icon" />
-                      ) : group.bucket ? (
-                        <CalendarDays aria-hidden="true" className="tk-group-icon" />
-                      ) : (
-                        <i className="jr-dot is-unfiled" aria-hidden="true" />
-                      )}
-                      <span className="tk-group-label">{group.label}</span>
-                      <span className="tk-group-count">{group.tasks.filter((t) => !t.is_done).length}</span>
-                    </h2>
-                    <ul className="tk-rows">
-                      {group.tasks.map((task) => renderRow(task, grouping === 'space' ? group.space?.id : undefined))}
-                    </ul>
-                  </section>
-                ))}
-
-                {done.length > 0 && (
-                  <section className="tk-done" aria-label="Done">
-                    <button
-                      type="button"
-                      className="tk-done-toggle"
-                      aria-expanded={showDone}
-                      aria-controls="tk-done-list"
-                      onClick={() => setParam(DONE_PARAM, showDone ? null : '1')}
-                    >
-                      <ChevronRight aria-hidden="true" className={showDone ? 'is-open' : undefined} />
-                      Done
-                      <span className="tk-group-count">{done.length}</span>
-                    </button>
-                    {showDone && (
-                      <>
-                        <ul className="tk-rows tk-rows--done" id="tk-done-list">
-                          {done.slice(0, doneLimit).map((task) => renderRow(task))}
-                        </ul>
-                        {done.length > doneLimit && (
-                          <button type="button" className="jr-earlier tk-more" onClick={() => setDoneLimit((n) => n + DONE_PAGE)}>
-                            Show {Math.min(DONE_PAGE, done.length - doneLimit)} more
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </section>
-                )}
-              </div>
-
-              {!nothingAtAll && loadState === 'ready' && (
-                <p className="tk-keys" aria-hidden="true">
-                  <span>
-                    <kbd className="memex-kbd">N</kbd> new task
-                  </span>
-                  <span>
-                    <kbd className="memex-kbd">↑↓</kbd> move
-                  </span>
-                  <span>
-                    <kbd className="memex-kbd">Space</kbd> tick
-                  </span>
-                  <span>
-                    <kbd className="memex-kbd">Enter</kbd> on a title renames
-                  </span>
-                  <span>
-                    <kbd className="memex-kbd">Delete</kbd> delete
-                  </span>
-                  <span>Drag a task onto a space to file it</span>
-                </p>
-              )}
-            </div>
-          </div>
-        </main>
       </div>
+
+      {filtered && (
+        <p className="mc-lab mc-tasks-filter" role="status">
+          Showing {spaceFilter.length === 1 ? spaceSummary : `${spaceFilter.length} spaces`}
+          <button type="button" className="mc-btn is-quiet is-small" onClick={() => setParam(SPACE_PARAM, null)}>
+            Show every space
+          </button>
+        </p>
+      )}
+
+      <div className="mc-task-list" ref={listRef} onKeyDown={onListKeyDown}>
+        {isLoading && (
+          <div className="mc-task-groups" aria-busy="true" aria-label="Loading tasks">
+            {[0, 1].map((n) => (
+              <section key={n} className="mc-task-group">
+                <span className="mc-sk mc-task-band-sk" />
+                <ul className="mc-task-rows">
+                  {[64, 48, 72].map((w) => (
+                    <li key={w} className="mc-trow">
+                      <span className="mc-sk" style={{ width: 40, height: 40, borderRadius: 12 }} />
+                      <span className="mc-sk" style={{ width: `${w}%`, height: 20 }} />
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )}
+
+        {failed && <LoadErrorState what="your tasks" onRetry={() => tasksQuery.refetch()} />}
+
+        {nothingAtAll && !filtered && (
+          <EmptySlot
+            glyph={<ListTodo />}
+            color="var(--mc-blue)"
+            title="Nothing to do yet"
+            body="Add one above. In the Journal, start a line with [] and it lands here too."
+          />
+        )}
+
+        {loadState === 'ready' && open.length === 0 && (done.length > 0 || filtered) &&
+          (filtered ? (
+            <EmptySlot
+              glyph={<ListTodo />}
+              title={`Nothing open in ${spaceFilter.length === 1 ? spaceSummary : 'these spaces'}`}
+              body={done.length > 0 ? `${done.length} done here.` : 'Add one above and it’s filed here.'}
+              action={
+                <button type="button" className="mc-btn" onClick={() => setParam(SPACE_PARAM, null)}>
+                  Show every space
+                </button>
+              }
+            />
+          ) : (
+            <EmptySlot glyph={<Check />} color="var(--mc-green)" title="All clear" body={`Every task is done. ${done.length} so far.`} />
+          ))}
+
+        {groups.length > 0 && (
+          <div className="mc-task-groups">
+            {groups.map((group) => (
+              <section
+                key={group.key}
+                className="mc-task-group"
+                aria-labelledby={`mc-tk-group-${group.key}`}
+                style={{ '--c': bandColor(group) } as CSSProperties}
+              >
+                <h2 className="mc-band mc-task-band" id={`mc-tk-group-${group.key}`}>
+                  <span className="mc-task-band-name" translate={group.space ? 'no' : undefined}>
+                    {group.label}
+                  </span>
+                  <span className="mc-task-band-count">{group.tasks.filter((t) => !t.is_done).length}</span>
+                </h2>
+                <ul className="mc-task-rows">
+                  {group.tasks.map((task) => renderCardsRow(task, grouping === 'space' ? group.space?.id : undefined))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )}
+
+        {done.length > 0 && (
+          <section className="mc-task-done" aria-label="Done">
+            <button
+              type="button"
+              className="mc-btn is-quiet is-small mc-task-done-toggle"
+              aria-expanded={showDone}
+              aria-controls="mc-tk-done-list"
+              onClick={() => setParam(DONE_PARAM, showDone ? null : '1')}
+            >
+              <ChevronRight aria-hidden="true" className={showDone ? 'is-open' : undefined} />
+              Done ({done.length})
+            </button>
+            {showDone && (
+              <>
+                <ul className="mc-task-rows mc-task-rows--done" id="mc-tk-done-list">
+                  {done.slice(0, doneLimit).map((task) => renderCardsRow(task))}
+                </ul>
+                {done.length > doneLimit && (
+                  <button type="button" className="mc-btn is-small" onClick={() => setDoneLimit((n) => n + DONE_PAGE)}>
+                    Show {Math.min(DONE_PAGE, done.length - doneLimit)} more
+                  </button>
+                )}
+              </>
+            )}
+          </section>
+        )}
+      </div>
+
+      <MoveSheet
+        open={fileInKey !== null}
+        onClose={() => setFileInKey(null)}
+        itemKeys={fileInKey ? [fileInKey] : []}
+        onFeedback={flash}
+        title="File this task in…"
+      />
 
       {toast !== null && (
         <FeedbackToast message={toast.message} phase={toast.phase} action={toast.action} onAnimationEnd={handleAnimationEnd} />
       )}
-    </div>
+    </main>
   );
 };
-
-const MenuCountLabel = ({ label, count }: { label: string; count: number }) => (
-  <span className="tk-menu-label">
-    <span className="tk-menu-name">{label}</span>
-    <span className="tk-menu-count">{count}</span>
-  </span>
-);
-
-/* ------------------------------------------------------------------ */
-/* Empty and loading states                                            */
-/* ------------------------------------------------------------------ */
-
-const TasksEmpty = ({
-  tone,
-  title,
-  body,
-  action,
-}: {
-  tone: 'start' | 'clear';
-  title: string;
-  body: ReactNode;
-  action?: { label: string; onClick: () => void };
-}) => (
-  <div className={`tk-empty is-${tone}`} role="status">
-    <span className="tk-empty-disc" aria-hidden="true">
-      {tone === 'clear' ? <Check /> : <ListTodo />}
-    </span>
-    <p className="tk-empty-title">{title}</p>
-    <p className="tk-empty-body">{body}</p>
-    {action && (
-      <button type="button" className="btn-secondary btn-compact" onClick={action.onClick}>
-        {action.label}
-      </button>
-    )}
-  </div>
-);
-
-const TaskSkeleton = () => (
-  <section className="tk-group is-skeleton" aria-busy="true" aria-label="Loading tasks">
-    <div className="tk-group-head">
-      <span className="tk-skeleton-bar" style={{ width: 96 }} />
-    </div>
-    <ul className="tk-rows">
-      {[64, 48, 72, 40].map((width) => (
-        <li key={width} className="tk-row">
-          <span className="tk-check-hit">
-            <span className="tk-skeleton-check" />
-          </span>
-          <span className="tk-skeleton-bar" style={{ width: `${width}%` }} />
-        </li>
-      ))}
-    </ul>
-  </section>
-);
 
 export default TasksPage;

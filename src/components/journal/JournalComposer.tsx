@@ -1,6 +1,5 @@
 import { forwardRef, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
-import { ArrowUp, Plus } from 'lucide-react';
-import { useCardsLook } from '../../look/look';
+import { Plus } from 'lucide-react';
 import { mentionQuery, parseComposer, withDefaultSpace, type ComposerResult, type JournalSpace } from '@memex/core';
 
 /*
@@ -140,10 +139,9 @@ const JournalComposer = forwardRef<JournalComposerHandle, JournalComposerProps>(
   };
 
   const enterKind = parsed.kind === 'empty' ? 'jot' : parsed.kind;
-  const cards = useCardsLook();
 
   return (
-    <div className={`jr-composer${cards ? ' mc-jr-composer' : ''}${cards && text ? ' has-text' : ''}`}>
+    <div className={`jr-composer mc-jr-composer${text ? ' has-text' : ''}`}>
       {pickerOpen && (
         <div className="memex-menu jr-picker" role="listbox" id={listId} aria-label="Spaces">
           {matches.map((space, i) => (
@@ -164,21 +162,13 @@ const JournalComposer = forwardRef<JournalComposerHandle, JournalComposerProps>(
           ))}
         </div>
       )}
-      <div className={cards ? 'jr-composer-field mc-field' : 'jr-composer-field'}>
+      <div className="jr-composer-field mc-field">
         <textarea
           ref={fieldRef}
           className="jr-composer-input"
           rows={1}
           value={text}
-          placeholder={
-            cards
-              ? defaultSpace
-                ? `Jot in ${defaultSpace.name}, paste a link…`
-                : 'Write a jot, paste a link…'
-              : defaultSpace
-              ? `Jot in ${defaultSpace.name}, paste a link, “[] ” for a task, @ to file elsewhere…`
-              : 'Write a jot, paste a link, “[] ” for a task, @space to file…'
-          }
+          placeholder={defaultSpace ? `Jot in ${defaultSpace.name}, paste a link…` : 'Write a jot, paste a link…'}
           aria-label={defaultSpace ? `Write in ${defaultSpace.name}` : 'Write in your Journal'}
           aria-describedby={hintId}
           aria-autocomplete="list"
@@ -199,11 +189,11 @@ const JournalComposer = forwardRef<JournalComposerHandle, JournalComposerProps>(
         />
         <button
           type="button"
-          className={cards ? 'mc-plus jr-send' : 'btn-primary jr-send'}
+          className="mc-plus jr-send"
           aria-label={parsed.kind === 'empty' ? 'Send' : SEND_LABEL[enterKind]}
           onClick={() => (parsed.kind === 'empty' ? fieldRef.current?.focus() : submit(false))}
         >
-          {cards ? <Plus aria-hidden="true" /> : <ArrowUp aria-hidden="true" />}
+          <Plus aria-hidden="true" />
         </button>
       </div>
       <p className="jr-hint" id={hintId}>

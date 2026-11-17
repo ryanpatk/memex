@@ -356,10 +356,10 @@ dialog.mc-sheet.mc-open-card .mc-sheet-scroll {
 
 /* ---------- List (d07) and Table (d08), on the classic components ---------- */
 
-html[data-look='cards'] .mc-list .memex-list-group {
+html:root .mc-list .memex-list-group {
   margin-bottom: 32px;
 }
-html[data-look='cards'] .mc-list .memex-list-label {
+html:root .mc-list .memex-list-label {
   font: 900 24px / 1.2 var(--mc-font-display);
   color: var(--mc-mut);
   margin: 16px 0;
@@ -369,16 +369,16 @@ html[data-look='cards'] .mc-list .memex-list-label {
   letter-spacing: 0;
   text-transform: none;
 }
-html[data-look='cards'] .mc-list .memex-list-count {
+html:root .mc-list .memex-list-count {
   font: 700 16px var(--mc-font-ui);
   color: var(--mc-faint);
 }
-html[data-look='cards'] .mc-list .memex-list-rows {
+html:root .mc-list .memex-list-rows {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-html[data-look='cards'] .mc-list .memex-row {
+html:root .mc-list .memex-row {
   min-height: 108px;
   padding: 16px 24px 16px 16px;
   border-radius: var(--mc-r-card);
@@ -387,29 +387,29 @@ html[data-look='cards'] .mc-list .memex-row {
   gap: 24px;
   color: var(--mc-ink);
 }
-html[data-look='cards'] .mc-list .memex-row:hover {
+html:root .mc-list .memex-row:hover {
   box-shadow: 0 0 0 2px var(--mc-line) inset, var(--mc-sh2);
 }
-html[data-look='cards'] .mc-list .memex-row.is-selected {
+html:root .mc-list .memex-row.is-selected {
   box-shadow: 0 0 0 4px var(--mc-pri), var(--mc-sh1);
 }
-html[data-look='cards'] .mc-list .memex-row-title {
+html:root .mc-list .memex-row-title {
   font: 800 24px / 1.2 var(--mc-font-display);
 }
-html[data-look='cards'] .mc-list .memex-row-meta {
+html:root .mc-list .memex-row-meta {
   font: 600 16px / 1.3 var(--mc-font-ui);
   color: var(--mc-mut);
 }
-html[data-look='cards'] .mc-list .memex-row-thumb {
+html:root .mc-list .memex-row-thumb {
   width: 76px;
   height: 76px;
   border-radius: 18px;
 }
 
-html[data-look='cards'] .mc-list {
+html:root .mc-list {
   max-width: none;
 }
-html[data-look='cards'] .mc-table-wrap .memex-table-wrap {
+html:root .mc-table-wrap .memex-table-wrap {
   max-width: none;
   border-radius: var(--mc-r-card);
   background: var(--mc-paper);
@@ -417,11 +417,11 @@ html[data-look='cards'] .mc-table-wrap .memex-table-wrap {
   color: var(--mc-ink);
   overflow: hidden;
 }
-html[data-look='cards'] .mc-table-wrap .memex-table {
+html:root .mc-table-wrap .memex-table {
   color: var(--mc-ink);
   table-layout: auto;
 }
-html[data-look='cards'] .mc-table-wrap .memex-table th {
+html:root .mc-table-wrap .memex-table th {
   top: 0;
   height: 60px;
   font: 800 17px / 1.2 var(--mc-font-display);
@@ -430,19 +430,19 @@ html[data-look='cards'] .mc-table-wrap .memex-table th {
   color: var(--mc-mut);
   background: var(--mc-well);
 }
-html[data-look='cards'] .mc-table-wrap .memex-table td {
+html:root .mc-table-wrap .memex-table td {
   height: 76px;
   font: 600 16px / 1.3 var(--mc-font-ui);
   border-bottom: 2px solid var(--mc-well);
 }
-html[data-look='cards'] .mc-table-wrap .memex-table-title,
-html[data-look='cards'] .mc-table-wrap .memex-table-title * {
+html:root .mc-table-wrap .memex-table-title,
+html:root .mc-table-wrap .memex-table-title * {
   font: 800 20px / 1.2 var(--mc-font-display);
 }
-html[data-look='cards'] .mc-table-wrap .memex-table td:not(:has(.memex-table-title)) {
+html:root .mc-table-wrap .memex-table td:not(:has(.memex-table-title)) {
   white-space: nowrap;
 }
-html[data-look='cards'] .mc-table-wrap .memex-table tr.is-selected td {
+html:root .mc-table-wrap .memex-table tr.is-selected td {
   background: color-mix(in srgb, var(--mc-pri) 12%, var(--mc-paper));
 }
 

@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Keyboard, LogOut, Palette, Settings } from 'lucide-react';
+import { Keyboard, LogOut, Settings } from 'lucide-react';
 import { INBOX_PATH, JOURNAL_PATH, LIBRARY_PATH, SPACES_PATH, TASKS_PATH } from '../../constants/modules';
 import { useJournal } from '../../hooks/useJournal';
 import { useSession } from '../../context/SessionContext';
 import { repository } from '../../data/repository';
 import { userDisplayName } from '../../utils/userDisplay';
-import { setLook } from '../../look/look';
 import Wordmark from '../ui/Wordmark';
 import AccountAvatar from '../AccountAvatar';
 import Menu from './Menu';
@@ -82,8 +81,6 @@ const CardsTopBar = () => {
             { id: 'settings', label: 'Settings…', icon: <Settings />, onSelect: () => setSettingsOpen(true) },
             { id: 'keys', label: 'Keys', icon: <Keyboard />, shortcut: '?', onSelect: () => setKeysOpen(true) },
             { kind: 'separator', id: 'sep1' },
-            { id: 'classic', label: 'Back to the classic look', icon: <Palette />, onSelect: () => void setLook('classic') },
-            { kind: 'separator', id: 'sep2' },
             { id: 'out', label: 'Sign out', icon: <LogOut />, onSelect: () => void signOut() },
           ]}
           trigger={(props) => (

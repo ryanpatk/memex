@@ -63,3 +63,13 @@ export const nextFocusAfter = (list: HTMLElement | null, taskId: string, fallbac
 /** Focus a row's check (after a neighbour left). */
 export const focusTaskRow = (list: HTMLElement | null, taskId: string) =>
   list?.querySelector<HTMLElement>(`[data-task-id="${CSS.escape(taskId)}"] [data-col="check"]`)?.focus();
+
+/** What a task row's buttons do (hooks/useTaskActions builds them). */
+export interface TaskRowHandlers {
+  onToggle: (task: TaskWithTags) => void;
+  onRename: (task: TaskWithTags, title: string) => void;
+  onStartRename: (taskId: string | null) => void;
+  onSetDue: (task: TaskWithTags, due: string | null) => void;
+  onFileToggle: (task: TaskWithTags, spaceId: string) => void;
+  onDelete: (task: TaskWithTags) => void;
+}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import { AlertCircle, CalendarDays, Check, Ellipsis, Pencil, Trash2 } from 'lucide-react';
+import { CalendarDays, Check, Ellipsis, FolderInput, Pencil, Trash2 } from 'lucide-react';
 import {
   dueDayKey,
   dueLabel,
@@ -10,44 +10,39 @@ import {
   type JournalSpace,
   type TaskWithTags,
 } from '@memex/core';
-import MenuButton, { type MenuEntry } from '../library/MenuButton';
+import Menu, { type MenuEntry } from '../cards/Menu';
 import { dragAttrs } from '../../utils/itemDrag';
+import type { TaskRowHandlers } from './taskList';
 
 /*
- * One task row, shared by the Tasks view and a space's board (decision 14B):
- * the check, the title (press to rename), space chips, the due date (native
- * picker) and a menu with due shortcuts, spaces, rename and delete. What the
- * buttons do comes from useTaskActions. Styles: styles/tasks.css (`tk-row`).
+ * A task row in the Memory Cards look (s09, d27/d28): the big check, the
+ * title (press to rename), the row's other spaces as strips, the due chip
+ * (late / today states; press for the native date picker) and a ••• menu
+ * with due shortcuts, Rename…, File in… and Delete. Same data attributes as
+ * TaskRow (data-task-row, data-col) so taskList.ts keys work unchanged:
+ * ↑/↓ move, Space ticks, Enter renames, Delete deletes.
  */
-
-export interface TaskRowHandlers {
-  onToggle: (task: TaskWithTags) => void;
-  onRename: (task: TaskWithTags, title: string) => void;
-  onStartRename: (taskId: string | null) => void;
-  onSetDue: (task: TaskWithTags, due: string | null) => void;
-  onFileToggle: (task: TaskWithTags, spaceId: string) => void;
-  onDelete: (task: TaskWithTags) => void;
-}
 
 export const TaskRow = ({
   task,
   taskSpaces,
   groupSpaceId,
-  allSpaces,
   settling,
   renaming,
   now,
   handlers,
+  onFileIn,
 }: {
   task: TaskWithTags;
   taskSpaces: JournalSpace[];
-  /** The space whose group this row sits in (its chip is left out). */
+  /** The space whose group this row sits in (its strip is left out). */
   groupSpaceId?: string;
-  allSpaces: JournalSpace[];
   settling: boolean;
   renaming: boolean;
   now: Date;
   handlers: TaskRowHandlers;
+  /** Opens the move sheet for this task. */
+  onFileIn?: (task: TaskWithTags) => void;
 }) => {
   const dueInputRef = useRef<HTMLInputElement>(null);
   const pending = task.id.startsWith('temp-');
@@ -55,7 +50,7 @@ export const TaskRow = ({
   const due = dueDayKey(task.due_date);
   const overdue = isOverdue(task, now);
   const shortcuts = dueShortcuts(now);
-  const chips = taskSpaces.filter((s) => s.id !== groupSpaceId);
+  const strips = taskSpaces.filter((s) => s.id !== groupSpaceId);
 
   const openPicker = () => {
     const input = dueInputRef.current;
@@ -64,50 +59,38 @@ export const TaskRow = ({
     try {
       input.showPicker?.();
     } catch {
-      // Older browsers: the focused field takes typing instead
+      // typing works instead
     }
   };
 
-  const menuEntries: MenuEntry[] = task.is_done
+  const entries: MenuEntry[] = task.is_done
     ? [
-        { key: 'rename', label: 'Rename…', icon: <Pencil aria-hidden="true" />, onSelect: () => handlers.onStartRename(task.id) },
-        { key: 'delete', label: 'Delete', icon: <Trash2 aria-hidden="true" />, danger: true, onSelect: () => handlers.onDelete(task) },
+        { id: 'rename', label: 'Rename…', icon: <Pencil />, shortcut: '↵', onSelect: () => handlers.onStartRename(task.id) },
+        { id: 'delete', label: 'Delete', icon: <Trash2 />, shortcut: '⌫', danger: true, onSelect: () => handlers.onDelete(task) },
       ]
     : [
-        { key: 'h-due', heading: 'Due' },
-        { key: 'today', label: 'Today', role: 'radio', checked: due === shortcuts.today, onSelect: () => handlers.onSetDue(task, shortcuts.today) },
-        { key: 'tomorrow', label: 'Tomorrow', role: 'radio', checked: due === shortcuts.tomorrow, onSelect: () => handlers.onSetDue(task, shortcuts.tomorrow) },
+        { kind: 'header', id: 'h-due', label: 'Due' },
+        { id: 'today', label: 'Today', checked: due === shortcuts.today, onSelect: () => handlers.onSetDue(task, shortcuts.today) },
+        { id: 'tomorrow', label: 'Tomorrow', checked: due === shortcuts.tomorrow, onSelect: () => handlers.onSetDue(task, shortcuts.tomorrow) },
         {
-          key: 'next-week',
+          id: 'next-week',
           label: `Next week · ${dueLabel(shortcuts.nextWeek, now)}`,
-          role: 'radio',
           checked: due === shortcuts.nextWeek,
           onSelect: () => handlers.onSetDue(task, shortcuts.nextWeek),
         },
-        { key: 'none', label: 'No due date', role: 'radio', checked: !due, onSelect: () => handlers.onSetDue(task, null) },
-        { key: 'pick', label: 'Pick a date…', icon: <CalendarDays aria-hidden="true" />, onSelect: () => setTimeout(openPicker, 0) },
-        ...(allSpaces.length
-          ? [
-              { key: 'd-spaces', divider: true as const },
-              { key: 'h-spaces', heading: 'Spaces' },
-              ...allSpaces.map((space) => ({
-                key: `space-${space.id}`,
-                label: space.name,
-                role: 'checkbox' as const,
-                checked: taskSpaces.some((s) => s.id === space.id),
-                icon: <span className="memex-space-dot" style={{ background: space.color }} aria-hidden="true" />,
-                onSelect: () => handlers.onFileToggle(task, space.id),
-              })),
-            ]
+        { id: 'pick', label: 'Pick a date…', icon: <CalendarDays />, onSelect: () => setTimeout(openPicker, 0) },
+        { id: 'none', label: 'No due date', checked: !due, onSelect: () => handlers.onSetDue(task, null) },
+        { kind: 'separator', id: 'sep' },
+        { id: 'rename', label: 'Rename…', icon: <Pencil />, shortcut: '↵', onSelect: () => handlers.onStartRename(task.id) },
+        ...(onFileIn
+          ? [{ id: 'file', label: 'File in…', icon: <FolderInput />, onSelect: () => onFileIn(task) } as MenuEntry]
           : []),
-        { key: 'd-actions', divider: true },
-        { key: 'rename', label: 'Rename…', icon: <Pencil aria-hidden="true" />, onSelect: () => handlers.onStartRename(task.id) },
-        { key: 'delete', label: 'Delete', icon: <Trash2 aria-hidden="true" />, danger: true, onSelect: () => handlers.onDelete(task) },
+        { id: 'delete', label: 'Delete', icon: <Trash2 />, shortcut: '⌫', danger: true, onSelect: () => handlers.onDelete(task) },
       ];
 
   return (
     <li
-      className={`tk-row${task.is_done ? ' is-done' : ''}${settling ? ' is-settling' : ''}${pending ? ' is-new' : ''}${
+      className={`mc-trow mc-task-row${task.is_done ? ' is-done' : ''}${settling ? ' is-settling' : ''}${pending ? ' is-new' : ''}${
         overdue ? ' is-overdue' : ''
       }`}
       data-task-row=""
@@ -115,27 +98,25 @@ export const TaskRow = ({
       data-item-key={key}
       {...(renaming ? {} : dragAttrs(key, task.title))}
     >
-      <span className="tk-check-hit">
-        <button
-          type="button"
-          role="checkbox"
-          className="memex-task-check"
-          aria-checked={task.is_done}
-          aria-label={`${task.is_done ? 'Reopen' : 'Done:'} “${task.title}”`}
-          disabled={pending}
-          data-col="check"
-          onClick={() => handlers.onToggle(task)}
-        >
-          <Check aria-hidden="true" />
-        </button>
-      </span>
+      <button
+        type="button"
+        role="checkbox"
+        className="mc-chk"
+        aria-checked={task.is_done}
+        aria-label={`${task.is_done ? 'Reopen' : 'Done:'} “${task.title}”`}
+        disabled={pending}
+        data-col="check"
+        onClick={() => handlers.onToggle(task)}
+      >
+        <Check aria-hidden="true" />
+      </button>
 
       {renaming ? (
-        <RenameField task={task} onDone={(title) => handlers.onRename(task, title)} onCancel={() => handlers.onStartRename(null)} />
+        <CardsRenameField task={task} onDone={(title) => handlers.onRename(task, title)} onCancel={() => handlers.onStartRename(null)} />
       ) : (
         <button
           type="button"
-          className="tk-title"
+          className="mc-trow-title mc-task-title"
           data-col="title"
           title="Rename"
           aria-label={`Rename “${task.title}”`}
@@ -146,27 +127,28 @@ export const TaskRow = ({
         </button>
       )}
 
-      <span className="tk-meta">
-        {chips.map((space) => (
-          <span key={space.id} className="jr-chip tk-chip" style={{ '--hue': space.color } as CSSProperties}>
-            <i className="jr-dot" aria-hidden="true" />
-            <span className="jr-ellipsis">{space.name}</span>
+      <span className="mc-task-meta">
+        {strips.map((space) => (
+          <span key={space.id} className="mc-strip mc-task-strip" style={{ '--c': space.color } as CSSProperties}>
+            <b aria-hidden="true" />
+            <span translate="no">{space.name}</span>
           </span>
         ))}
         {task.is_done ? (
-          <span className="tk-done-at" title={new Date(task.updated_at).toLocaleString()}>
+          <span className="mc-due" title={new Date(task.updated_at).toLocaleString()}>
             Done {relativeTime(task.updated_at, now.getTime())}
           </span>
         ) : (
           !pending && (
-            <label className={`tk-due${due ? ' has-due' : ''}${overdue ? ' is-overdue' : ''}${due === shortcuts.today ? ' is-today' : ''}`}>
-              {overdue ? <AlertCircle aria-hidden="true" /> : <CalendarDays aria-hidden="true" />}
-              <span className="tk-due-text">{due ? dueLabel(due, now) : 'Due'}</span>
-              {overdue && <span className="sr-only"> (overdue)</span>}
+            <label
+              className={`mc-due mc-task-due${due ? '' : ' is-empty'}${overdue ? ' is-late' : due === shortcuts.today ? ' is-today' : ''}`}
+            >
+              <span>{due ? dueLabel(due, now) : 'Due'}</span>
+              {overdue && <span className="mc-sr-only"> (overdue)</span>}
               <input
                 ref={dueInputRef}
                 type="date"
-                className="tk-due-input"
+                className="mc-task-due-input"
                 value={due ?? ''}
                 aria-label={due ? `Due ${dueLabel(due, now)}. Change the due date for “${task.title}”` : `Set a due date for “${task.title}”`}
                 data-col="due"
@@ -188,7 +170,6 @@ export const TaskRow = ({
                   }
                 }}
                 onChange={(event) => {
-                  // Half-typed dates read as empty: keep the old date until it's whole
                   if (event.target.value) handlers.onSetDue(task, event.target.value);
                 }}
               />
@@ -196,25 +177,30 @@ export const TaskRow = ({
           )
         )}
         {!pending && (
-          <MenuButton
-            triggerClassName="memex-icon-button is-compact tk-row-menu"
-            triggerLabel={`More for “${task.title}”`}
-            title="More"
-            menuLabel={`“${task.title}”`}
-            menuClassName="tk-row-menu-list"
-            entries={menuEntries}
-            align="end"
-            fixed
-          >
-            <Ellipsis aria-hidden="true" />
-          </MenuButton>
+          <Menu
+            label={`“${task.title}”`}
+            entries={entries}
+            trigger={(props) => (
+              <button {...props} type="button" className="mc-rb is-small mc-task-more" aria-label={`More for “${task.title}”`}>
+                <Ellipsis aria-hidden="true" />
+              </button>
+            )}
+          />
         )}
       </span>
     </li>
   );
 };
 
-const RenameField = ({ task, onDone, onCancel }: { task: TaskWithTags; onDone: (title: string) => void; onCancel: () => void }) => {
+const CardsRenameField = ({
+  task,
+  onDone,
+  onCancel,
+}: {
+  task: TaskWithTags;
+  onDone: (title: string) => void;
+  onCancel: () => void;
+}) => {
   const [value, setValue] = useState(task.title);
   const ref = useRef<HTMLInputElement>(null);
   const finished = useRef(false);
@@ -229,7 +215,6 @@ const RenameField = ({ task, onDone, onCancel }: { task: TaskWithTags; onDone: (
     finished.current = true;
     if (save) onDone(value);
     else onCancel();
-    // Back to the title button once it's rendered again
     requestAnimationFrame(() =>
       document.querySelector<HTMLElement>(`[data-task-id="${CSS.escape(task.id)}"] [data-col="title"]`)?.focus(),
     );
@@ -238,7 +223,7 @@ const RenameField = ({ task, onDone, onCancel }: { task: TaskWithTags; onDone: (
   return (
     <input
       ref={ref}
-      className="tk-title-input"
+      className="mc-inp mc-task-rename"
       value={value}
       maxLength={200}
       aria-label={`Rename “${task.title}”`}
@@ -258,5 +243,3 @@ const RenameField = ({ task, onDone, onCancel }: { task: TaskWithTags; onDone: (
     />
   );
 };
-
-

@@ -5,7 +5,7 @@ import { useAddToSpace } from './useAddToSpace';
 import { useRemoveFromSpace } from './useRemoveFromSpace';
 import type { ToastAction } from './useFeedbackToast';
 import { cue } from '../utils/sound';
-import type { TaskRowHandlers } from '../components/tasks/TaskRow';
+import type { TaskRowHandlers } from '../components/tasks/taskList';
 
 /*
  * What a task row can do, shared by the Tasks view and a space's board

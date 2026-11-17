@@ -1,12 +1,11 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
-import { Bot, Check, Ellipsis, FileText, FolderInput, ListTodo, Pencil, StickyNote, Trash2 } from 'lucide-react';
+import { Check, Ellipsis, FileText, FolderInput, ListTodo, Pencil, Trash2 } from 'lucide-react';
 import {
   type LinkWithTag,
   type SelfMessage,
   type TaskWithTags,
   getHostname,
   getLinkTitle,
-  stripMarkdown,
   isVisualLink,
   jotEdit,
   type Entry,
@@ -18,7 +17,6 @@ import {
 } from '@memex/core';
 import { getInitials } from '../../utils/streamCardFormat';
 import { dragAttrs } from '../../utils/itemDrag';
-import { useCardsLook } from '../../look/look';
 import { LinkMemoryCard, NoteMemoryCard, DueChip } from '../cards/cards';
 import { AgentBadge } from '../cards/MemoryCard';
 import { entryLabel } from '../cards/journal/entryLabel';
@@ -74,11 +72,6 @@ const Time = ({ at }: { at: string }) => (
 );
 
 const hue = (space: JournalSpace) => ({ '--hue': space.color }) as CSSProperties;
-
-const excerpt = (body: string, max: number) => {
-  const text = stripMarkdown(body ?? '').replace(/\s+/g, ' ').trim();
-  return text.length > max ? `${text.slice(0, max)}…` : text;
-};
 
 const Favicon = ({ link }: { link: LinkWithTag }) => {
   const [failed, setFailed] = useState(false);
@@ -300,71 +293,36 @@ const agentClient = (entry: Entry): string | null => {
 };
 
 const Filing = ({ entry, filer, handlers, scopeSpaceId }: { entry: Entry; filer: Filer; handlers: JournalHandlers; scopeSpaceId?: string }) => {
-  const cards = useCardsLook();
   const suggestion = filer.suggest(entry);
   const via = agentClient(entry);
   const chips = entry.spaces.filter((s) => s.id !== scopeSpaceId);
-  if (cards) {
-    // Memory Cards: links and notes are cards whose label strip already names
-    // their spaces and agent, so only jots and tasks show filled strips
-    const asCard = entry.kind === 'link' || entry.kind === 'note';
-    const shownChips = asCard ? [] : chips;
-    const shownVia = asCard ? null : via;
-    if (!shownChips.length && !suggestion && !shownVia) return null;
-    return (
-      <div className="jr-filing mc-jr-filing">
-        {shownVia && <AgentBadge name={shownVia} />}
-        {shownChips.map((s) => (
-          <span key={s.id} className="mc-strip mc-jr-strip" style={{ '--c': s.color } as CSSProperties}>
-            <b aria-hidden="true" />
-            <span translate="no">{s.name}</span>
-          </span>
-        ))}
-        {suggestion && (
-          <button
-            type="button"
-            className="mc-strip is-suggest"
-            style={{ '--c': suggestion.space.color } as CSSProperties}
-            title={suggestion.reason}
-            aria-label={`File in ${suggestion.space.name}: ${suggestion.reason}`}
-            onClick={() => handlers.onFile([entry.id], suggestion.space.id)}
-          >
-            <b aria-hidden="true" />
-            <span>
-              File in <span translate="no">{suggestion.space.name}</span>?
-            </span>
-          </button>
-        )}
-      </div>
-    );
-  }
-  if (!chips.length && !suggestion && !via) return null;
+  // Links and notes are memory cards whose label strip already names
+  // their spaces and agent, so only jots and tasks show filled strips
+  const asCard = entry.kind === 'link' || entry.kind === 'note';
+  const shownChips = asCard ? [] : chips;
+  const shownVia = asCard ? null : via;
+  if (!shownChips.length && !suggestion && !shownVia) return null;
   return (
-    <div className="jr-filing">
-      {via && (
-        <span className="jr-via" title={`Written by ${via} through memex’s MCP server`}>
-          <Bot aria-hidden="true" />
-          <span className="jr-ellipsis" translate="no">
-            via {via}
-          </span>
+    <div className="jr-filing mc-jr-filing">
+      {shownVia && <AgentBadge name={shownVia} />}
+      {shownChips.map((s) => (
+        <span key={s.id} className="mc-strip mc-jr-strip" style={{ '--c': s.color } as CSSProperties}>
+          <b aria-hidden="true" />
+          <span translate="no">{s.name}</span>
         </span>
-      )}
-      {chips.map((s) => (
-        <SpaceChip key={s.id} space={s} />
       ))}
       {suggestion && (
         <button
           type="button"
-          className="jr-chip is-suggested"
-          style={hue(suggestion.space)}
+          className="mc-strip is-suggest"
+          style={{ '--c': suggestion.space.color } as CSSProperties}
           title={suggestion.reason}
           aria-label={`File in ${suggestion.space.name}: ${suggestion.reason}`}
           onClick={() => handlers.onFile([entry.id], suggestion.space.id)}
         >
-          <i className="jr-dot" aria-hidden="true" />
-          <span className="jr-ellipsis">{suggestion.space.name}</span>
-          <span className="jr-chip-accept" aria-hidden="true">
-            <Check />
+          <b aria-hidden="true" />
+          <span>
+            File in <span translate="no">{suggestion.space.name}</span>?
           </span>
         </button>
       )}
@@ -624,8 +582,7 @@ const JotEditor = ({ jot, onDone }: { jot: SelfMessage; onDone: (body: string | 
 };
 
 export const PartView = ({ part, filer, spaces, handlers, scopeSpaceId, cont, held, found }: PartProps) => {
-  const cards = useCardsLook();
-  if (cards && (part.kind === 'link' || part.kind === 'note' || part.kind === 'task')) {
+  if (part.kind === 'link' || part.kind === 'note' || part.kind === 'task') {
     return <CardsEntry part={part} filer={filer} spaces={spaces} handlers={handlers} scopeSpaceId={scopeSpaceId} found={found} />;
   }
   if (part.kind === 'day') {
@@ -638,80 +595,7 @@ export const PartView = ({ part, filer, spaces, handlers, scopeSpaceId, cont, he
   if (part.kind === 'run') return <RunView run={part} spaces={spaces} handlers={handlers} scopeSpaceId={scopeSpaceId} />;
 
   const shell = { entry: part, filer, handlers, scopeSpaceId, found };
-  switch (part.kind) {
-    case 'jot':
-      return <JotEntry entry={part} shell={shell} spaces={spaces} handlers={handlers} cont={cont} held={held} />;
-    case 'task':
-      return (
-        <EntryShell {...shell} className="jr-entry--task" actions={<FileAction entry={part} spaces={spaces} handlers={handlers} />}>
-          <div className={`jr-taskline${part.task.is_done ? ' is-done' : ''}`}>
-            <button
-              type="button"
-              role="checkbox"
-              className="memex-task-check"
-              aria-checked={part.task.is_done}
-              aria-label={`Mark “${part.task.title}” ${part.task.is_done ? 'not done' : 'done'}`}
-              onClick={() => handlers.onToggleTask(part.task)}
-            >
-              <Check aria-hidden="true" />
-            </button>
-            <span className="jr-taskline-title">{part.task.title}</span>
-            <Time at={part.at} />
-          </div>
-        </EntryShell>
-      );
-    case 'note':
-      return (
-        <EntryShell {...shell} className="jr-entry--note" actions={<FileAction entry={part} spaces={spaces} handlers={handlers} />}>
-          <button type="button" className="jr-notecard" onClick={() => handlers.onOpenNote(part.note.id)}>
-            <span className="jr-meta">
-              <StickyNote aria-hidden="true" className="jr-glyph" /> Note
-              <span className="jr-push">
-                <Time at={part.at} />
-              </span>
-            </span>
-            <span className="jr-notecard-title">{part.note.title || 'Untitled'}</span>
-            {part.note.body && <span className="jr-notecard-body">{excerpt(part.note.body, 160)}</span>}
-          </button>
-        </EntryShell>
-      );
-    case 'link':
-      if (isVisualLink(part)) {
-        return (
-          <EntryShell {...shell} className="jr-entry--picture" actions={<FileAction entry={part} spaces={spaces} handlers={handlers} />}>
-            <a className="jr-unfurl" href={part.link.url} target="_blank" rel="noreferrer">
-              <Picture link={part.link} className="jr-unfurl-image" />
-              <span className="jr-unfurl-body">
-                <span className="jr-meta">
-                  <Favicon link={part.link} />
-                  <span className="jr-ellipsis">{part.source.label}</span>
-                  <span className="jr-push">
-                    <Time at={part.at} />
-                  </span>
-                </span>
-                <span className="jr-unfurl-title">{getLinkTitle(part.link)}</span>
-              </span>
-            </a>
-          </EntryShell>
-        );
-      }
-      return (
-        <EntryShell {...shell} className="jr-entry--link" actions={<FileAction entry={part} spaces={spaces} handlers={handlers} />}>
-          <a className="jr-hcard" href={part.link.url} target="_blank" rel="noreferrer">
-            {part.link.preview_image_url ? <Picture link={part.link} className="jr-hcard-thumb" /> : <span className="jr-hcard-thumb jr-hcard-thumb--fav"><Favicon link={part.link} /></span>}
-            <span className="jr-hcard-body">
-              <span className="jr-hcard-title">{getLinkTitle(part.link)}</span>
-              <span className="jr-meta">
-                <span className="jr-ellipsis">{getHostname(part.link.url)}</span>
-                <span className="jr-push">
-                  <Time at={part.at} />
-                </span>
-              </span>
-            </span>
-          </a>
-        </EntryShell>
-      );
-  }
+  return <JotEntry entry={part} shell={shell} spaces={spaces} handlers={handlers} cont={cont} held={held} />;
 };
 
 /**
