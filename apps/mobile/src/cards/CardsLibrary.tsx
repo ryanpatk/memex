@@ -16,6 +16,7 @@ import { MemoryCard, type CardLabel } from './MemoryCard';
 import { MoldedButton, CardsRoundButton } from './Molded';
 import { SpacePills } from './SpacePills';
 import { useCards } from './useCards';
+import { captureStore } from './capture';
 
 /*
  * Cards (the Library renamed, m01): one column of memory cards, newest saved
@@ -158,7 +159,7 @@ export const CardsLibrary = () => {
             title="Your first card goes here"
             body="Links you save in the Journal, with the extension or from X, Pinterest and YouTube become cards."
           >
-            <MoldedButton variant="primary" label="Save something" onPress={() => router.navigate({ pathname: '/', params: { compose: String(Date.now()) } })} />
+            <MoldedButton variant="primary" label="Save something" onPress={() => captureStore.open()} />
           </Placeholder>
         </View>
       ) : library.matching === 0 ? (

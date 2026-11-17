@@ -57,6 +57,7 @@ export const MoldedButton = ({
   style,
   accessibilityLabel,
   disabled,
+  testID,
 }: {
   label: string;
   onPress: () => void;
@@ -65,6 +66,7 @@ export const MoldedButton = ({
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
   disabled?: boolean;
+  testID?: string;
 }) => {
   const c = useCards();
   const primary = variant === 'primary';
@@ -77,6 +79,7 @@ export const MoldedButton = ({
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ disabled }}
       style={[wide && styles.wide, style]}
+      testID={testID}
     >
       {({ pressed }) => (
         <View

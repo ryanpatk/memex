@@ -36,7 +36,7 @@ export default function JournalScreen() {
   const actions = useEntryActions();
   const placeToasts = useComposerToasts();
   const pending = usePendingSaves();
-  const params = useLocalSearchParams<{ draft?: string; send?: string; compose?: string }>();
+  const params = useLocalSearchParams<{ draft?: string; send?: string }>();
   const { cards } = useTheme();
   const today = journal ? countToday(journal.feed) : 0;
   const subtitle = journal && !unavailable
@@ -90,7 +90,7 @@ export default function JournalScreen() {
         )}
         {/* Shown even when the Journal didn't load: offline, its saves wait on the phone. */}
         {!isLoading && (
-          <Composer spaces={journal?.spaces ?? []} filer={journal?.filer} onSubmit={actions.compose} draft={draft} onTop={placeToasts} focusKey={params.compose} />
+          <Composer spaces={journal?.spaces ?? []} filer={journal?.filer} onSubmit={actions.compose} draft={draft} onTop={placeToasts} />
         )}
       </KeyboardAvoidingView>
     </Canvas>

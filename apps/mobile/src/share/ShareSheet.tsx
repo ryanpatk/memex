@@ -15,6 +15,7 @@ import { Button, usePressSettle } from '../ui/Pressable';
 import { RoundButton } from '../ui/RoundButton';
 import { Text } from '../ui/Text';
 import { destination, linkSource, SAVE_LABEL, shareResult } from './shareModel';
+import { CardsShareSheet } from '../cards/CardsShareSheet';
 
 /*
  * The share sheet: what you shared from Safari, X, YouTube or anywhere, on
@@ -36,7 +37,13 @@ export interface ShareSheetProps {
   onSignIn: () => void;
 }
 
-export const ShareSheet = ({ content, spaces, signedIn, onSave, onClose, onSignIn }: ShareSheetProps) => {
+/** The share sheet: Memory Cards (cards/CardsShareSheet) or the classic look. */
+export const ShareSheet = (props: ShareSheetProps) => {
+  const { cards } = useTheme();
+  return cards ? <CardsShareSheet {...props} /> : <ClassicShareSheet {...props} />;
+};
+
+const ClassicShareSheet = ({ content, spaces, signedIn, onSave, onClose, onSignIn }: ShareSheetProps) => {
   const t = useTheme();
   const { palette } = t;
   const isLink = content.kind === 'link';

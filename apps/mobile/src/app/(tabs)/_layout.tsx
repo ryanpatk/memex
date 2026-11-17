@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router/tabs';
 import * as Haptics from 'expo-haptics';
 import { BookOpen, Inbox, MessageSquareText, Shapes, type LucideIcon } from 'lucide-react-native';
 import { CardsTabBar } from '../../cards/CardsTabBar';
+import { CaptureHost } from '../../cards/CaptureSheet';
 import { useInbox } from '../../data/useInbox';
 import { typeRole, useTheme } from '../../theme/theme';
 
@@ -25,6 +26,7 @@ export default function TabsLayout() {
   const { count: waiting } = useInbox();
 
   return (
+    <>
     <Tabs
       // Memory Cards: its own bar with the centre + (CardsTabBar); classic keeps the stock bar
       tabBar={t.cards ? (props) => <CardsTabBar {...props} waiting={waiting} /> : undefined}
@@ -51,5 +53,8 @@ export default function TabsLayout() {
         options={{ title: 'Inbox', tabBarIcon: icon(Inbox), tabBarBadge: waiting > 0 ? waiting : undefined }}
       />
     </Tabs>
+    {/* Save something (m05): the + opens it over whichever tab is showing */}
+    <CaptureHost />
+    </>
   );
 }

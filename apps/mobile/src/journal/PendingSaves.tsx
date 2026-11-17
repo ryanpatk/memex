@@ -1,5 +1,6 @@
 import { memo, useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text as RNText, View } from 'react-native';
+import { LabelStrip } from '../cards/MemoryCard';
 import * as Haptics from 'expo-haptics';
 import { CloudOff, TriangleAlert } from 'lucide-react-native';
 import { getHostname, type OutboxItem } from '@memex/core';
@@ -78,6 +79,35 @@ const PendingRow = ({ item }: { item: OutboxItem }) => {
     void saves.retry(item.id);
   };
 
+  if (t.cards) {
+    // Memory Cards (m06): a card whose label strip says it isn't sent yet (orange; red once refused)
+    const c = t.cards;
+    return (
+      <View style={[styles.cardsCard, { backgroundColor: c.colors.paper, boxShadow: c.cardShadow }]} testID={`pending-${item.id}`}>
+        <View accessible accessibilityLabel={`${KIND[item.draft.kind]} not sent yet: ${text}. ${pendingStatus(item)}`} style={styles.cardsText}>
+          <RNText style={[c.type.title, { fontSize: 21, lineHeight: 26, color: c.colors.ink }]} numberOfLines={3}>
+            {text}
+          </RNText>
+          {failed || host || where ? (
+            <RNText style={[c.type.labelUi, { color: failed ? c.colors.error : c.colors.muted }]} numberOfLines={2}>
+              {failed ? pendingStatus(item) : [host, where].filter(Boolean).join(' · ')}
+            </RNText>
+          ) : null}
+        </View>
+        <View style={styles.cardsActions}>
+          <Button compact variant="primary" label="Retry" onPress={retry} accessibilityHint="Tries to save it now" />
+          <Button compact variant="ghost" label="Discard" onPress={discard} accessibilityHint="Removes the copy kept on this phone" />
+        </View>
+        <View style={styles.cardsStrip}>
+          <LabelStrip
+            label={{ name: failed ? 'Couldn’t save' : 'Not sent yet', color: failed ? c.colors.error : c.extra.waiting }}
+            meta={failed ? KIND[item.draft.kind].toLowerCase() : item.attempts > 1 ? `tried ${item.attempts} times` : 'no connection'}
+          />
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View
       style={[
@@ -116,6 +146,10 @@ const PendingRow = ({ item }: { item: OutboxItem }) => {
 };
 
 const styles = StyleSheet.create({
+  cardsCard: { borderRadius: 28, paddingTop: 20, paddingHorizontal: 20, gap: 14, overflow: 'hidden' },
+  cardsText: { gap: 4 },
+  cardsActions: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  cardsStrip: { marginHorizontal: -20 },
   // Inverted feed: this sits under the newest entry, so its gap is on top.
   list: { gap: 10, paddingTop: 10 },
   row: { borderWidth: 1, borderStyle: 'dashed', padding: 12, gap: 8 },

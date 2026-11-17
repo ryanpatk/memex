@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
+import { useMemo, useRef, useState, type ComponentRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
@@ -33,8 +33,6 @@ export interface ComposerProps {
   /** A space's screen: what you send is filed there unless it names its own @spaces. */
   space?: JournalSpace;
   now?: () => Date;
-  /** A new value focuses the field (the tab bar's centre + in the Memory Cards look). */
-  focusKey?: string;
 }
 
 const systemNow = () => new Date();
@@ -42,7 +40,7 @@ const MIN_INPUT = 44;
 const MAX_INPUT = 132;
 const INPUT_PAD = 22;
 
-export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = systemNow, focusKey }: ComposerProps) => {
+export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = systemNow }: ComposerProps) => {
   const t = useTheme();
   const { palette } = t;
   const [text, setText] = useState(draft ?? '');
@@ -57,10 +55,6 @@ export const Composer = ({ spaces, filer, onSubmit, draft, onTop, space, now = s
   const dock = useRef<ComponentRef<typeof View>>(null);
   const send = usePressSettle();
   const cards = t.cards;
-
-  useEffect(() => {
-    if (focusKey) field.current?.focus();
-  }, [focusKey]);
 
   // A new ?draft= replaces the text (adjusting state during render, not in an effect).
   const [seenDraft, setSeenDraft] = useState(draft);
