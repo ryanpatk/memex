@@ -1,6 +1,6 @@
 ---
 name: memex
-description: Personal working-memory system — canonical design is the Links dashboard (`/`), the template for all memex modules
+description: Personal working-memory system — the classic Pastel Sky design system (retired 2026-11-17, tag classic-design-final; the app now wears Memory Cards, design/memory-cards/)
 colors:
   canvas: 'user-selected OKLCH swatch gradient (default soft grey oklch(0.94 0.009 264)); swatch hues from the JOYFUL_SYSTEMS palette (see JOYFUL_SYSTEMS.md)'
   surface: 'var(--bookmark-surface) / frosted white bubble'
@@ -68,6 +68,8 @@ components:
     border: 'brand bubble border'
     use: 'selected space/tag filters, active filter state'
 ---
+
+> **2026-11-17: this describes the classic Pastel Sky look, which memex no longer wears.** The app's design is **Memory Cards**: `design/memory-cards/README.md` (brief, coverage table, decisions), `design/memory-cards/SHIPPED.md` (what shipped and how the classic look was retired), tokens and kit in `src/styles/cards/`, every component at `/styleguide`. The last build in the look described here is tag `classic-design-final` (branch `archive/classic-design`). The principles below (Joyful Utility, honest depth, reduced motion) still hold where Memory Cards doesn't say otherwise, and the Pastel Sky tokens still sit under the shared Journal, List, Table and note-editor styles.
 
 > **2026-10-15 — Pastel Sky theme adopted.** Token values, typography, spacing, radii, edges, elevation, motion, and component treatments now come from the Graphical **Pastel Sky** theme: `GUI.md`, `gui/themes/pastel-sky.md`, `gui/themes/pastel-sky-components.md`, implemented in `src/styles/pastel-sky.css` (tokens) and `src/styles/components.css` (shared components). Where this document's values (Two Weekend Go, 13px UI, pill chips, frosted stacks, filled-icon set) disagree, the theme and those files win. Kept from memex: the canvas swatch, which now drives Pastel Sky's `--color-1` accent and the page canvas.
 

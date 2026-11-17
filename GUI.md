@@ -1,5 +1,7 @@
 # GUI — Pastel Sky design language
 
+> **2026-11-17:** Pastel Sky was memex's classic look (tag `classic-design-final`). The app now wears **Memory Cards** (`design/memory-cards/`, `src/styles/cards/`); build new UI from that kit, not from this guide. `src/styles/pastel-sky.css` keeps only the tokens the shared base styles still use.
+
 Use this guide and the accompanying skills to build with the supplied theme. The download contains Markdown guidance and theme references. Implement the theme in the receiving app’s existing styling system and components.
 
 ## Add to a project

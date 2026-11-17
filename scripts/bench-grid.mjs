@@ -10,10 +10,10 @@
  *
  *   node scripts/bench-grid.mjs http://localhost:4173/library [label]
  *
- * Works on both looks: the classic Library, and the Memory Cards look
- * (`?look=cards` or VITE_MEMEX_LOOK=cards), where the page scrolls in
- * `.mc-shell-main`, search is the save/search field and the filter toggles
- * are the first two space pills (the type chips live behind •••).
+ * The page scrolls in `.mc-shell-main`, search is the Cards page's
+ * save/search field and the filter toggles are the first two space pills
+ * (the type chips live behind •••). The classic Library this once measured
+ * is the tag `classic-design-final`.
  *
  * Point it at fixture data only (`VITE_MEMEX_FIXTURES=large`), never at a
  * signed-in production account. CHROME=<path> overrides the browser.
@@ -66,9 +66,8 @@ await send('Page.addScriptToEvaluateOnNewDocument', { source: `
 ` });
 await send('Page.navigate', { url });
 const results = { label };
-// The scroller and search field differ between the looks
-const SCROLLER = `(document.querySelector('.memex-grid-view') ?? document.querySelector('.mc-shell-main'))`;
-const SEARCH = `(document.querySelector('.memex-command-input') ?? document.querySelector('#mc-cards-field'))`;
+const SCROLLER = `document.querySelector('.mc-shell-main')`;
+const SEARCH = `document.querySelector('#mc-cards-field')`;
 await sleep(6000);
 if (process.env.SHIFTS === 'reload') { await send('Page.reload', {}); await sleep(6000); }
 if (process.env.SHIFTS) {
@@ -116,12 +115,10 @@ await sleep(1500);
 
 // 3. Filter toggles: time to next paint, long tasks, worst frame in the following 700ms
 results.filters = await evaluate(`(async () => {
-  const cards = document.documentElement.dataset.look === 'cards';
+  // The first two space pills, each pressed twice (on, then back to All)
   const pills = [...document.querySelectorAll('.mc-pills a.mc-pill')].filter((a) => a.textContent.trim() !== 'All');
-  const chip = (t) => cards
-    ? [...document.querySelectorAll('.mc-pills a.mc-pill')].find((a) => a.textContent.trim() === t)
-    : [...document.querySelectorAll('button.bookmark-profile-chip')].find((b) => b.textContent.trim().startsWith(t));
-  const labels = cards ? [0, 0, 1, 1].map((i) => pills[i].textContent.trim()) : ['Notes', 'Notes', 'Links', 'Links'];
+  const chip = (t) => [...document.querySelectorAll('.mc-pills a.mc-pill')].find((a) => a.textContent.trim() === t);
+  const labels = [0, 0, 1, 1].map((i) => pills[i].textContent.trim());
   const out = [];
   for (const label of labels) {
     const lts = []; const po = new PerformanceObserver((l) => l.getEntries().forEach((e) => lts.push(Math.round(e.duration)))); po.observe({ type: 'longtask' });
@@ -130,7 +127,7 @@ results.filters = await evaluate(`(async () => {
     const t = performance.now(); chip(label).click();
     await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))); const toPaint = Math.round(performance.now() - t);
     await new Promise((r) => setTimeout(r, 700)); stop = true; po.disconnect();
-    out.push({ toggle: label, toPaint, worstFrame: Math.round(Math.max(...deltas)), longTasks: lts, emptyStateShown: !!document.querySelector('.bookmark-list-empty-title, .mc-empty') });
+    out.push({ toggle: label, toPaint, worstFrame: Math.round(Math.max(...deltas)), longTasks: lts, emptyStateShown: !!document.querySelector('.mc-empty') });
   }
   return out;
 })()`);

@@ -1,6 +1,6 @@
 # memex
 
-**A personal working-memory system.** One Journal of everything you jot, save and plan (jots, links, notes, tasks), a Library to browse it, and spaces for the projects your work happens in. Captures arrive from the web app, the iPhone app and its share sheet, a Chrome extension (including X bookmarks, Pinterest saves and YouTube likes), and AI agents over MCP. Everything can be exported as a plain Markdown vault you own.
+**A personal working-memory system.** One Journal of everything you jot, save and plan (jots, links, notes, tasks), Cards to browse it, and spaces for the projects your work happens in, all in the Memory Cards design (big cards, few options). Captures arrive from the web app, the iPhone app and its share sheet, a Chrome extension (including X bookmarks, Pinterest saves and YouTube likes), and AI agents over MCP. Everything can be exported as a plain Markdown vault you own.
 
 Where it's going: [`ROADMAP.md`](ROADMAP.md). What v1 is and what was verified: [`docs/v1-signoff.md`](docs/v1-signoff.md).
 
@@ -78,7 +78,9 @@ The Chrome extension uses a different kind of token (`mx_…`, Settings → **Ac
 | [`docs/security-audit.md`](docs/security-audit.md) | RLS, token and memex-api audit (M7) |
 | [`CONTEXT.md`](CONTEXT.md) | Domain language (Journal, Entry, Jot, Space, Library, Capture, Vault…) |
 | [`CLAUDE.md`](CLAUDE.md) | Architecture, conventions and safety rules for agents |
-| [`DESIGN.md`](DESIGN.md), [`GUI.md`](GUI.md), [`JOYFUL_SYSTEMS.md`](JOYFUL_SYSTEMS.md) | Design system and theme |
+| [`design/memory-cards/`](design/memory-cards/) ([`README.md`](design/memory-cards/README.md), [`SHIPPED.md`](design/memory-cards/SHIPPED.md)) | The app's design, **Memory Cards**: brief, mockups, coverage of every feature, what shipped. Every component in every state at `/styleguide` |
+| [`JOYFUL_SYSTEMS.md`](JOYFUL_SYSTEMS.md) | The design language behind it (palette, spacing, motion, sound) |
+| [`DESIGN.md`](DESIGN.md), [`GUI.md`](GUI.md) | The classic Pastel Sky design, retired 2026-11-17; its last build is the git tag `classic-design-final` (branch `archive/classic-design`) |
 | [`PRODUCT.md`](PRODUCT.md), [`VISION.md`](VISION.md) | Positioning and the original product vision |
 | [`TODO.md`](TODO.md) | Living checklist, including Ryan's pending steps |
 | [`docs/`](docs/) | Feature notes (`journal-17b.md`, `space-page.md`, `tasks-view.md`, `library-views.md`), `mobile.md`, `mcp.md`, `backups.md`, `vault-format.md`, extension docs |

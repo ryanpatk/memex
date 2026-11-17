@@ -1,5 +1,7 @@
 # Library views (decision 15A)
 
+> **Since 2026-11-17 memex wears Memory Cards only.** This page records the feature as first built, in the classic look (the sidebar, filter chips and frosted stack it mentions are at tag `classic-design-final`). The behaviour carried over; where it moved (space pills instead of the sidebar, the ••• View panel instead of tabs and chips, the Inbox page instead of the tray) is in the coverage table in `design/memory-cards/README.md` and in `design/memory-cards/SHIPPED.md`.
+
 **Status:** built 2026-11-01 (branch `m5a-library-views`). Sources: `ROADMAP.md` §5 Phase 1 (“Library: Table view and saved views (Unfiled, From X, From YouTube)”) and §8 decision 15 (“15A; the Table ships as a toggle in either view”), the round-5 mock 15A on `/mocks`, `TODO.md` (“15A Library view tabs (All · Unfiled · From X · From YouTube · Table)”) and `CONTEXT.md` (**Saved view**: a named set of Library filters with a layout and sort).
 
 ## What 15A is

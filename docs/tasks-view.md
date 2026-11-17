@@ -1,5 +1,7 @@
 # Tasks view and drag to a space (M5-B)
 
+> **Since 2026-11-17 memex wears Memory Cards only.** This page records the feature as first built, in the classic look (the sidebar, filter chips and frosted stack it mentions are at tag `classic-design-final`). The behaviour carried over; where it moved (space pills instead of the sidebar, the ••• View panel instead of tabs and chips, the Inbox page instead of the tray) is in the coverage table in `design/memory-cards/README.md` and in `design/memory-cards/SHIPPED.md`.
+
 **Status:** built 2026-11-01 (branch `m5b-tasks-drag`). Closes two ROADMAP Phase 1 items: “a real Tasks view” and “drag to sidebar space”. No schema change: tasks already had `is_done`, `due_date` (a calendar day) and space membership (`profile_tasks`).
 
 ## Tasks (`/tasks`)

@@ -1,6 +1,8 @@
 # Memory Cards: design brief
 
-This folder holds **design work only**: HTML/CSS mockups, tokens, component sheets and rendered PNGs for **Memory Cards**, a simplified look for memex that Ryan picked from three directions. Nothing here is wired into the app. App code under `src/`, `apps/` and `packages/` is untouched by this work.
+> **Status, 2026-11-17: shipped.** Memory Cards is memex's only look on the web (the classic Pastel Sky look was retired the same day; its last build is tag `classic-design-final`). What was built, the choices made along the way and the state of each phone frame: [`SHIPPED.md`](SHIPPED.md). The text below is the design brief as written before implementation.
+
+This folder holds **design work only**: HTML/CSS mockups, tokens, component sheets and rendered PNGs for **Memory Cards**, a simplified look for memex that Ryan picked from three directions. The mockups here are the design source; the app's code lives in `src/` (web) and `apps/mobile/` (phone).
 
 - Design Page with every sheet and screen, the coverage table and the appendix: https://cursor.com/canvas/store-de911770-a135-4fc8-8342-45c4d4c702bf/3b4cf03c-7b1a-4baf-97fe-fc34d80bb1b7
 - Overview image: [`overview.png`](overview.png)
@@ -143,8 +145,8 @@ Inventory taken from `main` at `9d2ccdb` (Nov 12, 2026): web app, Expo app and b
 | 47 | Toasts with Undo or Open | d17, d22, m08, s08, s14 | Toast | Kept |
 | 48 | Phone tabs: Journal, Library, Spaces, Inbox; Tasks pill; account | m01–m03, m07, s11, x12 | Tab bar, + button, header | Kept; Library renamed Cards, + added in the centre. The Tasks header pill moves to the Tasks tile at the top of Spaces (m02); search becomes a ⌕ button. x12 shows three tabs instead |
 | 49 | Phone long-press File in…, pull to refresh, infinite scroll | m08, m09 | Menu, toast | Kept |
-| 50 | /styleguide | s01–s14 | Component sheets | Replaced by the sheets |
-| 51 | /mocks, legacy routes (/dashboard, /project/:id, /links, /notes), MissingEnv | None | None | Not redesigned (dev-only or redirects) |
+| 50 | /styleguide | s01–s14 | Component sheets | Replaced by the sheets (built: `/styleguide` is the live kit) |
+| 51 | /mocks, legacy routes (/dashboard, /project/:id, /links, /notes), MissingEnv | None | None | Not redesigned (dev-only or redirects). 2026-11-17: `/mocks` deleted with the classic look; `/project/:id` and `/protected` now redirect to Cards |
 
 ## Hidden, moved, cut or new
 

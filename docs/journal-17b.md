@@ -1,5 +1,7 @@
 # Desktop Journal: 17B notebook page + grouped jots (M5-D)
 
+> **Since 2026-11-17 memex wears Memory Cards only.** This page records the feature as first built, in the classic look (the sidebar, filter chips and frosted stack it mentions are at tag `classic-design-final`). The behaviour carried over; where it moved (space pills instead of the sidebar, the ••• View panel instead of tabs and chips, the Inbox page instead of the tray) is in the coverage table in `design/memory-cards/README.md` and in `design/memory-cards/SHIPPED.md`.
+
 **Status:** built 2026-11-01 (branch `m5d-journal-17b`). Closes decision 17 (Ryan chose **17B** on 2026-11-01 from the round-6 mock on `/mocks`) and the Journal polish items in `TODO.md`: edit a jot in place, move a jot between spaces, jots in ⌘K. No schema change and no migration: jots already had `body`, `profile_id` and an RLS update policy; the Repository just never used it.
 
 ## What changed

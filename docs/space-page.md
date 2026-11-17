@@ -1,5 +1,7 @@
 # Space page: scoped Journal + board (M5-C, decision 14B)
 
+> **Since 2026-11-17 memex wears Memory Cards only.** This page records the feature as first built, in the classic look (the sidebar, filter chips and frosted stack it mentions are at tag `classic-design-final`). The behaviour carried over; where it moved (space pills instead of the sidebar, the ••• View panel instead of tabs and chips, the Inbox page instead of the tray) is in the coverage table in `design/memory-cards/README.md` and in `design/memory-cards/SHIPPED.md`.
+
 **Status:** built 2026-11-01 (branch `m5c-space-board`). Closes the ROADMAP Phase 1 item “Space page becomes a board (pinned sites · tasks · notes · saves) with a scoped Journal column”. No schema change and no migration: everything comes from existing tables (jots' `profile_id`, the `profile_links` / `profile_notes` / `profile_tasks` joins, and `profile_links.is_super_favorite` for per-space pins).
 
 ## What `/spaces/:id` shows now

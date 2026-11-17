@@ -1,6 +1,6 @@
 # Library grid performance
 
-The Library's grid view (`/library`, `StreamPage` → `components/stream/MasonryLayout.tsx`) as rebuilt on 2026-11-12 to stay smooth with thousands of cards: why it was choppy, how it works now, the numbers, and how to measure it again.
+The Library's grid view (Cards, `/library`, `StreamPage` → `components/stream/MasonryLayout.tsx`) as rebuilt on 2026-11-12 (in the classic look; Memory Cards uses the same grid) to stay smooth with thousands of cards: why it was choppy, how it works now, the numbers, and how to measure it again.
 
 ## Why it was choppy
 
@@ -51,6 +51,8 @@ Production bundle, headless Chrome 2× DPR at 1280×800, fresh profile (cold cac
 | Search keystroke (Event Timing, worst) | 152–176ms, long tasks up to 122ms | 40–48ms, none |
 
 The remaining first-visit CLS comes from the app shell, not the grid: the sidebar's Inbox row appears once proposals load (it only shows while something is waiting, by design) and, on a browser's very first visit, the pinned-sites row.
+
+**2026-11-17, Memory Cards only** (the classic look retired; same bench, `large` fixture, one run): scrolling at 3,000, 8,400 and 6,000px/s all **60fps, 0 dropped frames**, worst frame 17ms, 0 long tasks, 0 cards moving, 0 blank frames; ≤28 cards mounted; load: one 78ms task, 28ms total blocking, CLS 0.0006, 277 DOM nodes at rest; pill toggles 15–30ms to paint, worst frame 17–33ms; search keystroke worst 48ms, no long tasks. The Memory Cards grid has bigger cards (340px minimum column), so fewer are mounted than in the classic numbers above.
 
 ## Measuring again
 
