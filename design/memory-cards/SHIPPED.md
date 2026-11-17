@@ -1,6 +1,6 @@
 # Memory Cards: shipped
 
-Memory Cards is memex's default look as of **2026-11-17** (web). It was built on `feat/memory-cards-ui` and merged into `main`. The design work it came from is in this folder: `README.md` (brief and coverage table), `REFINEMENT-NOTES.md` (pass 2), the mockups and `app-shots/`, which shows the running app on demo data.
+Memory Cards became memex's default look on **2026-11-17** (web) and its **only** look the same day, when the classic Pastel Sky look was retired (below). It was built on `feat/memory-cards-ui` and merged into `main`. The design work it came from is in this folder: `README.md` (brief and coverage table), `REFINEMENT-NOTES.md` (pass 2), the mockups and `app-shots/`, which shows the running app on demo data.
 
 ## Release record (2026-11-17)
 
@@ -12,22 +12,35 @@ Memory Cards is memex's default look as of **2026-11-17** (web). It was built on
 | Web deploy | Cloudflare Workers version `40eb7aba-5b5c-49e9-9cb7-642a4b2f4d6a`, https://memex.joyfulsystems.workers.dev |
 | Checked after deploy | Memory Cards by default, `?look=classic` shows the old look, no console errors (signed out) |
 
+## Retiring the classic look (2026-11-17, web)
+
+Ryan: “We can deprecate the classic view… I'm all in on the new design.” Built on `feat/retire-classic-look`, fast-forwarded into `main`.
+
+| Step | Result |
+|---|---|
+| Look flag removed | `html[data-look]`, `VITE_MEMEX_LOOK`, `?look=`, Settings → Look and the account menu's “Back to the classic look” are gone. Old `?look=classic` URLs are ignored. A browser's leftover `memex.look` (and the other classic-only keys: `memex.link-captions`, `memex.self-notes-open`, `memex.library.hadPinned`) is removed once on load (`src/utils/retiredSettings.ts`) |
+| Stylesheet | The Memory Cards CSS is a normal import in `main.tsx` (no lazy chunk, no wait before the first paint). Its rules moved from `html[data-look='cards']` to `html:root`, which has the same specificity, so nothing in the cascade changed |
+| Code removed | 64 files deleted (17.5k lines): the classic styleguide, `/mocks` and its components, the sidebar, filter bar, command bar, docked Journal panel, task band, classic cards, rows, modals, the Journal's classic entries and Inbox tray, `LinkEditModal`, `ProjectPage` and `ProtectedPage` (`/project/:id` and `/protected` now land in Cards), plus their hooks and utils. TS/TSX in `src/`: 32.4k → 17.9k lines |
+| CSS removed | Base CSS (`index.css`, `styles/*.css`, the mocks CSS) 16.6k → 2.8k lines: every rule whose selector names a class no source file can produce (read from string, template and JSX literals with the TypeScript parser), then unreferenced custom properties, keyframes and empty blocks. `tasks.css` and `space.css` were left empty and are gone |
+| Checked | Computed styles of every element on 28 screens and states (Journal, Cards grid/list/table, open note and card, a space filter, Tasks by space/date/done, Inbox, space board, styleguide, 404, dark mode, the View panel, Settings, Keys, ⌘K, the capture sheet, phone width) diffed before and after on demo data: no differences beyond run-to-run timing noise, and no console errors. Typecheck, lint, 659 web tests and the build pass |
+| Bundle | JS 1,508 → 1,223 KiB (gzip 448 → 378); main chunk 1,191 → 900 kB. CSS 400 → 153 KiB (gzip 59 → 28). Fonts unchanged (641 KiB) |
+| Grid benchmark | `large` fixture, production bundle: 60fps and 0 dropped frames scrolling at 3,000, 8,400 and 6,000px/s; 0 long tasks; load blocking 28ms, CLS 0.0006 |
+| Web deploy | Cloudflare Workers version `a8db2e92-26c1-4311-a3c2-a16c1989af79`. Checked live (signed out, fresh browser): sign-in, sign-up, 404 and protected routes render in Memory Cards; `?look=classic` changes nothing and a stored `memex.look=classic` is cleared; no console errors |
+| Database | Untouched. `profiles.color` stays |
+
 ## The classic design is kept
 
 | What | Where |
 |---|---|
 | The last production build with only the classic (Pastel Sky) design | tag **`classic-design-final`** and branch **`archive/classic-design`**, both at `9d2ccdb` |
-| The classic look inside today's app | `?look=classic` on any URL, or Settings → Look → Classic. Either choice is remembered in that browser (localStorage `memex.look`). `?look=cards` switches back. |
+| The classic look inside today's app | Gone since 2026-11-17. Check out the tag (or the branch) to run it: `git checkout classic-design-final && npm ci && VITE_MEMEX_FIXTURES=1 npm run dev` |
 
-A browser that already remembered `classic` (for example from local testing) stays on classic until it is switched back.
+## One look
 
-## How the look is chosen
-
-`src/look/look.ts` sets `html[data-look="cards" | "classic"]`. From strongest to weakest: `?look=`, then the remembered choice, then `VITE_MEMEX_LOOK` at build time, then `cards`. Everything Memory Cards draws is scoped to `html[data-look="cards"]`, and pages branch on `useCardsLook()`, so the classic look still renders as it did.
+There is no look switch any more. `src/main.tsx` imports `src/styles/cards` after the base styles; the rules that re-dress shared base classes (the Journal's `jr-*`, List and Table rows) are scoped to `html:root` so they keep winning over the base styles. The heading font is still a choice: Nunito or IBM Plex, `html[data-cards-font]`, Settings → Font (`src/utils/cardsFont.ts`).
 
 - Tokens: `src/styles/cards/tokens.css` (`--mc-*`). Core's `tokens/memoryCards.ts` copies them for the phone, and a test fails if the two drift apart.
 - Kit: `src/styles/cards/kit.css` (`.mc-*`) and `src/components/cards/`. Every component is shown in every state at `/styleguide`.
-- The cards stylesheet and fonts load as their own chunk.
 
 ## Space colours
 
@@ -36,17 +49,15 @@ Spaces can have a chosen colour. Migration `supabase/migrations/20261116120000_a
 ## Run it locally
 
 ```bash
-VITE_MEMEX_FIXTURES=1 npm run dev                       # demo data, Memory Cards
-VITE_MEMEX_FIXTURES=1 VITE_MEMEX_LOOK=classic npm run dev   # demo data, classic
+VITE_MEMEX_FIXTURES=1 npm run dev     # demo data
 ```
 
-Grid performance on either look:
+Grid performance:
 
 ```bash
 VITE_MEMEX_FIXTURES=large npx vite build --mode bench --outDir /tmp/memex-bench
 npx vite preview --outDir /tmp/memex-bench --port 4173
-node scripts/bench-grid.mjs "http://localhost:4173/library?look=cards" cards
-node scripts/bench-grid.mjs "http://localhost:4173/library?look=classic" classic
+node scripts/bench-grid.mjs http://localhost:4173/library
 ```
 
 ## Mobile (Expo): not the default yet
@@ -84,7 +95,7 @@ The phone app's default stays classic until the remaining frames are built and a
 - **Font:** Nunito, with Plex available in Settings → Font.
 - **Sound:** on by default, as today.
 - **Library → Cards:** renamed on web and phone.
-- **Card captions:** one style, caption below the picture. The setting is gone in the new look (the classic look keeps it).
+- **Card captions:** one style, caption below the picture. The setting is gone.
 - **Phone tabs:** Journal · Cards · + · Spaces · Inbox.
 - **Pinned sites:** moved off Everything, onto space pages, a Pinned group in ⌘K, and “Pin to top” on a card (with a gold pin badge).
 - **Card open:** the centred card sheet, not the in-place expand.
