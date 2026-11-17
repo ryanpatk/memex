@@ -10,6 +10,11 @@
  *
  *   node scripts/bench-grid.mjs http://localhost:4173/library [label]
  *
+ * Works on both looks: the classic Library, and the Memory Cards look
+ * (`?look=cards` or VITE_MEMEX_LOOK=cards), where the page scrolls in
+ * `.mc-shell-main`, search is the save/search field and the filter toggles
+ * are the first two space pills (the type chips live behind •••).
+ *
  * Point it at fixture data only (`VITE_MEMEX_FIXTURES=large`), never at a
  * signed-in production account. CHROME=<path> overrides the browser.
  * SHIFTS=1 prints the page's layout-shift sources after load instead
@@ -61,6 +66,9 @@ await send('Page.addScriptToEvaluateOnNewDocument', { source: `
 ` });
 await send('Page.navigate', { url });
 const results = { label };
+// The scroller and search field differ between the looks
+const SCROLLER = `(document.querySelector('.memex-grid-view') ?? document.querySelector('.mc-shell-main'))`;
+const SEARCH = `(document.querySelector('.memex-command-input') ?? document.querySelector('#mc-cards-field'))`;
 await sleep(6000);
 if (process.env.SHIFTS === 'reload') { await send('Page.reload', {}); await sleep(6000); }
 if (process.env.SHIFTS) {
@@ -78,7 +86,7 @@ results.load = await evaluate(`(async () => {
 // 2. Scrolling: frames, drops, long tasks, visible shifts (cards moving against the rest), blank frames
 const scrollBench = (step, ms) => evaluate(`(async () => {
   const STEP = ${step}, MS = ${ms};
-  const sc = document.querySelector('.memex-grid-view');
+  const sc = ${SCROLLER};
   const grid = document.querySelector('.memex-masonry'); const sr = sc.getBoundingClientRect(); const gr = grid.getBoundingClientRect();
   const pts = []; for (let fx = 0.1; fx < 1; fx += 0.2) for (let fy = 0.1; fy < 1; fy += 0.2) pts.push([gr.left + gr.width * fx, sr.top + sr.height * fy]);
   const lts = []; const po = new PerformanceObserver((l) => l.getEntries().forEach((e) => lts.push(e.duration))); po.observe({ type: 'longtask' });
@@ -97,40 +105,45 @@ const scrollBench = (step, ms) => evaluate(`(async () => {
     dropped: deltas.reduce((s, d) => s + Math.max(0, Math.round(d / 16.67) - 1), 0), p95Frame: Math.round(sorted[Math.floor(sorted.length * 0.95)]), longestFrame: Math.round(sorted[sorted.length - 1]),
     longTasks: lts.length, longestTask: Math.round(Math.max(0, ...lts)), visibleShifts: shifts, shiftPx: Math.round(shiftPx), blankFrames: blank, cls: +(window.__cls - clsStart).toFixed(4), maxDomNodes: maxNodes, maxMountedCards: maxCards };
 })()`);
-await evaluate(`document.querySelector('.memex-grid-view').scrollTop = 0`);
+await evaluate(`${SCROLLER}.scrollTop = 0`);
 await sleep(500);
 results.scrollDown3000 = await scrollBench(50, 3000);
 results.scrollDown8400 = await scrollBench(140, 3000);
 await sleep(800);
 results.scrollUp6000 = await scrollBench(-100, 3000);
-await evaluate(`document.querySelector('.memex-grid-view').scrollTop = 0`);
+await evaluate(`${SCROLLER}.scrollTop = 0`);
 await sleep(1500);
 
 // 3. Filter toggles: time to next paint, long tasks, worst frame in the following 700ms
 results.filters = await evaluate(`(async () => {
-  const chip = (t) => [...document.querySelectorAll('button.bookmark-profile-chip')].find((b) => b.textContent.trim().startsWith(t));
+  const cards = document.documentElement.dataset.look === 'cards';
+  const pills = [...document.querySelectorAll('.mc-pills a.mc-pill')].filter((a) => a.textContent.trim() !== 'All');
+  const chip = (t) => cards
+    ? [...document.querySelectorAll('.mc-pills a.mc-pill')].find((a) => a.textContent.trim() === t)
+    : [...document.querySelectorAll('button.bookmark-profile-chip')].find((b) => b.textContent.trim().startsWith(t));
+  const labels = cards ? [0, 0, 1, 1].map((i) => pills[i].textContent.trim()) : ['Notes', 'Notes', 'Links', 'Links'];
   const out = [];
-  for (const label of ['Notes', 'Notes', 'Links', 'Links']) {
+  for (const label of labels) {
     const lts = []; const po = new PerformanceObserver((l) => l.getEntries().forEach((e) => lts.push(Math.round(e.duration)))); po.observe({ type: 'longtask' });
     const deltas = []; let last = performance.now(); let stop = false; const f = (ts) => { deltas.push(ts - last); last = ts; if (!stop) requestAnimationFrame(f); }; requestAnimationFrame(f);
     await new Promise((r) => setTimeout(r, 100));
     const t = performance.now(); chip(label).click();
     await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))); const toPaint = Math.round(performance.now() - t);
     await new Promise((r) => setTimeout(r, 700)); stop = true; po.disconnect();
-    out.push({ toggle: label, toPaint, worstFrame: Math.round(Math.max(...deltas)), longTasks: lts, emptyStateShown: !!document.querySelector('.bookmark-list-empty-title') });
+    out.push({ toggle: label, toPaint, worstFrame: Math.round(Math.max(...deltas)), longTasks: lts, emptyStateShown: !!document.querySelector('.bookmark-list-empty-title, .mc-empty') });
   }
   return out;
 })()`);
 
 // 4. Search typing: real key events through CDP, Event Timing per keystroke
-await evaluate(`(() => { window.__ev = []; new PerformanceObserver((l) => l.getEntries().forEach((e) => { if (/key|input/.test(e.name)) window.__ev.push([e.name, Math.round(e.duration), Math.round(e.processingEnd - e.processingStart)]); })).observe({ type: 'event', durationThreshold: 16 }); window.__lt.length = 0; document.querySelector('.memex-command-input').focus(); })()`);
+await evaluate(`(() => { window.__ev = []; new PerformanceObserver((l) => l.getEntries().forEach((e) => { if (/key|input/.test(e.name)) window.__ev.push([e.name, Math.round(e.duration), Math.round(e.processingEnd - e.processingStart)]); })).observe({ type: 'event', durationThreshold: 16 }); window.__lt.length = 0; ${SEARCH}.focus(); })()`);
 for (const ch of 'kitchen') {
   await send('Input.dispatchKeyEvent', { type: 'keyDown', key: ch, text: ch, unmodifiedText: ch });
   await send('Input.dispatchKeyEvent', { type: 'keyUp', key: ch });
   await sleep(110);
 }
 await sleep(1200);
-results.search = await evaluate(`(() => ({ slowEvents: window.__ev, worstEventMs: Math.max(0, ...window.__ev.map((e) => e[1])), longTasks: window.__lt.slice(), value: document.querySelector('.memex-command-input').value, cards: document.querySelectorAll('[data-item-key]').length }))()`);
+results.search = await evaluate(`(() => ({ slowEvents: window.__ev, worstEventMs: Math.max(0, ...window.__ev.map((e) => e[1])), longTasks: window.__lt.slice(), value: ${SEARCH}.value, cards: document.querySelectorAll('[data-item-key]').length }))()`);
 
 console.log(JSON.stringify(results, null, 1));
 ws.close();

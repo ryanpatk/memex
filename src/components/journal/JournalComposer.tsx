@@ -1,5 +1,6 @@
 import { forwardRef, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
-import { ArrowUp } from 'lucide-react';
+import { ArrowUp, Plus } from 'lucide-react';
+import { useCardsLook } from '../../look/look';
 import { mentionQuery, parseComposer, withDefaultSpace, type ComposerResult, type JournalSpace } from '@memex/core';
 
 /*
@@ -139,9 +140,10 @@ const JournalComposer = forwardRef<JournalComposerHandle, JournalComposerProps>(
   };
 
   const enterKind = parsed.kind === 'empty' ? 'jot' : parsed.kind;
+  const cards = useCardsLook();
 
   return (
-    <div className="jr-composer">
+    <div className={`jr-composer${cards ? ' mc-jr-composer' : ''}${cards && text ? ' has-text' : ''}`}>
       {pickerOpen && (
         <div className="memex-menu jr-picker" role="listbox" id={listId} aria-label="Spaces">
           {matches.map((space, i) => (
@@ -162,14 +164,18 @@ const JournalComposer = forwardRef<JournalComposerHandle, JournalComposerProps>(
           ))}
         </div>
       )}
-      <div className="jr-composer-field">
+      <div className={cards ? 'jr-composer-field mc-field' : 'jr-composer-field'}>
         <textarea
           ref={fieldRef}
           className="jr-composer-input"
           rows={1}
           value={text}
           placeholder={
-            defaultSpace
+            cards
+              ? defaultSpace
+                ? `Jot in ${defaultSpace.name}, paste a link…`
+                : 'Write a jot, paste a link…'
+              : defaultSpace
               ? `Jot in ${defaultSpace.name}, paste a link, “[] ” for a task, @ to file elsewhere…`
               : 'Write a jot, paste a link, “[] ” for a task, @space to file…'
           }
@@ -193,11 +199,11 @@ const JournalComposer = forwardRef<JournalComposerHandle, JournalComposerProps>(
         />
         <button
           type="button"
-          className="btn-primary jr-send"
+          className={cards ? 'mc-plus jr-send' : 'btn-primary jr-send'}
           aria-label={parsed.kind === 'empty' ? 'Send' : SEND_LABEL[enterKind]}
           onClick={() => (parsed.kind === 'empty' ? fieldRef.current?.focus() : submit(false))}
         >
-          <ArrowUp aria-hidden="true" />
+          {cards ? <Plus aria-hidden="true" /> : <ArrowUp aria-hidden="true" />}
         </button>
       </div>
       <p className="jr-hint" id={hintId}>

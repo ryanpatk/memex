@@ -3,6 +3,8 @@ import { LinkWithTag } from '@memex/core';
 import { useProjects } from '../hooks/useProjects';
 import { useTags, useCreateTag, TAG_COLORS } from '../hooks/useTags';
 import { useUpdateLink } from '../hooks/useLinks';
+import { useCardsLook } from '../look/look';
+import EditLinkSheet from './cards/EditLinkSheet';
 
 interface LinkEditModalProps {
   link: LinkWithTag;
@@ -17,6 +19,7 @@ const LinkEditModal = ({
   onClose,
   onDelete,
 }: LinkEditModalProps) => {
+  const cards = useCardsLook();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [editUrl, setEditUrl] = useState(link.url);
   const [editTitle, setEditTitle] = useState(link.title || '');
@@ -98,6 +101,10 @@ const LinkEditModal = ({
     editDescription !== (link.description || '') ||
     selectedTagId !== (link.tag_id || '') ||
     selectedProjectId !== link.project_id;
+
+  // Memory Cards (d13): link, title, why I saved this. Tags and the legacy
+  // project picker stay hidden; delete lives on the card's •••
+  if (cards) return <EditLinkSheet link={link} open={isOpen} onClose={onClose} />;
 
   return (
     <dialog

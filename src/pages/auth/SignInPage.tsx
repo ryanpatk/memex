@@ -5,6 +5,8 @@ import { repository } from '../../data/repository';
 import AppLogo from '../../components/AppLogo';
 import DarkModeToggle from '../../components/DarkModeToggle';
 import { nextPathFromSearch, rememberNextPath } from '../../utils/authRedirect';
+import { useCardsLook } from '../../look/look';
+import CardsAuthForm from './CardsAuthForm';
 
 const GitHubIcon = () => (
   <svg width="18" height="18" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
@@ -18,6 +20,7 @@ const GitHubIcon = () => (
 
 const SignInPage = () => {
   const { session } = useSession();
+  const cards = useCardsLook();
   const location = useLocation();
   // The page that sent you here (`?next=`); signing in returns to it.
   const nextPath = nextPathFromSearch(location.search);
@@ -68,6 +71,29 @@ const SignInPage = () => {
     status &&
     !status.includes('Logging') &&
     !status.includes('GitHub');
+
+  if (cards) {
+    return (
+      <CardsAuthForm
+        title="Welcome back"
+        mode="sign-in"
+        values={formValues}
+        onChange={handleInputChange}
+        onSubmit={handleSubmit}
+        onGitHub={handleGitHubSignIn}
+        submitLabel="Sign in"
+        submitting={status.includes('Logging')}
+        githubBusy={status.includes('GitHub')}
+        disabled={isSubmitting}
+        error={showError ? status : null}
+        footer={
+          <Link to="/auth/sign-up" className="mc-auth-link">
+            New here? <strong>Make an account</strong>
+          </Link>
+        }
+      />
+    );
+  }
 
   return (
     <div className="app-surface page-shell">

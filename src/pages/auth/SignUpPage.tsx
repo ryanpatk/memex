@@ -5,6 +5,8 @@ import { repository } from '../../data/repository';
 import AppLogo from '../../components/AppLogo';
 import DarkModeToggle from '../../components/DarkModeToggle';
 import { DEFAULT_MODULE_PATH } from '../../constants/modules';
+import { useCardsLook } from '../../look/look';
+import CardsAuthForm from './CardsAuthForm';
 
 const GitHubIcon = () => (
   <svg
@@ -24,6 +26,7 @@ const GitHubIcon = () => (
 
 const SignUpPage = () => {
   const { session } = useSession();
+  const cards = useCardsLook();
   const [status, setStatus] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formValues, setFormValues] = useState({
@@ -68,6 +71,30 @@ const SignUpPage = () => {
   const isSuccess = status.includes('email');
   const showMessage =
     status && !status.includes('Creating') && !status.includes('GitHub');
+
+  if (cards) {
+    return (
+      <CardsAuthForm
+        title="Make an account"
+        mode="sign-up"
+        values={formValues}
+        onChange={handleInputChange}
+        onSubmit={handleSubmit}
+        onGitHub={handleGitHubSignUp}
+        submitLabel="Make my account"
+        submitting={status.includes('Creating')}
+        githubBusy={status.includes('GitHub')}
+        disabled={isSubmitting}
+        error={showMessage && !isSuccess ? status : null}
+        success={showMessage && isSuccess ? status : null}
+        footer={
+          <Link to="/auth/sign-in" className="mc-auth-link">
+            Have an account? <strong>Sign in</strong>
+          </Link>
+        }
+      />
+    );
+  }
 
   return (
     <div className="app-surface page-shell">

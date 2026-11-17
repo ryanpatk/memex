@@ -18,6 +18,10 @@ import {
 } from '@memex/core';
 import { getInitials } from '../../utils/streamCardFormat';
 import { dragAttrs } from '../../utils/itemDrag';
+import { useCardsLook } from '../../look/look';
+import { LinkMemoryCard, NoteMemoryCard, DueChip } from '../cards/cards';
+import { AgentBadge } from '../cards/MemoryCard';
+import { entryLabel } from '../cards/journal/entryLabel';
 
 /*
  * Journal entry renderers, decision 11D: jots are bubbles, tasks are lines,
@@ -41,6 +45,8 @@ export interface JournalHandlers {
   onDeleteJot: (jot: SelfMessage) => void;
   /** Save an edited jot (already checked by core's jotEdit). Without it, jots can't be edited. */
   onEditJot?: (jot: SelfMessage, body: string) => void;
+  /** Memory Cards: open a link's card (the centred card on Cards). */
+  onOpenLink?: (link: LinkWithTag) => void;
 }
 
 interface PartProps {
@@ -294,9 +300,44 @@ const agentClient = (entry: Entry): string | null => {
 };
 
 const Filing = ({ entry, filer, handlers, scopeSpaceId }: { entry: Entry; filer: Filer; handlers: JournalHandlers; scopeSpaceId?: string }) => {
+  const cards = useCardsLook();
   const suggestion = filer.suggest(entry);
   const via = agentClient(entry);
   const chips = entry.spaces.filter((s) => s.id !== scopeSpaceId);
+  if (cards) {
+    // Memory Cards: links and notes are cards whose label strip already names
+    // their spaces and agent, so only jots and tasks show filled strips
+    const asCard = entry.kind === 'link' || entry.kind === 'note';
+    const shownChips = asCard ? [] : chips;
+    const shownVia = asCard ? null : via;
+    if (!shownChips.length && !suggestion && !shownVia) return null;
+    return (
+      <div className="jr-filing mc-jr-filing">
+        {shownVia && <AgentBadge name={shownVia} />}
+        {shownChips.map((s) => (
+          <span key={s.id} className="mc-strip mc-jr-strip" style={{ '--c': s.color } as CSSProperties}>
+            <b aria-hidden="true" />
+            <span translate="no">{s.name}</span>
+          </span>
+        ))}
+        {suggestion && (
+          <button
+            type="button"
+            className="mc-strip is-suggest"
+            style={{ '--c': suggestion.space.color } as CSSProperties}
+            title={suggestion.reason}
+            aria-label={`File in ${suggestion.space.name}: ${suggestion.reason}`}
+            onClick={() => handlers.onFile([entry.id], suggestion.space.id)}
+          >
+            <b aria-hidden="true" />
+            <span>
+              File in <span translate="no">{suggestion.space.name}</span>?
+            </span>
+          </button>
+        )}
+      </div>
+    );
+  }
   if (!chips.length && !suggestion && !via) return null;
   return (
     <div className="jr-filing">
@@ -583,6 +624,10 @@ const JotEditor = ({ jot, onDone }: { jot: SelfMessage; onDone: (body: string | 
 };
 
 export const PartView = ({ part, filer, spaces, handlers, scopeSpaceId, cont, held, found }: PartProps) => {
+  const cards = useCardsLook();
+  if (cards && (part.kind === 'link' || part.kind === 'note' || part.kind === 'task')) {
+    return <CardsEntry part={part} filer={filer} spaces={spaces} handlers={handlers} scopeSpaceId={scopeSpaceId} found={found} />;
+  }
   if (part.kind === 'day') {
     return (
       <h2 className="jr-day">
@@ -667,4 +712,71 @@ export const PartView = ({ part, filer, spaces, handlers, scopeSpaceId, cont, he
         </EntryShell>
       );
   }
+};
+
+/**
+ * Memory Cards entries (d23): links and notes are memory cards with their
+ * label strip (a link opens its card on Cards; a note opens in the editor),
+ * tasks are chunky task rows. Filing (suggestion strip, File to…) and drag
+ * stay as in the classic Journal.
+ */
+const CardsEntry = ({
+  part,
+  filer,
+  spaces,
+  handlers,
+  scopeSpaceId,
+  found,
+}: {
+  part: Extract<Entry, { kind: 'link' | 'note' | 'task' }>;
+  filer: Filer;
+  spaces: JournalSpace[];
+  handlers: JournalHandlers;
+  scopeSpaceId?: string;
+  found?: boolean;
+}) => {
+  const shell = { entry: part, filer, handlers, scopeSpaceId, found };
+  const actions = <FileAction entry={part} spaces={spaces} handlers={handlers} />;
+  if (part.kind === 'task') {
+    return (
+      <EntryShell {...shell} className="jr-entry--task mc-jr-entry" actions={actions}>
+        <div className={`mc-trow mc-jr-task${part.task.is_done ? ' is-done' : ''}`}>
+          <button
+            type="button"
+            role="checkbox"
+            className="mc-chk"
+            aria-checked={part.task.is_done}
+            aria-label={`Mark “${part.task.title}” ${part.task.is_done ? 'not done' : 'done'}`}
+            onClick={() => handlers.onToggleTask(part.task)}
+          >
+            <Check aria-hidden="true" />
+          </button>
+          <span className="mc-trow-title">{part.task.title}</span>
+          <DueChip due={part.task.due_date} done={part.task.is_done} />
+          <Time at={part.at} />
+        </div>
+      </EntryShell>
+    );
+  }
+  const label = entryLabel(part.spaces, scopeSpaceId);
+  if (part.kind === 'note') {
+    return (
+      <EntryShell {...shell} className="jr-entry--note mc-jr-entry" actions={actions}>
+        <div className="mc-jr-card">
+          <NoteMemoryCard note={part.note} label={label} onActivate={(note) => handlers.onOpenNote(note.id)} />
+        </div>
+      </EntryShell>
+    );
+  }
+  return (
+    <EntryShell {...shell} className={`jr-entry--${isVisualLink(part) ? 'picture' : 'link'} mc-jr-entry`} actions={actions}>
+      <div className="mc-jr-card">
+        <LinkMemoryCard
+          link={part.link}
+          label={label}
+          onActivate={(link) => (handlers.onOpenLink ? handlers.onOpenLink(link) : window.open(link.url, '_blank', 'noopener'))}
+        />
+      </div>
+    </EntryShell>
+  );
 };

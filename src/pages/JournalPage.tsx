@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Check, Inbox, X } from 'lucide-react';
+import { Navigate, useSearchParams } from 'react-router-dom';
+import { Check, Inbox, Plus, X } from 'lucide-react';
 import { useJournal } from '../hooks/useJournal';
 import { useAddToSpace } from '../hooks/useAddToSpace';
 import { useFeedbackToast } from '../hooks/useFeedbackToast';
@@ -11,7 +11,9 @@ import { proposalTarget } from '../components/journal/proposalTarget';
 import { FeedbackToast } from '../components/ui';
 import LoadErrorState from '../components/LoadErrorState';
 import { HANDLES_ERRORS } from '../utils/mutationErrors';
-import { INBOX_PARAM } from '../constants/modules';
+import { INBOX_PARAM, INBOX_PATH } from '../constants/modules';
+import { useCardsLook } from '../look/look';
+import { EmptySlot } from '../components/cards/Controls';
 import {
   type Entry,
   type FileableEntry,
@@ -89,6 +91,50 @@ const JournalPage = () => {
 
   const today = new Date().toDateString();
   const todayCount = entries.filter((e) => new Date(e.at).toDateString() === today).length;
+  const cards = useCardsLook();
+
+  if (cards) {
+    // Memory Cards (d23, x04): the Inbox is its own page, there's no docked
+    // panel; the Journal is one paper column under a “Today” hero
+    if (inboxOpen) return <Navigate to={INBOX_PATH} replace />;
+    return (
+      <div className="mc-jr-page">
+        <div className="mc-jr-paper">
+          <h1 className="mc-hero mc-jr-hero">
+            Today
+            {loadState === 'ready' && (
+              <sup>
+                <span className="mc-sr-only">, </span>
+                {todayCount}
+                <span className="mc-sr-only"> {todayCount === 1 ? 'entry' : 'entries'}</span>
+              </sup>
+            )}
+          </h1>
+          <JournalFeed
+            entries={entries}
+            spaces={spaces}
+            filer={filer}
+            isLoading={isLoading}
+            label="Journal"
+            flash={flash}
+            dismiss={dismiss}
+            failure={loadState === 'failed' ? <LoadErrorState what="your Journal" onRetry={refetch} /> : undefined}
+            empty={
+              <EmptySlot
+                title="Your Journal starts here"
+                body="Write what’s on your mind, or paste a link."
+                glyph={<Plus />}
+                color="var(--mc-blue)"
+              />
+            }
+          />
+        </div>
+        {toast !== null && (
+          <FeedbackToast message={toast.message} phase={toast.phase} action={toast.action} onAnimationEnd={handleAnimationEnd} />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={`jr-page${inboxOpen ? ' has-inbox' : ''}`}>

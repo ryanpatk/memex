@@ -22,7 +22,7 @@ import { useAddNotesToProfile } from '../../hooks/useProfileNotes';
 import { useAddTasksToProfile } from '../../hooks/useProfileTasks';
 import JournalComposer, { type JournalComposerHandle } from './JournalComposer';
 import { PartView, type JournalHandlers } from './JournalParts';
-import { JOT_PARAM, LIBRARY_PATH, NOTE_PARAM } from '../../constants/modules';
+import { JOT_PARAM, LIBRARY_PATH, LINK_PARAM, NOTE_PARAM } from '../../constants/modules';
 import { cue } from '../../utils/sound';
 import { HANDLES_ERRORS } from '../../utils/mutationErrors';
 
@@ -237,6 +237,8 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
     );
 
     const openNote = useCallback((noteId: string) => navigate(`${LIBRARY_PATH}?${NOTE_PARAM}=${noteId}`), [navigate]);
+    // Memory Cards: a link entry opens its card on Cards (the classic Journal links straight out)
+    const openLink = useCallback((linkId: string) => navigate(`${LIBRARY_PATH}?${LINK_PARAM}=${linkId}`), [navigate]);
 
     /** On a space page, a save filed only elsewhere leaves this feed: say where it went. */
     const filedElsewhere = useCallback(
@@ -447,8 +449,9 @@ const JournalFeed = forwardRef<JournalFeedHandle, JournalFeedProps>(
         onJotToTask: (jot) => void convertJot(jot, 'task'),
         onDeleteJot: handleDeleteJot,
         onEditJot: handleEditJot,
+        onOpenLink: (link) => openLink(link.id),
       }),
-      [convertJot, handleDeleteJot, handleEditJot, handleFile, handleToggleTask, handleUnfile, openNote],
+      [convertJot, handleDeleteJot, handleEditJot, handleFile, handleToggleTask, handleUnfile, openLink, openNote],
     );
 
     return (

@@ -16,7 +16,8 @@ import OAuthLanding from "./OAuthLanding.tsx";
 import MemexShell from "../components/MemexShell.tsx";
 import Providers from "../Providers.tsx";
 import RouteError from "./RouteError.tsx";
-import { LEGACY_HOME_PATH, LIBRARY_PATH, TASKS_PATH } from "../constants/modules.ts";
+import InboxRoute from "./InboxRoute.tsx";
+import { INBOX_PATH, LEGACY_HOME_PATH, LIBRARY_PATH, TASKS_PATH } from "../constants/modules.ts";
 
 const router = createBrowserRouter([
   // I recommend you reflect the routes here in the pages folder
@@ -66,6 +67,11 @@ const router = createBrowserRouter([
                   {
                     path: TASKS_PATH,
                     element: <TasksPage />,
+                  },
+                  {
+                    // The Inbox page (Memory Cards look); the classic look redirects to /?inbox=1
+                    path: INBOX_PATH,
+                    element: <InboxRoute />,
                   },
                 ],
               },

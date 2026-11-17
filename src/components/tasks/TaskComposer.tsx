@@ -1,6 +1,7 @@
 import { forwardRef, useId, useImperativeHandle, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import { mentionQuery, parseTaskInput, type JournalSpace } from '@memex/core';
+import { useCardsLook } from '../../look/look';
 
 /*
  * The Tasks view's add field. Same syntax as the Journal composer
@@ -31,6 +32,7 @@ const TaskComposer = forwardRef<TaskComposerHandle, TaskComposerProps>(({ spaces
   const listId = useId();
 
   useImperativeHandle(ref, () => ({ focus: () => fieldRef.current?.focus() }), []);
+  const cards = useCardsLook();
 
   const parsed = useMemo(() => parseTaskInput(text, spaces), [spaces, text]);
   const filing = parsed?.spaces.length ? parsed.spaces : defaultSpace ? [defaultSpace] : [];
@@ -99,6 +101,83 @@ const TaskComposer = forwardRef<TaskComposerHandle, TaskComposerProps>(({ spaces
     }
   };
 
+  const inputProps = {
+    ref: fieldRef,
+    value: text,
+    'aria-label': 'Add a task',
+    'aria-describedby': hintId,
+    'aria-autocomplete': 'list' as const,
+    'aria-expanded': pickerOpen,
+    'aria-controls': pickerOpen ? listId : undefined,
+    'aria-activedescendant': pickerOpen ? `${listId}-${activeIndex}` : undefined,
+    role: 'combobox',
+    autoComplete: 'off',
+    enterKeyHint: 'done' as const,
+    spellCheck: true,
+    onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
+      setText(event.target.value);
+      setCaret(event.target.selectionStart ?? 0);
+      setPickIndex(0);
+      setPickerDismissed(false);
+    },
+    onKeyDown: handleKeyDown,
+    onSelect: syncCaret,
+    onClick: syncCaret,
+  };
+
+  const picker = pickerOpen && (
+    <div className={cards ? 'mc-menu mc-task-picker' : 'memex-menu tk-picker'} role="listbox" id={listId} aria-label="Spaces">
+      {matches.map((space, i) => (
+        <button
+          key={space.id}
+          type="button"
+          role="option"
+          id={`${listId}-${i}`}
+          aria-selected={i === activeIndex}
+          className={cards ? `mc-mi${i === activeIndex ? ' is-active' : ''}` : i === activeIndex ? 'is-active' : undefined}
+          style={{ '--hue': space.color, '--c': space.color } as CSSProperties}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => pick(space)}
+        >
+          {cards ? (
+            <span className="mc-mi-icon" aria-hidden="true">
+              <span className="mc-mi-dot" />
+            </span>
+          ) : (
+            <i className="jr-dot" aria-hidden="true" />
+          )}
+          {space.name}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (cards) {
+    // Memory Cards (d27): the kit's field, an N key cap, Enter adds
+    return (
+      <div className="mc-task-composer">
+        <label className="mc-field">
+          <span className="mc-field-glyph" aria-hidden="true">
+            <Search />
+          </span>
+          <input {...inputProps} placeholder="Add a task…" />
+          <kbd className="mc-kb" aria-hidden="true">
+            N
+          </kbd>
+        </label>
+        {picker}
+        <p className="mc-sr-only" id={hintId}>
+          Enter adds the task. Type @ and a space's name to file it.
+        </p>
+        {filing.length > 0 && text.trim() && (
+          <p className="mc-lab mc-task-filing" aria-live="polite">
+            Goes in {filing.map((s) => s.name).join(', ')}
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="tk-composer">
       <div className="tk-composer-field">
@@ -132,26 +211,7 @@ const TaskComposer = forwardRef<TaskComposerHandle, TaskComposerProps>(({ spaces
           Add
         </button>
       </div>
-      {pickerOpen && (
-        <div className="memex-menu tk-picker" role="listbox" id={listId} aria-label="Spaces">
-          {matches.map((space, i) => (
-            <button
-              key={space.id}
-              type="button"
-              role="option"
-              id={`${listId}-${i}`}
-              aria-selected={i === activeIndex}
-              className={i === activeIndex ? 'is-active' : undefined}
-              style={{ '--hue': space.color } as CSSProperties}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => pick(space)}
-            >
-              <i className="jr-dot" aria-hidden="true" />
-              {space.name}
-            </button>
-          ))}
-        </div>
-      )}
+      {picker}
       <p className="tk-composer-hint" id={hintId}>
         <span>
           <kbd className="memex-kbd">↵</kbd> add task

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { useCardsLook } from '../look/look';
 import CanvasColorPicker from '../components/CanvasColorPicker';
 import DarkModeToggle from '../components/DarkModeToggle';
 import LinkGridCard from '../components/LinkGridCard';
@@ -136,7 +137,7 @@ const Section = ({
   </section>
 );
 
-const StyleguidePage = () => {
+const ClassicStyleguidePage = () => {
   const [spaceSelected, setSpaceSelected] = useState(true);
   const [tagSelected, setTagSelected] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -427,6 +428,22 @@ const StyleguidePage = () => {
       {toast !== null && <FeedbackToast message={toast.message} phase={toast.phase} />}
     </div>
   );
+};
+
+// The Memory Cards kit replaces this page in the cards look; its own chunk,
+// so the classic look never loads it
+const CardsKitPage = lazy(() => import('./CardsKitPage'));
+
+const StyleguidePage = () => {
+  const cards = useCardsLook();
+  if (cards) {
+    return (
+      <Suspense fallback={null}>
+        <CardsKitPage />
+      </Suspense>
+    );
+  }
+  return <ClassicStyleguidePage />;
 };
 
 export default StyleguidePage;

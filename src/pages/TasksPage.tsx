@@ -16,6 +16,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  Ellipsis,
   ListTodo,
 } from 'lucide-react';
 import {
@@ -55,6 +56,11 @@ import { HANDLES_ERRORS } from '../utils/mutationErrors';
 import { loadStateOf } from '../utils/loadState';
 import { DONE_PARAM, GROUP_PARAM, SPACE_PARAM } from '../constants/modules';
 import { cue } from '../utils/sound';
+import { useCardsLook } from '../look/look';
+import { CardsTaskRow } from '../components/tasks/CardsTaskRow';
+import CardsMenu, { type MenuEntry as CardsMenuEntry } from '../components/cards/Menu';
+import MoveSheet from '../components/cards/MoveSheet';
+import { EmptySlot, ToggleGroup } from '../components/cards/Controls';
 import '../styles/journal.css';
 import '../styles/tasks.css';
 
@@ -112,6 +118,9 @@ const TasksPage = () => {
   const filterSpace = spaceFilter.length === 1 ? spaceById.get(spaceFilter[0]) : undefined;
 
   const [doneLimit, setDoneLimit] = useState(DONE_PAGE);
+  const cards = useCardsLook();
+  /** Memory Cards: the task whose “File in…” sheet is open. */
+  const [fileInKey, setFileInKey] = useState<string | null>(null);
   const composerRef = useRef<TaskComposerHandle>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const focusAfter = useRef<string | null>(null);
@@ -314,6 +323,218 @@ const TasksPage = () => {
   const filtered = spaceFilter.length > 0;
   const failed = loadState === 'failed';
   const nothingAtAll = loadState === 'ready' && open.length === 0 && done.length === 0;
+
+
+  /* ---------- Memory Cards (d27, d28) ---------- */
+
+  if (cards) {
+    const bandColor = (group: (typeof groups)[number]) =>
+      group.space
+        ? group.space.color
+        : group.bucket === 'overdue'
+          ? 'var(--mc-coral)'
+          : group.bucket === 'today'
+            ? 'var(--mc-gold)'
+            : group.bucket === 'tomorrow'
+              ? 'var(--mc-cyan)'
+              : group.bucket === 'week'
+                ? 'var(--mc-blue)'
+                : group.bucket === 'later'
+                  ? 'var(--mc-vio)'
+                  : 'var(--mc-line)';
+
+    const menuEntries: CardsMenuEntry[] = [
+      { kind: 'header', id: 'h-space', label: 'Show' },
+      {
+        id: UNFILED_TASKS,
+        label: `Unfiled · ${counts.get(UNFILED_TASKS) ?? 0}`,
+        checked: spaceFilter.includes(UNFILED_TASKS),
+        onSelect: () => toggleSpaceFilter(UNFILED_TASKS),
+      },
+      ...spaces.map<CardsMenuEntry>((space) => ({
+        id: space.id,
+        label: `${space.name} · ${counts.get(space.id) ?? 0}`,
+        color: space.color,
+        checked: spaceFilter.includes(space.id),
+        onSelect: () => toggleSpaceFilter(space.id),
+      })),
+      ...(spaceFilter.length
+        ? [{ id: 'every', label: 'Every space', onSelect: () => setParam(SPACE_PARAM, null) } as CardsMenuEntry]
+        : []),
+      { kind: 'separator', id: 'sep' },
+      {
+        id: 'done',
+        label: showDone ? 'Hide done' : `Show done · ${done.length}`,
+        icon: <Check />,
+        disabled: done.length === 0,
+        onSelect: () => setParam(DONE_PARAM, showDone ? null : '1'),
+      },
+    ];
+
+    const renderCardsRow = (task: TaskWithTags, groupSpaceId?: string) => (
+      <CardsTaskRow
+        key={task.id}
+        task={task}
+        taskSpaces={spacesOf(task)}
+        groupSpaceId={groupSpaceId}
+        settling={settling.has(task.id)}
+        renaming={renamingId === task.id}
+        now={now}
+        handlers={rowHandlers}
+        onFileIn={(t) => setFileInKey(`task:${t.id}`)}
+      />
+    );
+
+    return (
+      <main className="mc-page mc-tasks" aria-label="Tasks">
+        <div className="mc-page-head">
+          <h1 className="mc-hero">
+            Tasks
+            {loadState === 'ready' && <sup aria-label={`${openCount} open`}>{openCount}</sup>}
+          </h1>
+          <div className="mc-page-tools mc-tasks-tools">
+            <TaskComposer ref={composerRef} spaces={spaces} defaultSpace={filterSpace} onSubmit={handleCreate} />
+            <ToggleGroup
+              label="Group by"
+              value={grouping}
+              options={[
+                { value: 'space', label: 'By space' },
+                { value: 'date', label: 'By date' },
+              ]}
+              onChange={setGrouping}
+            />
+            <CardsMenu
+              label="Tasks options"
+              entries={menuEntries}
+              trigger={(props) => (
+                <button {...props} type="button" className="mc-rb" aria-label="Tasks options">
+                  <Ellipsis aria-hidden="true" />
+                </button>
+              )}
+            />
+          </div>
+        </div>
+
+        {filtered && (
+          <p className="mc-lab mc-tasks-filter" role="status">
+            Showing {spaceFilter.length === 1 ? spaceSummary : `${spaceFilter.length} spaces`}
+            <button type="button" className="mc-btn is-quiet is-small" onClick={() => setParam(SPACE_PARAM, null)}>
+              Show every space
+            </button>
+          </p>
+        )}
+
+        <div className="mc-task-list" ref={listRef} onKeyDown={onListKeyDown}>
+          {isLoading && (
+            <div className="mc-task-groups" aria-busy="true" aria-label="Loading tasks">
+              {[0, 1].map((n) => (
+                <section key={n} className="mc-task-group">
+                  <span className="mc-sk mc-task-band-sk" />
+                  <ul className="mc-task-rows">
+                    {[64, 48, 72].map((w) => (
+                      <li key={w} className="mc-trow">
+                        <span className="mc-sk" style={{ width: 40, height: 40, borderRadius: 12 }} />
+                        <span className="mc-sk" style={{ width: `${w}%`, height: 20 }} />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          )}
+
+          {failed && <LoadErrorState what="your tasks" onRetry={() => tasksQuery.refetch()} />}
+
+          {nothingAtAll && !filtered && (
+            <EmptySlot
+              glyph={<ListTodo />}
+              color="var(--mc-blue)"
+              title="Nothing to do yet"
+              body="Add one above. In the Journal, start a line with [] and it lands here too."
+            />
+          )}
+
+          {loadState === 'ready' && open.length === 0 && (done.length > 0 || filtered) &&
+            (filtered ? (
+              <EmptySlot
+                glyph={<ListTodo />}
+                title={`Nothing open in ${spaceFilter.length === 1 ? spaceSummary : 'these spaces'}`}
+                body={done.length > 0 ? `${done.length} done here.` : 'Add one above and it’s filed here.'}
+                action={
+                  <button type="button" className="mc-btn" onClick={() => setParam(SPACE_PARAM, null)}>
+                    Show every space
+                  </button>
+                }
+              />
+            ) : (
+              <EmptySlot glyph={<Check />} color="var(--mc-green)" title="All clear" body={`Every task is done. ${done.length} so far.`} />
+            ))}
+
+          {groups.length > 0 && (
+            <div className="mc-task-groups">
+              {groups.map((group) => (
+                <section
+                  key={group.key}
+                  className="mc-task-group"
+                  aria-labelledby={`mc-tk-group-${group.key}`}
+                  style={{ '--c': bandColor(group) } as CSSProperties}
+                >
+                  <h2 className="mc-band mc-task-band" id={`mc-tk-group-${group.key}`}>
+                    <span className="mc-task-band-name" translate={group.space ? 'no' : undefined}>
+                      {group.label}
+                    </span>
+                    <span className="mc-task-band-count">{group.tasks.filter((t) => !t.is_done).length}</span>
+                  </h2>
+                  <ul className="mc-task-rows">
+                    {group.tasks.map((task) => renderCardsRow(task, grouping === 'space' ? group.space?.id : undefined))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          )}
+
+          {done.length > 0 && (
+            <section className="mc-task-done" aria-label="Done">
+              <button
+                type="button"
+                className="mc-btn is-quiet is-small mc-task-done-toggle"
+                aria-expanded={showDone}
+                aria-controls="mc-tk-done-list"
+                onClick={() => setParam(DONE_PARAM, showDone ? null : '1')}
+              >
+                <ChevronRight aria-hidden="true" className={showDone ? 'is-open' : undefined} />
+                Done ({done.length})
+              </button>
+              {showDone && (
+                <>
+                  <ul className="mc-task-rows mc-task-rows--done" id="mc-tk-done-list">
+                    {done.slice(0, doneLimit).map((task) => renderCardsRow(task))}
+                  </ul>
+                  {done.length > doneLimit && (
+                    <button type="button" className="mc-btn is-small" onClick={() => setDoneLimit((n) => n + DONE_PAGE)}>
+                      Show {Math.min(DONE_PAGE, done.length - doneLimit)} more
+                    </button>
+                  )}
+                </>
+              )}
+            </section>
+          )}
+        </div>
+
+        <MoveSheet
+          open={fileInKey !== null}
+          onClose={() => setFileInKey(null)}
+          itemKeys={fileInKey ? [fileInKey] : []}
+          onFeedback={flash}
+          title="File this task in…"
+        />
+
+        {toast !== null && (
+          <FeedbackToast message={toast.message} phase={toast.phase} action={toast.action} onAnimationEnd={handleAnimationEnd} />
+        )}
+      </main>
+    );
+  }
 
   return (
     <div className="tk-page">

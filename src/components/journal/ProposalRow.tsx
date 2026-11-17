@@ -1,7 +1,8 @@
 import { useState, type CSSProperties } from 'react';
 import { Bot, Check, X } from 'lucide-react';
 import { changedSinceProposed, compactDiff, proposalFields, type ProposalTarget } from '@memex/core/agent';
-import { getLinkTitle, type InboxProposal, type JournalSpace } from '@memex/core';
+import { type InboxProposal, type JournalSpace } from '@memex/core';
+import { ago, targetTitle } from './proposalTarget';
 
 /*
  * One agent proposal in the Inbox tray (docs/mcp.md → "Proposals"): which
@@ -10,19 +11,6 @@ import { getLinkTitle, type InboxProposal, type JournalSpace } from '@memex/core
  */
 
 const timeFmt = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
-const relFmt = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
-
-const ago = (at: string) => {
-  const minutes = Math.round((Date.parse(at) - Date.now()) / 60_000);
-  if (Math.abs(minutes) < 60) return relFmt.format(minutes, 'minute');
-  const hours = Math.round(minutes / 60);
-  if (Math.abs(hours) < 24) return relFmt.format(hours, 'hour');
-  return relFmt.format(Math.round(hours / 24), 'day');
-};
-
-const targetTitle = (target: ProposalTarget) =>
-  target.type === 'link' ? getLinkTitle(target.item) : target.type === 'note' ? target.item.title || 'Untitled note' : target.item.title;
-
 const TYPE_WORD = { link: 'link', note: 'note', task: 'task' } as const;
 const DIFF_LINES = 14;
 

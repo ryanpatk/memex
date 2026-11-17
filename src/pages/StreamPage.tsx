@@ -1,5 +1,26 @@
-import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useNavigationType, useSearchParams } from 'react-router-dom';
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Link as RouterLink, useNavigate, useNavigationType, useSearchParams } from 'react-router-dom';
+import { useCardsLook } from '../look/look';
+import { useCardLabels } from '../hooks/useCardLabels';
+import { useAllSelfMessages } from '../hooks/useSelfMessages';
+import { JotMemoryCard, LinkMemoryCard, NoteMemoryCard, TaskMemoryCard } from '../components/cards/cards';
+import CaptureSheet from '../components/cards/CaptureSheet';
+import OpenCardSheet from '../components/cards/OpenCardSheet';
+import ViewPanel from '../components/cards/ViewPanel';
+import SpacePillRow from '../components/cards/SpacePillRow';
+import CardsSelectionBar from '../components/cards/SelectionBar';
+import MoveSheet from '../components/cards/MoveSheet';
+import NewSpaceSheet from '../components/cards/NewSpaceSheet';
+import { EmptySlot } from '../components/cards/Controls';
+import CardsSkeleton from '../components/cards/CardsSkeleton';
+import { gridShowsJots, interleaveNewestFirst, jotMatches, toggleShownType } from '../utils/cardsGrid';
+import {
+  jotCardHeight,
+  linkCardHeight,
+  noteCardHeight,
+  pictureCardHeight,
+  taskCardHeight,
+} from '../utils/memoryCardEstimates';
 import LibraryTable, { type TableSpace } from '../components/library/LibraryTable';
 import LibraryViewTabs, { type ViewTab } from '../components/library/LibraryViewTabs';
 import MenuButton, { type MenuEntry } from '../components/library/MenuButton';
@@ -89,6 +110,8 @@ import {
   pinnedLinks,
 } from '@memex/core';
 import {
+  JOURNAL_PATH,
+  spacePath,
   LIBRARY_PATH,
   LINK_PARAM,
   NOTE_PARAM,
@@ -131,8 +154,11 @@ import { getImageRatio, getShownRatio, layoutRatio, prefetchImageRatios, subscri
 import { estimatedLines, pictureHeight, textCardHeight } from '../utils/cardEstimates';
 import type { RescrapeResult } from '../components/stream/LinkExpandedCard';
 import {
+  AlertTriangle,
   ArrowUpDown,
   BookOpen,
+  MoreHorizontal,
+  Search,
   Check,
   ChevronDown,
   ChevronRight,
@@ -187,6 +213,13 @@ const storeView = (next: StreamView) => {
 
 const HAD_PINNED_KEY = 'memex.library.hadPinned';
 
+const numberFormat = new Intl.NumberFormat();
+const MC_TYPE_KEYS: readonly ItemType[] = ['link', 'note', 'task'];
+
+/** When an item was first saved (the Saved sort), for weaving jots into the grid. */
+const itemCreatedAt = (item: StreamItem) =>
+  item.type === 'link' ? item.link.created_at : item.type === 'note' ? item.note.created_at : item.task.created_at;
+
 /** A note's grid excerpt length, worked out once per note version (estimates run on every layout). */
 const excerptLengths = new WeakMap<NoteWithTags, number>();
 const noteExcerptLength = (note: NoteWithTags) => {
@@ -214,6 +247,8 @@ const FILTER_PARAM_NAMES = {
  * header.
  */
 const StreamPage = () => {
+  const cardsLook = useCardsLook();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { session } = useSession();
 
@@ -456,11 +491,13 @@ const StreamPage = () => {
       const target = event.target as HTMLElement;
       if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
       event.preventDefault();
-      toggleSelfNotes();
+      // Memory Cards cut the docked panel (x04): J opens the Journal tab
+      if (cardsLook) navigate(JOURNAL_PATH);
+      else toggleSelfNotes();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [toggleSelfNotes]);
+  }, [cardsLook, navigate, toggleSelfNotes]);
 
   // On phones the sheet is a whole page: flag the document so the bottom
   // bar hides while it is open (the bar is fixed at a higher stacking layer
@@ -2079,7 +2116,7 @@ const StreamPage = () => {
               </a>
             }
           />
-          {isExpanded && renderExpanded(link, 'row')}
+          {isExpanded && !cardsLook && renderExpanded(link, 'row')}
         </div>
       );
     }
@@ -2249,7 +2286,523 @@ const StreamPage = () => {
 
   const nothingToShow = openItems.length === 0 && doneTasks.length === 0;
 
+  /* ---------- Memory Cards look (design/memory-cards, behind the look flag) ---------- */
+
+  // One space chosen → its pill fills, the hero names it, captures file there
+  const mcSpaceId = captureSpaceId;
+  const { labelFor } = useCardLabels(mcSpaceId);
+  const { data: allJots } = useAllSelfMessages();
+  const [captureText, setCaptureText] = useState<string | null>(null);
+  const [viewPanelOpen, setViewPanelOpen] = useState(false);
+  const [moveKeys, setMoveKeys] = useState<string[] | null>(null);
+  const [newSpaceOpen, setNewSpaceOpen] = useState(false);
+  const viewButtonRef = useRef<HTMLButtonElement>(null);
+  const fieldRef = useRef<HTMLInputElement>(null);
+
+  // Jots join the grid only in the plain, date-ordered view (cardsGrid.ts)
+  const mcJots = useMemo(() => {
+    if (!cardsLook || !allJots) return [];
+    const eligible = gridShowsJots({
+      types: selectedTypes,
+      sources: selectedSources,
+      tagIds: selectedTagIds,
+      untagged: includeUntagged,
+      sortField: sort.field,
+      sortDirection: sort.direction,
+    });
+    if (!eligible) return [];
+    return allJots
+      .filter((jot) => !hiddenJotIds.has(jot.id) && jotMatches(jot, activeFilters.spaces, gridSearch, UNFILED))
+      .sort((a, b) => b.created_at.localeCompare(a.created_at));
+  }, [
+    activeFilters.spaces,
+    allJots,
+    cardsLook,
+    gridSearch,
+    hiddenJotIds,
+    includeUntagged,
+    selectedSources,
+    selectedTagIds,
+    selectedTypes,
+    sort.direction,
+    sort.field,
+  ]);
+  const mcJotsById = useMemo(() => new Map(mcJots.map((jot) => [jot.id, jot])), [mcJots]);
+
+  // Tasks are cards in the grid (the task band is gone); done ones stay in Tasks
+  const mcGridKeys = useMemo(() => {
+    if (!cardsLook) return [];
+    const items = openItems.map((item) => ({
+      key: item.key,
+      at: sort.field === 'saved' ? itemCreatedAt(item) : item.updatedAt,
+    }));
+    if (mcJots.length === 0) return items.map((item) => item.key);
+    return interleaveNewestFirst(
+      items,
+      mcJots.map((jot) => ({ key: `jot:${jot.id}`, at: jot.created_at })),
+    );
+  }, [cardsLook, mcJots, openItems, sort.field]);
+
+  const mcMasonryItems = useMemo<MasonryItem[]>(() => mcGridKeys.map((key) => ({ key })), [mcGridKeys]);
+
+  useLayoutEffect(() => {
+    if (cardsLook) gridKeysRef.current = mcGridKeys;
+  }, [cardsLook, mcGridKeys]);
+
+  const mcEstimate = useCallback(
+    (key: string, width: number) => {
+      if (key.startsWith('jot:')) return jotCardHeight(width, mcJotsById.get(key.slice(4))?.body.length ?? 40);
+      const item = itemsByKey.get(key);
+      if (!item) return 0;
+      if (item.type === 'task') return taskCardHeight(width, item.task.title.length, Boolean(item.task.due_date));
+      if (item.type === 'note') {
+        return noteCardHeight(width, noteDisplayTitle(item.note).length, Math.min(220, noteExcerptLength(item.note)));
+      }
+      const url = previewUrlOf(item);
+      const titleLength = getLinkTitle(item.link).length;
+      if (url) return pictureCardHeight(width, layoutRatio(url, item.link.url, item.link.source), titleLength);
+      return linkCardHeight(width, titleLength);
+    },
+    [itemsByKey, mcJotsById, previewUrlOf],
+  );
+
+  const mcSizeToken = useCallback(
+    (key: string) => {
+      if (key.startsWith('jot:')) return `mc|j|${mcJotsById.get(key.slice(4))?.updated_at ?? ''}`;
+      const item = itemsByKey.get(key);
+      if (!item) return 'mc|';
+      const label = labelFor(key);
+      const labelToken = `${label.name ?? ''}+${label.extra}`;
+      if (item.type === 'task') return `mc|t|${item.task.updated_at}|${labelToken}`;
+      if (item.type === 'note') return `mc|n|${item.note.updated_at}|${labelToken}`;
+      const url = previewUrlOf(item);
+      if (!url) return `mc|l|${item.link.updated_at}|${labelToken}`;
+      return `mc|p|${item.link.updated_at}|${getShownRatio(url) ?? getImageRatio(url) ?? '?'}|${labelToken}`;
+    },
+    [itemsByKey, labelFor, mcJotsById, previewUrlOf],
+  );
+
+  const toggleTaskCard = useStableCallback(handleToggleTaskDone);
+  const toggleSelectTask = useStableCallback((task: TaskWithTags) => {
+    const item = itemsByKey.get(itemKey('task', task.id));
+    if (item) handleToggleSelect(item);
+  });
+  const openJotCard = useStableCallback((jot: SelfMessage) => {
+    if (selectionMode) toggleItemSelection(`jot:${jot.id}`);
+    else navigate(`${JOURNAL_PATH}?jot=${jot.id}`);
+  });
+  const activateNoteCard = useStableCallback((note: NoteWithTags) => {
+    if (selectionMode) toggleSelectNote(note.id);
+    else handleOpenNote(note);
+  });
+
+  const renderMemoryCard = (key: string) => {
+    const isSelected = selectedKeySet.has(key);
+    const label = labelFor(key);
+    if (key.startsWith('jot:')) {
+      const jot = mcJotsById.get(key.slice(4));
+      return jot ? (
+        <JotMemoryCard jot={jot} label={label} onActivate={openJotCard} selected={isSelected} selectionMode={selectionMode} />
+      ) : null;
+    }
+    const item = itemsByKey.get(key);
+    if (!item) return null;
+    if (item.type === 'link') {
+      return (
+        <LinkMemoryCard
+          link={item.link}
+          label={label}
+          withPicture={Boolean(item.link.preview_image_url) && !brokenPreviews.has(item.id)}
+          onActivate={activateLink}
+          onImageError={previewBroken}
+          selected={isSelected}
+          selectionMode={selectionMode}
+          pinned={Boolean(item.link.is_super_favorite)}
+        />
+      );
+    }
+    if (item.type === 'note') {
+      return (
+        <NoteMemoryCard note={item.note} label={label} onActivate={activateNoteCard} selected={isSelected} selectionMode={selectionMode} />
+      );
+    }
+    return (
+      <TaskMemoryCard
+        task={item.task}
+        label={label}
+        onToggleDone={toggleTaskCard}
+        onActivate={selectionMode ? toggleSelectTask : undefined}
+        selected={isSelected}
+        selectionMode={selectionMode}
+      />
+    );
+  };
+
+  /** Where a space pill goes: this page with only that space chosen (other filters kept). */
+  const spaceHref = useCallback(
+    (spaceId: string | null) => {
+      const params = new URLSearchParams(searchParams);
+      params.delete(NOTE_PARAM);
+      params.delete(LINK_PARAM);
+      if (spaceId) params.set(SPACE_PARAM, spaceId);
+      else params.delete(SPACE_PARAM);
+      const query = params.toString();
+      return `${LIBRARY_PATH}${query ? `?${query}` : ''}`;
+    },
+    [searchParams],
+  );
+
+  const resetView = useCallback(() => {
+    updateParams((params) => {
+      [TYPE_PARAM, SOURCE_PARAM, SORT_PARAM, TAGS_PARAM, UNTAGGED_PARAM, VIEW_PARAM].forEach((key) => params.delete(key));
+      if (activeFilters.spaces.includes(UNFILED)) params.delete(SPACE_PARAM);
+    });
+    storeView('grid');
+  }, [activeFilters.spaces, updateParams]);
+
+  const unfiledOnly = activeFilters.spaces.length === 1 && activeFilters.spaces[0] === UNFILED;
+  const mcViewCustomised =
+    selectedTypes.length > 0 || selectedSources.length > 0 || unfiledOnly || !sameSort(sort, SORT_OPTIONS[0]) || view !== 'grid';
+
+  // “/” puts the cursor in the save/search field (the classic palette has its own)
+  useEffect(() => {
+    if (!cardsLook) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]') || document.querySelector('dialog[open]')) return;
+      event.preventDefault();
+      fieldRef.current?.focus();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [cardsLook]);
+
+  const mcSpace = mcSpaceId ? spaceById.get(mcSpaceId) : undefined;
+  const mcHeroName =
+    activeView && activeView.id !== 'everything' ? activeView.name : mcSpace ? mcSpace.name : 'Everything';
+  const mcShownCount = view === 'grid' ? mcGridKeys.length : filteredItems.length;
+  const openLinkItem = expandedLinkId ? itemsByKey.get(itemKey('link', expandedLinkId)) : undefined;
+  const openLink = openLinkItem?.type === 'link' ? openLinkItem.link : null;
+
+  const renderCardsPage = () => {
+    const emptyLibrary = loadState === 'ready' && allItems.length === 0 && (allJots?.length ?? 0) === 0;
+    let body: ReactNode;
+    if (loadState === 'failed') {
+      body = (
+        <EmptySlot
+          color="var(--mc-coral)"
+          glyph={<AlertTriangle />}
+          title="Your cards didn’t load"
+          body="Check your connection, then try again. Nothing you saved is lost."
+          action={
+            <button type="button" className="mc-btn is-primary" onClick={() => void refetchLibrary()}>
+              Try again
+            </button>
+          }
+        />
+      );
+    } else if (itemsPending && nothingToShow) {
+      body = <CardsSkeleton />;
+    } else if (emptyLibrary) {
+      body = (
+        <EmptySlot
+          color="var(--mc-blue)"
+          glyph={<Plus />}
+          title="Your first card goes here"
+          body="Paste a link or write a thought in the field above, then press Enter."
+          action={
+            <button type="button" className="mc-btn is-primary" onClick={() => setCaptureText(searchQuery)}>
+              Save something
+            </button>
+          }
+        />
+      );
+    } else if ((view === 'grid' ? mcGridKeys.length === 0 : filteredItems.length === 0)) {
+      body = (
+        <EmptySlot
+          glyph={<Search />}
+          title={gridSearch.trim() ? `Nothing matches “${gridSearch.trim()}”` : hasActiveFilters ? emptyTitle : 'All clear'}
+          body={
+            gridSearch.trim()
+              ? 'Press Enter to save it as a card instead.'
+              : hasActiveFilters
+                ? emptySubtitle
+                : 'Nothing open. Everything left is done.'
+          }
+          action={
+            gridSearch.trim() ? (
+              <button type="button" className="mc-btn is-quiet" onClick={() => setSearchQuery('')}>
+                Clear search
+              </button>
+            ) : hasActiveFilters ? (
+              <RouterLink className="mc-btn is-quiet" to={LIBRARY_PATH}>
+                Show everything
+              </RouterLink>
+            ) : undefined
+          }
+        />
+      );
+    } else if (view === 'table') {
+      body = (
+        <div className="mc-table-wrap">
+          <LibraryTable
+            items={filteredItems}
+            columns={columns}
+            sort={sort}
+            onSort={sortBy}
+            spacesOf={tableSpacesOf}
+            selectionMode={selectionMode}
+            selectedKeys={selectedKeySet}
+            onToggleSelect={handleTableToggleSelect}
+            onSelectAll={handleTableSelectAll}
+            onClearSelection={handleTableClearSelection}
+            expandedLinkId={null}
+            renderExpanded={() => null}
+            onOpenLinkDetails={handleOpenLinkDetails}
+            onOpenUrl={handleOpenLink}
+            onOpenNote={handleOpenNote}
+            onToggleTaskDone={handleToggleTaskDone}
+            onDelete={handleTableDelete}
+            brokenPreviews={brokenPreviews}
+            onPreviewError={markPreviewBroken}
+          />
+        </div>
+      );
+    } else if (view === 'list') {
+      body = (
+        <div className="memex-list mc-list">
+          {listGroups.map((group) => (
+            <section key={group.label} className="memex-list-group" aria-label={group.label}>
+              <h2 className="memex-list-label">
+                {group.label}
+                <span className="memex-list-count">{group.items.length}</span>
+              </h2>
+              <div className="memex-list-rows">{group.items.map(renderRow)}</div>
+            </section>
+          ))}
+        </div>
+      );
+    } else {
+      body = (
+        <MasonryLayout
+          className="mc-grid"
+          items={mcMasonryItems}
+          renderItem={renderMemoryCard}
+          estimateHeight={mcEstimate}
+          sizeToken={mcSizeToken}
+          isPending={isCardPending}
+          subscribeEstimates={subscribeImageRatios}
+          onPrefetch={prefetchCards}
+          scrollKey={`mc|${gridQueryKey}`}
+          restoreOnKeyChange={navigationType === 'POP'}
+          minColumnWidth={340}
+        />
+      );
+    }
+
+    return (
+      <div ref={pageRef} className={`mc-page mc-cards-page${selectionMode ? ' has-selection-bar' : ''}`}>
+        {openNoteItem ? (
+          <NoteEditor
+            note={openNoteItem}
+            backLabel={mcHeroName}
+            spaceNames={openNoteSpaces}
+            onBack={closeNote}
+            onSave={handleSaveNote}
+            onDelete={handleDeleteNote}
+          />
+        ) : (
+          <>
+            <div className="mc-page-head">
+              <h1 className="mc-hero">
+                <span translate={mcSpace ? 'no' : undefined}>{mcHeroName}</span>
+                {loadState === 'ready' && <sup aria-label={`${mcShownCount} cards`}>{numberFormat.format(mcShownCount)}</sup>}
+              </h1>
+              <div className="mc-page-tools">
+                <form
+                  className="mc-field"
+                  role="search"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    setCaptureText(searchQuery);
+                  }}
+                >
+                  <span className="mc-field-glyph" aria-hidden="true">
+                    <Search />
+                  </span>
+                  <label className="mc-sr-only" htmlFor="mc-cards-field">
+                    Search or save
+                  </label>
+                  <input
+                    id="mc-cards-field"
+                    ref={fieldRef}
+                    type="text"
+                    enterKeyHint="go"
+                    autoComplete="off"
+                    placeholder="Search or save a link, a thought…"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Escape' && searchQuery) {
+                        event.preventDefault();
+                        setSearchQuery('');
+                      }
+                    }}
+                    aria-describedby="mc-cards-field-hint"
+                  />
+                  <span id="mc-cards-field-hint" className="mc-sr-only">
+                    Typing filters your cards. Enter saves what you typed as a new card.
+                  </span>
+                  {searchQuery.trim() ? (
+                    <kbd className="mc-kb" aria-hidden="true">
+                      ↵ save
+                    </kbd>
+                  ) : (
+                    <kbd className="mc-kb" aria-hidden="true">
+                      /
+                    </kbd>
+                  )}
+                  <button type="submit" className="mc-plus" aria-label="Save something">
+                    <Plus aria-hidden="true" />
+                  </button>
+                </form>
+                <button
+                  ref={viewButtonRef}
+                  type="button"
+                  className="mc-rb"
+                  aria-label="View options"
+                  aria-haspopup="dialog"
+                  aria-expanded={viewPanelOpen}
+                  onClick={() => setViewPanelOpen((open) => !open)}
+                >
+                  <MoreHorizontal aria-hidden="true" />
+                  {mcViewCustomised && <span className="mc-dot-badge" aria-hidden="true" />}
+                </button>
+                <ViewPanel
+                  open={viewPanelOpen}
+                  onClose={() => setViewPanelOpen(false)}
+                  anchor={viewButtonRef.current}
+                  layout={view}
+                  onLayout={(next) => setView(next)}
+                  types={selectedTypes}
+                  onToggleType={(type) =>
+                    updateParams((params) => setListParam(params, TYPE_PARAM, toggleShownType(MC_TYPE_KEYS, selectedTypes, type)))
+                  }
+                  unfiledOnly={unfiledOnly}
+                  onToggleUnfiled={() =>
+                    updateParams((params) => {
+                      if (unfiledOnly) params.delete(SPACE_PARAM);
+                      else params.set(SPACE_PARAM, UNFILED);
+                    })
+                  }
+                  sources={selectedSources}
+                  onToggleSource={(key) => toggleListValue(SOURCE_PARAM, selectedSources, key)}
+                  sort={sort}
+                  onSort={setSort}
+                  tabs={viewTabs}
+                  activeViewId={activeView?.id ?? null}
+                  onOpenView={handleOpenView}
+                  canSave={!activeView}
+                  suggestedName={suggestedViewName}
+                  onSave={handleSaveView}
+                  canUpdate={canUpdateView}
+                  onUpdate={handleUpdateView}
+                  onRename={handleRenameView}
+                  onDelete={handleDeleteView}
+                  onReset={resetView}
+                  canReset={mcViewCustomised}
+                  footer={
+                    <>
+                      <button
+                        type="button"
+                        className="mc-btn is-small"
+                        onClick={() => {
+                          setViewPanelOpen(false);
+                          if (selectionMode) exitSelection();
+                          else handleToggleSelectionMode();
+                        }}
+                      >
+                        {selectionMode ? 'Stop selecting' : 'Select cards'}
+                      </button>
+                      {mcSpace && (
+                        <RouterLink className="mc-btn is-small" to={spacePath(mcSpace.id)}>
+                          Open {mcSpace.name}’s page
+                        </RouterLink>
+                      )}
+                    </>
+                  }
+                />
+              </div>
+            </div>
+
+            <SpacePillRow
+              spaces={profiles}
+              colors={spaceColors}
+              selectedId={mcSpaceId}
+              allOn={activeFilters.spaces.length === 0}
+              hrefFor={spaceHref}
+              onAdd={(spaceId, keys) => addToSpace(spaceId, keys)}
+              onNewSpace={() => setNewSpaceOpen(true)}
+            />
+
+            <div key={view} ref={streamBodyRef} className={`memex-stream-body mc-stream is-${view}`}>
+              {body}
+            </div>
+          </>
+        )}
+
+        <CaptureSheet
+          open={captureText !== null}
+          onClose={() => {
+            setCaptureText(null);
+            setSearchQuery('');
+          }}
+          initialText={captureText ?? ''}
+          spaces={profiles ?? []}
+          defaultSpaceId={mcSpaceId}
+          onFeedback={flash}
+        />
+        <OpenCardSheet
+          link={openLink}
+          onClose={() => setExpandedLinkId(null)}
+          isPinned={expandedIsPinned}
+          onTogglePin={handleTogglePin}
+          onOpen={() => openLink && handleOpenLink(openLink)}
+          onRescrape={handleRescrape}
+          onDelete={() => openLink && handleDeleteLink(openLink)}
+          onMove={() => openLink && setMoveKeys([itemKey('link', openLink.id)])}
+          onFeedback={flash}
+        />
+        <MoveSheet
+          open={moveKeys !== null}
+          onClose={() => setMoveKeys(null)}
+          itemKeys={moveKeys ?? []}
+          onFeedback={flash}
+          title={moveKeys && moveKeys.length > 1 ? `Move ${moveKeys.length} cards to…` : 'Move to…'}
+        />
+        <NewSpaceSheet open={newSpaceOpen} onClose={() => setNewSpaceOpen(false)} onFeedback={flash} />
+
+        {selectionMode && (
+          <CardsSelectionBar
+            count={selectedItemKeys.length}
+            hiddenCount={hiddenSelectedCount}
+            onMove={() => setMoveKeys([...selectedItemKeys])}
+            onDelete={handleBulkDelete}
+            onExit={exitSelection}
+          />
+        )}
+
+        {toast !== null && (
+          <FeedbackToast message={toast.message} phase={toast.phase} action={toast.action} onAnimationEnd={handleAnimationEnd} />
+        )}
+      </div>
+    );
+  };
+
   /* ---------- Render ---------- */
+
+  if (cardsLook) return renderCardsPage();
 
   return (
     <div
@@ -2402,7 +2955,7 @@ const StreamPage = () => {
                           onSelectAll={handleTableSelectAll}
                           onClearSelection={handleTableClearSelection}
                           expandedLinkId={expandedLinkId}
-                          renderExpanded={(link) => renderExpanded(link, 'row')}
+                          renderExpanded={(link) => (cardsLook ? null : renderExpanded(link, 'row'))}
                           onOpenLinkDetails={handleOpenLinkDetails}
                           onOpenUrl={handleOpenLink}
                           onOpenNote={handleOpenNote}

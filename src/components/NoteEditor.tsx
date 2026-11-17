@@ -2,9 +2,15 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useBlocker } from 'react-router-dom';
 import { MarkdownText } from './ui';
 import type { MarkdownEditorHandle } from './ui/MarkdownEditor';
-import { type NoteWithTags, type UpdateNoteData, relativeTime } from '@memex/core';
-import { Ellipsis, Trash2 } from 'lucide-react';
+import { type NoteWithTags, type UpdateNoteData, itemKey, relativeTime } from '@memex/core';
+import { Ellipsis, MoreHorizontal, Plus, Trash2, X } from 'lucide-react';
 import { notices } from '../utils/notices';
+import { useCardsLook } from '../look/look';
+import { useCardLabels } from '../hooks/useCardLabels';
+import { useFeedbackToast } from '../hooks/useFeedbackToast';
+import { FeedbackToast } from './ui';
+import Menu from './cards/Menu';
+import MoveSheet from './cards/MoveSheet';
 
 /** `error`: the last save failed. The draft stays in the editor (and unsaved) until a retry or the next edit lands. */
 type SaveStatus = 'saved' | 'saving' | 'error';
@@ -31,6 +37,10 @@ const countWords = (text: string) => {
 };
 
 const NoteEditor = ({ note, backLabel = 'notes', spaceNames = [], onBack, onSave, onDelete }: NoteEditorProps) => {
+  const cards = useCardsLook();
+  const { labelFor } = useCardLabels();
+  const [moveOpen, setMoveOpen] = useState(false);
+  const cardsToast = useFeedbackToast();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useState(note.title ?? '');
@@ -218,6 +228,123 @@ const NoteEditor = ({ note, backLabel = 'notes', spaceNames = [], onBack, onSave
   };
 
   const words = countWords(body);
+
+  const statusText =
+    status === 'error' ? (
+      <>
+        Couldn’t save
+        <span aria-hidden="true">·</span>
+        <button type="button" className="mc-note-retry" onClick={retry}>
+          Retry
+        </button>
+      </>
+    ) : status === 'saving' ? (
+      'Saving…'
+    ) : (
+      'Saved'
+    );
+
+  const titleInput = (className: string) => (
+    <input
+      type="text"
+      className={className}
+      value={title}
+      onChange={(event) => handleTitleChange(event.target.value)}
+      onKeyDown={(event) => {
+        // Enter / ↓ move from the title into the body
+        if (event.nativeEvent.isComposing) return;
+        if (event.key === 'Enter' || event.key === 'ArrowDown') {
+          event.preventDefault();
+          bodyRef.current?.focus('start');
+        }
+      }}
+      placeholder="Untitled note"
+      aria-label="Note title"
+      autoComplete="off"
+      spellCheck={false}
+    />
+  );
+
+  const editorBody = (
+    <div className="memex-note-editor-body">
+      <Suspense fallback={<MarkdownText>{body}</MarkdownText>}>
+        <MarkdownEditor
+          key={note.id}
+          ref={bodyRef}
+          value={body}
+          onChange={handleBodyChange}
+          placeholder="Write in markdown…"
+          ariaLabel="Note body (markdown)"
+          autoFocus={!note.body.trim()}
+        />
+      </Suspense>
+    </div>
+  );
+
+  if (cards) {
+    // d15: the note opens on its label strip (space, + Space, Saved, •••, ✕),
+    // then a document column on paper
+    const label = labelFor(itemKey('note', note.id));
+    return (
+      <article className="mc-note" aria-label={title.trim() || 'Untitled note'}>
+        <header
+          className={`mc-note-band${label.name ? '' : ' is-unfiled'}`}
+          style={label.color ? ({ '--c': label.color } as React.CSSProperties) : undefined}
+        >
+          <span className="mc-note-space" translate={label.name ? 'no' : undefined}>
+            {label.name ?? 'Unfiled'}
+            {label.extra > 0 && ` +${label.extra}`}
+          </span>
+          {!note.id.startsWith('temp-') && (
+            <button type="button" className="mc-note-addspace" onClick={() => setMoveOpen(true)}>
+              <Plus aria-hidden="true" /> Space
+            </button>
+          )}
+          <span className={`mc-note-status${status === 'error' ? ' is-error' : ''}`} role="status" aria-live="polite">
+            {statusText}
+          </span>
+          <Menu
+            label="Note actions"
+            entries={[{ id: 'delete', label: 'Delete note', icon: <Trash2 />, danger: true, onSelect: handleDelete }]}
+            trigger={(props) => (
+              <button {...props} type="button" className="mc-rb is-small" aria-label="Note actions">
+                <MoreHorizontal aria-hidden="true" />
+              </button>
+            )}
+          />
+          <button type="button" className="mc-rb is-small" onClick={handleBack} aria-label={`Close note, back to ${backLabel}`}>
+            <X aria-hidden="true" />
+          </button>
+        </header>
+        <div className="memex-note-doc mc-note-doc">
+          {titleInput('memex-note-title-input')}
+          <p className="memex-note-meta">
+            <span>Edited {relativeTime(note.updated_at)}</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              {words} word{words === 1 ? '' : 's'}
+            </span>
+          </p>
+          {editorBody}
+        </div>
+        <MoveSheet
+          open={moveOpen}
+          onClose={() => setMoveOpen(false)}
+          itemKeys={[itemKey('note', note.id)]}
+          onFeedback={cardsToast.flash}
+          title="File this note"
+        />
+        {cardsToast.toast && (
+          <FeedbackToast
+            message={cardsToast.toast.message}
+            phase={cardsToast.toast.phase}
+            action={cardsToast.toast.action}
+            onAnimationEnd={cardsToast.handleAnimationEnd}
+          />
+        )}
+      </article>
+    );
+  }
 
   return (
     <div className="memex-note-editor">
