@@ -1,0 +1,75 @@
+/* Memory Cards design tokens (generated from mc_css.ts; edit there, then regenerate). */
+
+/* Light, default font pair: Nunito display + Inter UI */
+.mc {
+  --fd: "Nunito",ui-rounded,"SF Pro Rounded",system-ui,sans-serif;
+  --fu: "Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --t-hero: 72px;
+  --t-h1: 44px;
+  --t-h2: 28px;
+  --t-h3: 24px;
+  --t-body: 18px;
+  --t-lab: 16px;
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 16px;
+  --s4: 24px;
+  --s5: 32px;
+  --s6: 40px;
+  --s7: 64px;
+  --r-chip: 12px;
+  --r-pic: 20px;
+  --r-card: 28px;
+  --r-sheet: 40px;
+  --r-pill: 999px;
+  --ink: #1d2127;
+  --mut: #6a6f75;
+  --faint: #9aa0a7;
+  --line: #dde0e5;
+  --bg: #eef2f8;
+  --paper: #fff;
+  --well: #f1f4f9;
+  --notep: #fff8d6;
+  --pri: #5077ff;
+  --pri-ink: #2f55d6;
+  --ok: #1f9d55;
+  --warn: #b7791f;
+  --err: #e5484d;
+  --err-bg: #fdecec;
+  --coral: #ff5a6f;
+  --cyan: #00b8f0;
+  --gold: #ffc928;
+  --blue: #5077ff;
+  --vio: #b38cfd;
+  --green: #2fbf71;
+  --orange: #ff9f2e;
+  --pink: #ff8fc8;
+  --sh1: 0 2px 0 rgba(29,33,39,.05),0 8px 18px -10px rgba(29,33,39,.25);
+  --sh2: 0 2px 0 rgba(29,33,39,.05),0 18px 36px -18px rgba(29,33,39,.32);
+  --sh3: 0 40px 80px -30px rgba(0,0,0,.5);
+  --m-press: 120ms;
+  --m-base: 200ms;
+  --m-write: 280ms;
+  --ease: cubic-bezier(.2,.8,.2,1);
+}
+
+/* Font switch: IBM Plex Sans for both */
+.mc.plex {
+  --fd: "IBM Plex Sans",system-ui,sans-serif;
+  --fu: "IBM Plex Sans",system-ui,sans-serif;
+}
+
+/* Dark mode overrides */
+.mc.dark {
+  --ink: #eef1f6;
+  --mut: #a4abb5;
+  --faint: #7c838d;
+  --line: #343a44;
+  --bg: #14171d;
+  --paper: #1f242c;
+  --well: #272d36;
+  --notep: #3a3524;
+  --err-bg: #3a2224;
+  --sh1: 0 2px 0 rgba(0,0,0,.3),0 8px 18px -10px rgba(0,0,0,.6);
+  --sh2: 0 2px 0 rgba(0,0,0,.3),0 18px 36px -18px rgba(0,0,0,.7);
+}
