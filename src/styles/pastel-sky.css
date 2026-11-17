@@ -11,66 +11,38 @@
   /* Palette. color-1 is the primary action color; memex drives it from the
      user's canvas swatch at runtime (src/utils/canvasColor.ts), so these
      literals are only the pre-hydration fallback. */
-  --color-none: transparent;
   --color-1: #247474;
   --color-1-transparent: color-mix(in oklab, var(--color-1) 20%, transparent);
-  --color-2: #bce0d9;
-  --color-2-transparent: #bce0d933;
-  --color-3: #c0c9df;
-  --color-3-transparent: #c0c9df33;
-  --color-4: #dfcbb6;
-  --color-4-transparent: #dfcbb633;
   /* Neutrals */
   --neutral-1: #ffffff;
-  --neutral-1-transparent: #ffffff33;
   --neutral-2: #f9fafb;
-  --neutral-2-transparent: #f9fafb33;
   --neutral-3: #f1f2f4;
-  --neutral-3-transparent: #f1f2f433;
   --neutral-4: #dde0e5;
   --neutral-4-transparent: #dde0e533;
   --neutral-5: #c0c6cd;
-  --neutral-5-transparent: #c0c6cd33;
   --neutral-6: #8f959c;
   --neutral-6-transparent: #8f959c33;
   --neutral-7: #6a6f75;
   --neutral-7-transparent: #6a6f7533;
   --neutral-8: #4c5157;
-  --neutral-8-transparent: #4c515733;
   --neutral-9: #30353a;
-  --neutral-9-transparent: #30353a33;
   --neutral-10: #1d2127;
   --neutral-10-transparent: #1d212733;
   /* Status */
-  --success: #247348;
-  --success-transparent: #24734833;
-  --warning: #94651e;
-  --warning-transparent: #94651e33;
   --error: #bd3d42;
-  --error-transparent: #bd3d4233;
   /* Typography: font roles */
   --font-ui: "Inter Variable", "Inter", sans-serif;
   --weight-ui-regular: 400;
   --weight-ui-medium: 500;
   --weight-ui-heavy: 600;
-  --font-brand: "Inter Variable", "Inter", sans-serif;
-  --weight-brand-regular: 400;
-  --weight-brand-medium: 500;
-  --weight-brand-heavy: 600;
   --font-editorial: "Inter Variable", "Inter", sans-serif;
   --weight-editorial-regular: 400;
   --weight-editorial-medium: 500;
   --weight-editorial-heavy: 600;
   --font-data: "Inter Variable", "Inter", sans-serif;
   --weight-data-regular: 400;
-  --weight-data-medium: 500;
   --weight-data-heavy: 600;
   /* Typography: scale */
-  --tracking-xs: -0.02em;
-  --tracking-s: -0.01em;
-  --tracking-m: 0em;
-  --tracking-l: 0.01em;
-  --tracking-xl: 0.02em;
   --size-xxs: 10px;
   --line-xxs: 14px;
   --letter-spacing-xxs: 0.02em;
@@ -89,11 +61,7 @@
   --size-xl: 37px;
   --line-xl: 41px;
   --letter-spacing-xl: -0.01em;
-  --size-xxl: 49px;
-  --line-xxl: 53px;
-  --letter-spacing-xxl: -0.02em;
   /* Spacing */
-  --space-zero: 0px;
   --space-xxs: 4px;
   --space-xs: 8px;
   --space-s: 12px;
@@ -102,27 +70,18 @@
   --space-xl: 33px;
   --space-xxl: 50px;
   /* Radius */
-  --radius-zero: 0px;
   --radius-xs: 4px;
   --radius-s: 8px;
   --radius-m: 12px;
-  --radius-l: 19px;
-  --radius-xl: 29px;
   --radius-full: 9999px;
   /* Borders */
-  --border-none: 0px;
   --border-s: 0.7506429036458333px;
-  --border-m: 0.79px;
   --border-l: 1.43px;
   --border-default-color: var(--neutral-6-transparent);
-  --border-shadow-none: 0 0 0 0 transparent;
   --border-shadow-s: 0 0 0 var(--border-s) var(--border-default-color);
-  --border-shadow-m: 0 0 0 var(--border-m) var(--border-default-color);
-  --border-shadow-l: 0 0 0 var(--border-l) var(--border-default-color);
   /* Elevation. memex retune (Joyful Utility): layered ambient + direct
      shadows tinted toward the canvas hue, a step deeper than the theme's
      originals (gui/themes/pastel-sky.md) so surfaces read as objects. */
-  --shadow-none: none;
   --shadow-ink: oklch(from var(--color-1) 0.28 calc(c * 0.35) h);
   --shadow-s:
     0 1px 1px color-mix(in oklab, var(--shadow-ink) 7%, transparent),
@@ -131,10 +90,6 @@
     0 1px 2px color-mix(in oklab, var(--shadow-ink) 7%, transparent),
     0 4px 10px -2px color-mix(in oklab, var(--shadow-ink) 10%, transparent),
     0 12px 24px -8px color-mix(in oklab, var(--shadow-ink) 12%, transparent);
-  --shadow-l:
-    0 2px 4px color-mix(in oklab, var(--shadow-ink) 7%, transparent),
-    0 10px 24px -6px color-mix(in oklab, var(--shadow-ink) 14%, transparent),
-    0 28px 56px -16px color-mix(in oklab, var(--shadow-ink) 18%, transparent);
   /* Surfaces */
   --surface-raised-image: linear-gradient(180deg, #ffffff1f 0%, #ffffff00 48%, #1d21270d 100%);
   --surface-raised-shadow: inset 0px 1px 0px 0px #ffffffb3, inset 0px -1px 0px 0px #1d212729;
@@ -143,12 +98,6 @@
   /* Focus, navigation, options */
   --focus-ring-outline: var(--border-l) solid color-mix(in srgb, var(--color-1) 55%, transparent);
   --option-badge-background: color-mix(in srgb, var(--color-1) 10%, transparent);
-  --option-badge-foreground: var(--color-1-ink);
-  --navigation-active-foreground: var(--neutral-10);
-  --emphasis-icon-background: var(--neutral-3);
-  --emphasis-icon-foreground: var(--neutral-10);
-  --emphasis-type-background: var(--neutral-3);
-  --emphasis-type-foreground: var(--neutral-10);
   --navigation-active-background: var(--color-1-transparent);
   /* Motion */
   --icon-stroke-width: 2;
@@ -158,37 +107,12 @@
   --motion-large-easing: linear(0, 0.0846, 0.2691, 0.4778, 0.6674, 0.8179, 0.9249, 0.9926, 1.0293, 1.0442, 1.0452, 1.0388, 1.0296, 1.0202, 1.0121, 1.0061, 1.0019, 0.9995, 0.9983, 1);
   --motion-popup-scale: 0.98;
   --motion-press-distance: 1px;
-  /* Convenience roles */
-  --cte-canvas: var(--neutral-1);
-  --cte-surface: var(--neutral-2);
-  --cte-surface-muted: var(--neutral-3);
-  --cte-text: var(--neutral-10);
-  --cte-text-muted: var(--neutral-7);
-  --cte-border: var(--border-default-color);
-  --cte-accent: var(--color-1);
   /* Label on a color-1 fill; the canvas swatch re-derives it at runtime */
   --cte-accent-text: #f9fafb;
-  --cte-danger: var(--error);
-  --cte-focus: var(--color-1);
-  --cte-font: var(--font-ui);
-  --cte-font-size: var(--size-s);
-  --cte-font-weight: var(--weight-ui-regular);
-  --cte-line-height: var(--line-s);
-  --cte-letter-spacing: var(--letter-spacing-s);
-  --cte-detail-font-size: var(--size-xs);
-  --cte-detail-line-height: var(--line-xs);
-  --cte-detail-letter-spacing: var(--letter-spacing-xs);
 
   /* Popup surfaces (dialog, menu, popover, toast, select) and modal veils;
      the effective assignments switch these per mode */
   --popover-background: var(--neutral-1);
-  --backdrop-background: var(--neutral-10-transparent);
-
-  /* Text over photographs (link preview captions): mode-independent ink and
-     scrim, since an image's brightness doesn't follow light/dark mode.
-     memex addition — Pastel Sky has no on-image role. */
-  --on-image-foreground: oklch(0.99 0 0);
-  --on-image-scrim: oklch(0.16 0.012 260);
 
   /* Text-safe accent: color-1 when used as text on neutral surfaces. The
      swatch runtime darkens/lightens it to keep contrast. */
@@ -215,16 +139,8 @@
     rgb(255 255 255 / 0.14) 46%,
     rgb(255 255 255 / 0) 54%,
     rgb(0 0 0 / 0.06) 100%
-  );
-  --control-glow:
-    0 1px 2px color-mix(in oklab, var(--color-1) 30%, transparent),
-    0 4px 12px -4px color-mix(in oklab, var(--color-1) 55%, transparent);
-  --control-glow-hover:
-    0 1px 2px color-mix(in oklab, var(--color-1) 30%, transparent),
-    0 7px 18px -5px color-mix(in oklab, var(--color-1) 60%, transparent);
-  --hover-swell: 1.03; /* text buttons, chips */
-  --hover-swell-icon: 1.08; /* small square controls */
-  --hover-lift: -2px; /* cards: lift, never scale (text and images stay crisp) */
+  ); /* text buttons, chips */
+  --hover-swell-icon: 1.08; /* cards: lift, never scale (text and images stay crisp) */
   --press-settle: 0.97;
   /* Hover answers fast and lands with the theme spring's small overshoot */
   --transition-swell: 220ms var(--motion-easing);
@@ -233,44 +149,25 @@
 [data-theme='dark'] {
   /* Palette (color-1 again overridden by the canvas swatch) */
   --color-1: #8ed6cd;
-  --color-2: #659b94;
-  --color-2-transparent: #659b9433;
-  --color-3: #9aa8c7;
-  --color-3-transparent: #9aa8c733;
-  --color-4: #bfaa91;
-  --color-4-transparent: #bfaa9133;
   /* Neutrals */
   --neutral-1: #13171d;
-  --neutral-1-transparent: #13171d33;
   --neutral-2: #1d2127;
-  --neutral-2-transparent: #1d212733;
   --neutral-3: #272b31;
-  --neutral-3-transparent: #272b3133;
   --neutral-4: #373c41;
   --neutral-4-transparent: #373c4133;
   --neutral-5: #51565c;
-  --neutral-5-transparent: #51565c33;
   --neutral-6: #7c8288;
   --neutral-6-transparent: #7c828833;
   --neutral-7: #a7adb4;
   --neutral-7-transparent: #a7adb433;
   --neutral-8: #c8ced5;
-  --neutral-8-transparent: #c8ced533;
   --neutral-9: #e6e8ec;
-  --neutral-9-transparent: #e6e8ec33;
   --neutral-10: #f9fafb;
   --neutral-10-transparent: #f9fafb33;
   /* Status */
-  --success: #8fd5ad;
-  --success-transparent: #8fd5ad33;
-  --warning: #e5c279;
-  --warning-transparent: #e5c27933;
   --error: #f49fa5;
-  --error-transparent: #f49fa533;
   /* Borders */
   --border-shadow-s: inset 0 0 0 var(--border-s) var(--border-default-color);
-  --border-shadow-m: inset 0 0 0 var(--border-m) var(--border-default-color);
-  --border-shadow-l: inset 0 0 0 var(--border-l) var(--border-default-color);
   /* Elevation (memex retune; a dark canvas needs near-black, stronger drops) */
   --shadow-ink: oklch(from var(--color-1) 0.1 calc(c * 0.2) h);
   --shadow-s:
@@ -280,10 +177,6 @@
     0 1px 2px color-mix(in oklab, var(--shadow-ink) 30%, transparent),
     0 4px 10px -2px color-mix(in oklab, var(--shadow-ink) 35%, transparent),
     0 12px 24px -8px color-mix(in oklab, var(--shadow-ink) 40%, transparent);
-  --shadow-l:
-    0 2px 4px color-mix(in oklab, var(--shadow-ink) 30%, transparent),
-    0 10px 24px -6px color-mix(in oklab, var(--shadow-ink) 45%, transparent),
-    0 28px 56px -16px color-mix(in oklab, var(--shadow-ink) 55%, transparent);
   /* Surfaces */
   --surface-raised-image: linear-gradient(180deg, #f9fafb1a 0%, #f9fafb00 48%, #13171d1f 100%);
   --surface-raised-shadow: inset 0px 1px 0px 0px #f9fafb3d, inset 0px -1px 0px 0px #13171d3d;
@@ -293,7 +186,6 @@
   --cte-accent-text: #1d2127;
 
   --popover-background: var(--neutral-2);
-  --backdrop-background: var(--neutral-1-transparent);
 
   --control-raised-image: linear-gradient(180deg, #f9fafb1a 0%, #13171d1f 100%);
   --control-raised-bevel:
@@ -308,10 +200,4 @@
     rgb(255 255 255 / 0) 54%,
     rgb(0 0 0 / 0.08) 100%
   );
-  --control-glow:
-    0 1px 2px rgb(0 0 0 / 0.4),
-    0 4px 12px -4px color-mix(in oklab, var(--color-1) 35%, transparent);
-  --control-glow-hover:
-    0 1px 2px rgb(0 0 0 / 0.4),
-    0 7px 18px -5px color-mix(in oklab, var(--color-1) 45%, transparent);
 }

@@ -31,8 +31,6 @@ import MoveSheet from '../components/cards/MoveSheet';
 import CardsMenu from '../components/cards/Menu';
 import { ToggleGroup } from '../components/cards/Controls';
 import '../styles/journal.css';
-import '../styles/tasks.css';
-import '../styles/space.css';
 
 /*
  * A space page, `/spaces/:spaceId` (decision 14B; Memory Cards d03, m02):

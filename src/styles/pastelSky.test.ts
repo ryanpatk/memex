@@ -15,13 +15,16 @@ import { WORDMARK_INK } from '@memex/core';
 
 /*
  * @memex/core's Pastel Sky constants are a copy of this CSS for clients that
- * can't read CSS variables. This test keeps the copy honest: change a token
- * in pastel-sky.css and it fails until tokens/pastelSky.ts matches.
+ * can't read CSS variables. Since Memory Cards became the only web look
+ * (2026-11-17), pastel-sky.css keeps only the tokens the web still uses, so
+ * this checks every token it still defines: change one and the test fails
+ * until tokens/pastelSky.ts matches. Tokens the web dropped live on in core
+ * alone.
  */
 
 const block = (selector: string) => {
   const start = css.indexOf(`${selector} {`);
-  return css.slice(start, css.indexOf('\n}', start));
+  return start === -1 ? '' : css.slice(start, css.indexOf('\n}', start));
 };
 const vars = (text: string) =>
   Object.fromEntries([...text.matchAll(/--([\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
@@ -35,46 +38,54 @@ const colorVars = (k: keyof PastelSkyColors) =>
 const px = (v: string) => Number(v.replace(/px$/, ''));
 const em = (v: string) => Number(v.replace(/em$/, ''));
 
+/** Compares a core value with its CSS token when the CSS still defines it; counts the checks made. */
+const checked = { count: 0 };
+const matchIfDefined = (label: string, coreValue: unknown, cssValue: string | undefined, parse: (v: string) => unknown = (v) => v) => {
+  if (cssValue === undefined) return;
+  checked.count += 1;
+  expect([label, coreValue]).toEqual([label, parse(cssValue)]);
+};
+
 describe('Pastel Sky tokens match pastel-sky.css', () => {
   it.each(['light', 'dark'] as const)('%s colours', (mode) => {
     const source = mode === 'light' ? light : dark;
     for (const [key, value] of Object.entries(PASTEL_SKY_COLORS[mode])) {
-      expect([key, value]).toEqual([key, source[colorVars(key as keyof PastelSkyColors)]]);
+      matchIfDefined(key, value, source[colorVars(key as keyof PastelSkyColors)]);
     }
   });
 
   it('type scale', () => {
     for (const [size, role] of Object.entries(TYPE_SCALE)) {
-      expect([size, role]).toEqual([
-        size,
-        { size: px(light[`size-${size}`]), line: px(light[`line-${size}`]), letterSpacing: em(light[`letter-spacing-${size}`]) },
-      ]);
+      matchIfDefined(`size-${size}`, role.size, light[`size-${size}`], px);
+      matchIfDefined(`line-${size}`, role.line, light[`line-${size}`], px);
+      matchIfDefined(`letter-spacing-${size}`, role.letterSpacing, light[`letter-spacing-${size}`], em);
     }
   });
 
   it('spacing and radius', () => {
-    for (const [k, v] of Object.entries(SPACE)) expect([k, v]).toEqual([k, px(light[`space-${k}`])]);
-    for (const [k, v] of Object.entries(RADIUS)) expect([k, v]).toEqual([k, px(light[`radius-${k}`])]);
+    for (const [k, v] of Object.entries(SPACE)) matchIfDefined(`space-${k}`, v, light[`space-${k}`], px);
+    for (const [k, v] of Object.entries(RADIUS)) matchIfDefined(`radius-${k}`, v, light[`radius-${k}`], px);
   });
 
   it('weights, motion and depth', () => {
-    expect(FONT_WEIGHTS).toEqual({
-      regular: Number(light['weight-ui-regular']),
-      medium: Number(light['weight-ui-medium']),
-      heavy: Number(light['weight-ui-heavy']),
-    });
-    expect(MOTION).toEqual({
-      duration: Number(light['motion-duration'].replace('ms', '')),
-      largeDuration: Number(light['motion-large-duration'].replace('ms', '')),
-      pressDistance: px(light['motion-press-distance']),
-      popupScale: Number(light['motion-popup-scale']),
-    });
-    expect(DEPTH).toEqual({
-      hoverSwell: Number(light['hover-swell']),
-      hoverSwellIcon: Number(light['hover-swell-icon']),
-      hoverLift: px(light['hover-lift']),
-      pressSettle: Number(light['press-settle']),
-    });
+    matchIfDefined('weight-ui-regular', FONT_WEIGHTS.regular, light['weight-ui-regular'], Number);
+    matchIfDefined('weight-ui-medium', FONT_WEIGHTS.medium, light['weight-ui-medium'], Number);
+    matchIfDefined('weight-ui-heavy', FONT_WEIGHTS.heavy, light['weight-ui-heavy'], Number);
+    const ms = (v: string) => Number(v.replace('ms', ''));
+    matchIfDefined('motion-duration', MOTION.duration, light['motion-duration'], ms);
+    matchIfDefined('motion-large-duration', MOTION.largeDuration, light['motion-large-duration'], ms);
+    matchIfDefined('motion-press-distance', MOTION.pressDistance, light['motion-press-distance'], px);
+    matchIfDefined('motion-popup-scale', MOTION.popupScale, light['motion-popup-scale'], Number);
+    matchIfDefined('hover-swell', DEPTH.hoverSwell, light['hover-swell'], Number);
+    matchIfDefined('hover-swell-icon', DEPTH.hoverSwellIcon, light['hover-swell-icon'], Number);
+    matchIfDefined('hover-lift', DEPTH.hoverLift, light['hover-lift'], px);
+    matchIfDefined('press-settle', DEPTH.pressSettle, light['press-settle'], Number);
+  });
+
+  it('still checks the tokens the web uses', () => {
+    // The palette, neutrals and type scale are still in use (Journal, List,
+    // Table, note editor): if this drops to zero the file moved or emptied
+    expect(checked.count).toBeGreaterThan(20);
   });
 
   it('wordmark ink', () => {

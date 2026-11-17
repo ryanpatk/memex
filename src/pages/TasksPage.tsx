@@ -55,7 +55,6 @@ import CardsMenu, { type MenuEntry as CardsMenuEntry } from '../components/cards
 import MoveSheet from '../components/cards/MoveSheet';
 import { EmptySlot, ToggleGroup } from '../components/cards/Controls';
 import '../styles/journal.css';
-import '../styles/tasks.css';
 
 /*
  * The Tasks view (`/tasks`, ROADMAP.md Phase 1): every open task across
