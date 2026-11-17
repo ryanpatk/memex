@@ -22,6 +22,7 @@ import { SpaceChip } from '../../ui/SpaceChip';
 import { StackHeader } from '../../ui/StackHeader';
 import { Text } from '../../ui/Text';
 import { useToast } from '../../ui/Toast';
+import { NotePage } from '../../cards/NotePage';
 
 /*
  * A note (ROADMAP Phase 6: note view). Reading: its title, when it was
@@ -133,6 +134,30 @@ const Note = ({ entry, spaces, onBack }: { entry: NoteEntry; spaces: NonNullable
   const menu = entryMenuItems(entry, spaces, entryActions)
     .filter((i) => i.name !== 'open')
     .map((i) => (i.name === 'delete' ? { ...i, run: () => (entryActions.deleteEntry(entry), onBack()) } : i));
+
+  if (t.cards)
+    return (
+      <Canvas>
+        <Stack.Screen options={{ gestureEnabled: !editing }} />
+        <NotePage
+          spaces={entry.spaces}
+          title={title}
+          meta={`Written ${dateFmt.format(new Date(note.created_at))}${edited ? ` · edited ${dateFmt.format(new Date(note.updated_at))}` : ''}`}
+          body={note.body}
+          draft={draft}
+          saving={saving}
+          dirty={dirty}
+          top={insets.top}
+          bottom={insets.bottom}
+          onBack={() => leave(onBack)}
+          onEdit={startEditing}
+          onCancel={() => leave(() => setDraft(null))}
+          onSave={save}
+          onMore={() => showMenu(entryLabel(entry), [{ name: 'edit', label: 'Edit', run: startEditing }, ...menu])}
+          onChange={(next) => draft && setDraft({ ...draft, ...next })}
+        />
+      </Canvas>
+    );
 
   return (
     <Canvas>

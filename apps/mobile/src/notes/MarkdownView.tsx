@@ -54,6 +54,40 @@ const Spans = ({ spans }: { spans: Span[] }) => {
 const BlockView = ({ block }: { block: Block }) => {
   const t = useTheme();
   const { palette } = t;
+  const c = t.cards;
+  if (c && block.kind === 'heading')
+    // Memory Cards (m04): headings in rounded Nunito, h2 28 → h3 24 → 20
+    return (
+      <RNText
+        style={[block.level === 1 ? c.type.h2 : block.level === 2 ? c.type.h3 : c.type.title, styles.heading, { color: block.level > 2 ? c.colors.muted : c.colors.ink }]}
+        accessibilityRole="header"
+      >
+        <Spans spans={block.spans} />
+      </RNText>
+    );
+  if (c && block.kind === 'item' && block.marker === 'task')
+    // Memory Cards (s09 .chk): a 32px molded box; done is green with a white tick
+    return (
+      <View style={[styles.item, styles.cardsItem, { paddingLeft: block.depth * 18 }]}>
+        <View
+          style={[
+            styles.cardsBox,
+            block.checked
+              ? { backgroundColor: c.colors.ok, boxShadow: c.molded() }
+              : { backgroundColor: c.colors.paper, boxShadow: `inset 0 0 0 3px ${c.colors.line}, inset 0 -3px 0 0 ${c.colors.line}` },
+          ]}
+          accessible
+          accessibilityRole="checkbox"
+          accessibilityLabel={block.spans.map((span) => span.text).join('')}
+          accessibilityState={{ checked: Boolean(block.checked) }}
+        >
+          {block.checked && <Check size={18} color="#ffffff" strokeWidth={3.25} />}
+        </View>
+        <Text size="m" selectable tone={block.checked ? 'muted' : 'ink'} style={[styles.itemText, block.checked && styles.struck]}>
+          <Spans spans={block.spans} />
+        </Text>
+      </View>
+    );
   switch (block.kind) {
     case 'heading':
       return (
@@ -134,6 +168,8 @@ const styles = StyleSheet.create({
   italic: { fontFamily: FONTS.italic },
   item: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: -6 },
   marker: { minWidth: 16, textAlign: 'right' },
+  cardsItem: { alignItems: 'center', gap: 14, marginTop: -2 },
+  cardsBox: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   box: { width: 18, height: 18, borderRadius: 5, marginTop: 3, alignItems: 'center', justifyContent: 'center' },
   itemText: { flex: 1, minWidth: 0 },
   struck: { textDecorationLine: 'line-through' },

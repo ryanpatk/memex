@@ -29,6 +29,8 @@ import { Button, usePressSettle } from '../../ui/Pressable';
 import { RoundButton } from '../../ui/RoundButton';
 import { Text } from '../../ui/Text';
 import { useToast } from '../../ui/Toast';
+import { StackHeader } from '../../ui/StackHeader';
+import { LinkPage } from '../../cards/LinkPage';
 
 /*
  * Link detail (ROADMAP Phase 6: "link detail; open in browser"): the
@@ -49,6 +51,7 @@ export default function LinkDetailScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
   const repository = useRepository();
+  const t = useTheme();
   const { journal, isLoading, refresh } = useJournal();
   const entry = journal?.entries.find((e): e is LinkEntry => e.kind === 'link' && e.link.id === id);
   // Deep links can arrive before (or without) the Journal's copy. Supabase's
@@ -72,6 +75,32 @@ export default function LinkDetailScreen() {
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const link = entry?.link ?? fallback.data ?? null;
+
+  if (t.cards)
+    return (
+      <Canvas>
+        {link ? (
+          <LinkPage link={link} entry={entry} spaces={journal?.spaces ?? []} filer={journal?.filer} onBack={back} top={insets.top} bottom={insets.bottom} />
+        ) : (
+          <>
+            <StackHeader onBack={back} />
+            {isLoading || fallback.isPending ? null : fallback.isError ? (
+              <FeedError
+                error={fallback.error}
+                onRetry={() => {
+                  void fallback.refetch();
+                  void refresh();
+                }}
+                title="Couldn’t load this link"
+                retrying={fallback.isFetching}
+              />
+            ) : (
+              <Gone onBack={back} />
+            )}
+          </>
+        )}
+      </Canvas>
+    );
 
   return (
     <Canvas>
