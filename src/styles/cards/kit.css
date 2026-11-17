@@ -147,19 +147,25 @@ html[data-cards-font='plex'] .mc-h2 {
   padding: 0 24px;
   font-size: 18px;
 }
+/* A trigger whose menu is open (aria-expanded) keeps its hover look, and so
+   does whatever lifts around it (cards, tiles, task rows): moving the pointer
+   from it into the menu must not move it, or the menu anchored to it */
 @media (hover: hover) {
-  .mc-btn:hover:not(:disabled, [aria-disabled='true'], [aria-busy='true']) {
+  .mc-btn:hover:not(:disabled, [aria-disabled='true'], [aria-busy='true']),
+  .mc-btn[aria-expanded='true']:not(.is-quiet) {
     transform: translateY(-2px);
     filter: brightness(1.04);
     box-shadow: 0 0 0 2px var(--mc-line) inset, inset 0 -4px 0 var(--mc-line), var(--mc-sh1);
   }
-  .mc-btn.is-quiet:hover:not(:disabled, [aria-disabled='true']) {
+  .mc-btn.is-quiet:hover:not(:disabled, [aria-disabled='true']),
+  .mc-btn.is-quiet[aria-expanded='true'] {
     background: var(--mc-well);
     box-shadow: none;
     color: var(--mc-ink);
     transform: none;
   }
-  .mc-btn.is-primary:hover:not(:disabled, [aria-busy='true']) {
+  .mc-btn.is-primary:hover:not(:disabled, [aria-busy='true']),
+  .mc-btn.is-primary[aria-expanded='true'] {
     box-shadow: var(--mc-shade), 0 12px 22px -10px rgba(80, 119, 255, 0.7);
   }
   .mc-btn.is-danger:hover:not(:disabled, [aria-busy='true']) {
@@ -267,11 +273,13 @@ html[data-cards-font='plex'] .mc-h2 {
   box-shadow: var(--mc-shade);
 }
 @media (hover: hover) {
-  .mc-rb:hover:not(:disabled) {
+  .mc-rb:hover:not(:disabled),
+  .mc-rb[aria-expanded='true'] {
     transform: translateY(-2px) scale(1.05);
     box-shadow: 0 0 0 2px var(--mc-line) inset, inset 0 -4px 0 var(--mc-line), var(--mc-sh1);
   }
-  .mc-rb.is-primary:hover:not(:disabled) {
+  .mc-rb.is-primary:hover:not(:disabled),
+  .mc-rb.is-primary[aria-expanded='true'] {
     box-shadow: var(--mc-shade), 0 12px 22px -10px rgba(80, 119, 255, 0.7);
   }
 }
@@ -361,7 +369,8 @@ html[data-cards-font='plex'] .mc-h2 {
   box-shadow: var(--mc-sh1);
 }
 @media (hover: hover) {
-  .mc-pill:hover:not(.is-on, .is-selected, :disabled) {
+  .mc-pill:hover:not(.is-on, .is-selected, :disabled),
+  .mc-pill[aria-expanded='true']:not(.is-on, .is-selected) {
     transform: translateY(-2px);
     box-shadow: 0 0 0 3px var(--c, var(--mc-line)) inset, var(--mc-sh2);
   }
@@ -791,7 +800,8 @@ html[data-theme='dark'] .mc-lb.is-unfiled {
 
 /* Card states */
 @media (hover: hover) {
-  .mc-card:hover {
+  .mc-card:hover,
+  .mc-card:has([aria-expanded='true']) {
     transform: translateY(-4px);
     box-shadow: var(--mc-bevel), 0 2px 0 rgba(29, 33, 39, 0.05), 0 28px 44px -18px rgba(29, 33, 39, 0.42);
   }
@@ -909,7 +919,8 @@ html[data-theme='dark'] .mc-lb.is-unfiled {
     transform var(--mc-m-base) var(--mc-ease);
 }
 .mc-card:hover .mc-card-hover,
-.mc-card:focus-within .mc-card-hover {
+.mc-card:focus-within .mc-card-hover,
+.mc-card:has([aria-expanded='true']) .mc-card-hover {
   opacity: 1;
   transform: none;
 }
@@ -1672,7 +1683,8 @@ button.mc-setrow:focus-visible {
   justify-content: center;
 }
 @media (hover: hover) {
-  .mc-tile:hover {
+  .mc-tile:hover,
+  .mc-tile:has([aria-expanded='true']) {
     transform: translateY(-4px);
   }
 }
@@ -1733,7 +1745,8 @@ button.mc-setrow:focus-visible {
   text-decoration: line-through;
 }
 @media (hover: hover) {
-  .mc-trow:hover {
+  .mc-trow:hover,
+  .mc-trow:has([aria-expanded='true']) {
     box-shadow: 0 0 0 2px var(--mc-line) inset, var(--mc-sh2);
     transform: translateY(-2px);
   }

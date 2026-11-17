@@ -8,7 +8,10 @@
  *   - on top: points inside it hit the popover itself, not the grid, the top
  *     bar or a sheet above or below it,
  *   - keyboard-friendly (menus): Esc closes it and focus goes back to the
- *     trigger.
+ *     trigger,
+ *   - steady (menus): with a real pointer, hovering the trigger, clicking it
+ *     and moving onto the menu leaves both the trigger's and the menu's boxes
+ *     exactly where they were (an open trigger keeps its hover look).
  * Prints a table and exits 1 on any failure. Screenshots of the two cases
  * Ryan reported (the open card's ••• menu, the space pills' More) go to
  * SHOTS=<dir> when set.
@@ -70,6 +73,7 @@ const key = async (k, code = k) => {
   await send('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code, windowsVirtualKeyCode: k === 'Escape' ? 27 : 0 });
   await send('Input.dispatchKeyEvent', { type: 'keyUp', key: k, code, windowsVirtualKeyCode: k === 'Escape' ? 27 : 0 });
 };
+const mouse = (type, x, y, extra = {}) => send('Input.dispatchMouseEvent', { type, x, y, ...extra });
 const go = async (path) => { await send('Page.navigate', { url: base + path }); await sleep(2200); };
 const shot = async (name) => {
   if (!SHOTS) return;
@@ -148,7 +152,7 @@ const CASES = [
   {
     name: 'jot-actions', note: 'Journal jot ··· (bottom of the feed, by the composer)', path: '/',
     open: `(() => { const bs = document.querySelectorAll('button[aria-label="Jot actions"]'); const b = bs[bs.length - 1]; b.scrollIntoView({ block: 'end' }); window.__trigger = b; b.click(); })()`,
-    trigger: '__window', popover: '[role="menu"][aria-label="Jot actions"]',
+    trigger: '__window', popover: '[role="menu"][aria-label="Jot actions"]', menu: true,
   },
   {
     name: 'journal-picker', note: 'Journal composer “@” space picker (bottom edge)', path: '/', typeInto: '.jr-composer-input',
@@ -183,18 +187,49 @@ for (const [w, h] of VIEWPORTS) {
       await evaluate(`document.querySelector('.mc-shell-main').scrollBy(0, -120)`);
       await sleep(200);
     }
+    const TRIGGER = c.trigger === '__window' ? 'window.__trigger' : c.trigger ? `document.querySelector(${JSON.stringify(c.trigger)})` : `[...document.querySelectorAll('.mc-pills button')].find((b) => b.textContent.trim() === 'More')`;
     let escape = null;
     if (c.menu && m.found) {
       await key('Escape');
       await sleep(250);
-      escape = await evaluate(`(() => { const open = document.querySelector(${JSON.stringify(c.popover)}); const t = ${c.trigger === '__window' ? 'window.__trigger' : c.trigger ? `document.querySelector(${JSON.stringify(c.trigger)})` : `[...document.querySelectorAll('.mc-pills button')].find((b) => b.textContent.trim() === 'More')`}; return { closed: !open || getComputedStyle(open).display === 'none', focusBack: document.activeElement === t }; })()`);
+      escape = await evaluate(`(() => { const open = document.querySelector(${JSON.stringify(c.popover)}); const t = ${TRIGGER}; return { closed: !open || getComputedStyle(open).display === 'none', focusBack: document.activeElement === t }; })()`);
     }
-    const ok = m.found && m.visible && m.inside && m.covered === 0 && (!escape || (escape.closed && escape.focusBack)) && afterScroll !== 'detached';
+    // Real pointer: hover the trigger, click, then move onto the menu's first item
+    let shift = null;
+    if (c.menu && m.found) {
+      // With motion on: the hover lift is a transform, which reduced motion turns off
+      await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+      const box = (expr) => `(() => { const e = ${expr}; if (!e) return null; const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height].map((v) => Math.round(v * 100) / 100); })()`;
+      const t0 = await evaluate(box(TRIGGER));
+      const [tx, ty] = [t0[0] + t0[2] / 2, t0[1] + t0[3] / 2];
+      await mouse('mouseMoved', tx, ty);
+      await sleep(350);
+      await mouse('mousePressed', tx, ty, { button: 'left', clickCount: 1 });
+      await mouse('mouseReleased', tx, ty, { button: 'left', clickCount: 1 });
+      await sleep(450);
+      const tA = await evaluate(box(TRIGGER));
+      const pA = await evaluate(box(`document.querySelector(${JSON.stringify(c.popover)})`));
+      const item = await evaluate(box(`document.querySelector(${JSON.stringify(c.popover)})?.querySelector('[role^="menuitem"], button')`));
+      if (pA && item) {
+        const [ix, iy] = [item[0] + item[2] / 2, item[1] + item[3] / 2];
+        for (let i = 1; i <= 6; i++) { await mouse('mouseMoved', tx + ((ix - tx) * i) / 6, ty + ((iy - ty) * i) / 6); await sleep(16); }
+        await sleep(450);
+        const tB = await evaluate(box(TRIGGER));
+        const pB = await evaluate(box(`document.querySelector(${JSON.stringify(c.popover)})`));
+        shift = pB ? Math.round(100 * Math.max(...tA.map((v, i) => Math.abs(v - tB[i])), ...pA.map((v, i) => Math.abs(v - pB[i])))) / 100 : 'closed';
+      } else shift = 'not opened';
+      await key('Escape');
+      await mouse('mouseMoved', 1, 1);
+      await sleep(200);
+      await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+    }
+    const ok = m.found && m.visible && m.inside && m.covered === 0 && (!escape || (escape.closed && escape.focusBack)) && afterScroll !== 'detached' && (shift === null || shift === 0);
     if (!ok) failures++;
     rows.push({
       viewport: `${w}×${h}`, case: c.name, result: ok ? 'ok' : 'FAIL',
       inside: m.found ? m.inside : 'not found', covered: m.found ? `${m.covered}/${m.points}` : '', rect: m.rect?.join(','), scrolls: m.scrolls,
       esc: escape ? `${escape.closed ? 'closes' : 'stays'}${escape.focusBack ? ', focus back' : ', focus lost'}` : '', scroll: afterScroll ?? '',
+      'moved px': shift ?? '',
     });
   }
 }

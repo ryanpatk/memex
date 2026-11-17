@@ -220,7 +220,8 @@ html:root .jr-actions .memex-icon-button svg {
   width: 20px;
   height: 20px;
 }
-html:root .jr-actions .memex-icon-button:hover {
+html:root .jr-actions .memex-icon-button:hover,
+html:root .jr-actions .memex-icon-button[aria-expanded='true'] {
   transform: translateY(-2px);
 }
 html:root .jr-actions .memex-icon-button:active {

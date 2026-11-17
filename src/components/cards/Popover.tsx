@@ -43,7 +43,9 @@ const Popover = ({ anchor, open, placement = 'bottom-end', gap, popoverRef, clas
     transform: false,
     elements: { reference: anchor },
     middleware: popoverMiddleware({ gap }),
-    whileElementsMounted: autoUpdate,
+    // Every frame while open, so it moves with its trigger through a hover
+    // or press transition instead of landing where the trigger was mid-way
+    whileElementsMounted: (reference, floating, update) => autoUpdate(reference, floating, update, { animationFrame: true }),
   });
 
   const setFloating = refs.setFloating;
