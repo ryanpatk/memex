@@ -20,6 +20,7 @@ import ApiTokensModal from './ApiTokensModal';
 import SettingsMenu from './SettingsMenu';
 import { userDisplayName } from '../utils/userDisplay';
 import { ITEM_DRAG_TYPE, isFileableKey, parseDragKeys } from '../utils/itemDrag';
+import AccountAvatar from './AccountAvatar';
 import NewSpaceModal from './NewSpaceModal';
 import { InboxIcon, JournalIcon, LibraryIcon, PlusIcon, TasksIcon } from './icons';
 import Wordmark from './ui/Wordmark';
@@ -369,7 +370,12 @@ const MemexSidebar = () => {
           aria-haspopup="dialog"
           aria-label="Open settings"
         >
-          <CircleUser aria-hidden="true" className="memex-sidebar-account-avatar" />
+          <AccountAvatar
+            user={user}
+            size={18}
+            className="memex-sidebar-account-avatar is-photo"
+            fallback={<CircleUser aria-hidden="true" className="memex-sidebar-account-avatar" />}
+          />
           <span className="memex-sidebar-account-name">{userDisplayName(user)}</span>
           <Settings aria-hidden="true" className="memex-sidebar-account-gear" />
         </button>

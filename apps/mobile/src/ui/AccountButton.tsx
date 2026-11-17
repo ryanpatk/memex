@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Alert, Pressable, StyleSheet, Text as RNText, View } from 'react-native';
+import { Image } from 'expo-image';
+import { accountAvatar, sizedAvatarUrl } from '@memex/core';
 import Animated from 'react-native-reanimated';
 import { useSession } from '../auth/SessionProvider';
 import { FIXTURE_MODE } from '../data/config';
@@ -11,7 +13,26 @@ import { Text } from './Text';
 import { useToast } from './Toast';
 
 /**
- * The signed-in account as a small raised disc; pressing it offers Sign out.
+ * The GitHub picture filling a disc of `size`, or `letter` when the session
+ * has none or it fails to load.
+ */
+const AvatarFace = ({ url, alt, size, letter }: { url: string | null; alt: string; size: number; letter: ReactNode }) => {
+  const [failed, setFailed] = useState<string | null>(null);
+  if (!url || failed === url) return <>{letter}</>;
+  return (
+    <Image
+      source={sizedAvatarUrl(url, size * 3)}
+      style={{ width: size, height: size, borderRadius: size / 2 }}
+      contentFit="cover"
+      accessibilityLabel={alt}
+      accessibilityIgnoresInvertColors
+      onError={() => setFailed(url)}
+    />
+  );
+};
+
+/**
+ * The signed-in account as a small raised disc (the GitHub picture when there is one); pressing it offers Sign out.
  * Sign-out ends the session on the server too, so offline it fails and you
  * stay signed in; the toast says so.
  */
@@ -24,8 +45,7 @@ export const AccountButton = () => {
   const repository = useRepository();
   const toast = useToast();
   const email = session?.user.email ?? '';
-  const name = session?.user.user_metadata.full_name ?? session?.user.user_metadata.name ?? email;
-  const letter = (name || '?').trim().charAt(0).toUpperCase();
+  const { url: avatarUrl, initial: letter, alt: avatarAlt } = accountAvatar(session?.user);
 
   const signOut = async () => {
     const failed = await repository.auth.signOut().then(
@@ -68,7 +88,13 @@ export const AccountButton = () => {
                 },
               ]}
             >
-              <RNText style={[c.type.title, { color: c.colors.ink }]}>{letter}</RNText>
+              <AvatarFace
+                url={avatarUrl}
+                alt={avatarAlt}
+                size={44}
+                letter={<RNText style={[c.type.title, { color: c.colors.ink }]}>{letter}</RNText>}
+              />
+              {avatarUrl ? <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.ring, { borderColor: c.colors.line }]} /> : null}
             </View>
           )}
         </Pressable>
@@ -95,11 +121,18 @@ export const AccountButton = () => {
       hitSlop={6}
     >
       <Animated.View style={[styles.disc, { backgroundColor: t.palette.tint, boxShadow: t.objectShadow }, settle.style]}>
-        <View>
-          <Text size="s" weight="heavy" style={{ color: t.palette.tintInk }}>
-            {letter}
-          </Text>
-        </View>
+        <AvatarFace
+          url={avatarUrl}
+          alt={avatarAlt}
+          size={38}
+          letter={
+            <View>
+              <Text size="s" weight="heavy" style={{ color: t.palette.tintInk }}>
+                {letter}
+              </Text>
+            </View>
+          }
+        />
       </Animated.View>
     </Pressable>
   );
@@ -108,4 +141,5 @@ export const AccountButton = () => {
 const styles = StyleSheet.create({
   disc: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   cardsDisc: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  ring: { borderRadius: 22, borderWidth: 2 },
 });

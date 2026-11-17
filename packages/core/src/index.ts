@@ -29,5 +29,6 @@ export * from './tokens/spaceColors';
 export * from './tokens/pastelSky';
 export * from './tokens/memoryCards';
 export * from './repository';
+export * from './account';
 export * from './capture';
 export * from './outbox';

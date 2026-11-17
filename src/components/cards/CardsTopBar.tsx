@@ -8,6 +8,7 @@ import { repository } from '../../data/repository';
 import { userDisplayName } from '../../utils/userDisplay';
 import { setLook } from '../../look/look';
 import Wordmark from '../ui/Wordmark';
+import AccountAvatar from '../AccountAvatar';
 import Menu from './Menu';
 import SettingsSheet from './SettingsSheet';
 import ShortcutsSheet from './ShortcutsSheet';
@@ -34,7 +35,6 @@ const CardsTopBar = () => {
   useShortcutsKey(() => setKeysOpen(true));
 
   const name = userDisplayName(user);
-  const initial = (name.trim()[0] ?? 'M').toUpperCase();
   const cardsActive = pathname === LIBRARY_PATH || pathname.startsWith(`${SPACES_PATH}/`);
 
   const signOut = async () => {
@@ -88,7 +88,7 @@ const CardsTopBar = () => {
           ]}
           trigger={(props) => (
             <button {...props} type="button" className="mc-rb mc-avatar" aria-label={`Account: ${name}`}>
-              {initial}
+              <AccountAvatar user={user} size={56} className="mc-avatar-img" />
             </button>
           )}
         />

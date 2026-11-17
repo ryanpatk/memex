@@ -108,9 +108,26 @@ html[data-look='cards'] ::selection {
   color: var(--mc-ink);
 }
 
-/* Top bar: account button */
+/* Top bar: account button. With a GitHub picture the photo fills the disc
+   and the disc's ring is redrawn over it, so it still reads as a button. */
 .mc-avatar {
   font-size: 20px;
+}
+.mc-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+  user-select: none;
+}
+.mc-avatar:has(> .mc-avatar-img)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--mc-line) inset;
+  pointer-events: none;
 }
 
 /* Account menu anchored to the avatar */

@@ -377,6 +377,12 @@
   flex: none;
 }
 
+.memex-sidebar-account-avatar.is-photo {
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px var(--neutral-4);
+}
+
 .memex-sidebar-account-name {
   flex: 1;
   min-width: 0;
