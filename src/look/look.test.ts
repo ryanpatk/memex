@@ -2,14 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_LOOK, isLook, resolveLook } from './look';
 
 describe('resolveLook', () => {
-  it('defaults to the classic look, so prod is unaffected', () => {
-    expect(DEFAULT_LOOK).toBe('classic');
-    expect(resolveLook({})).toBe('classic');
-    expect(resolveLook({ query: null, stored: null, env: undefined })).toBe('classic');
+  it('defaults to Memory Cards', () => {
+    expect(DEFAULT_LOOK).toBe('cards');
+    expect(resolveLook({})).toBe('cards');
+    expect(resolveLook({ query: null, stored: null, env: undefined })).toBe('cards');
   });
 
-  it('turns on from the env', () => {
+  it('can default to classic from the env', () => {
+    expect(resolveLook({ env: 'classic' })).toBe('classic');
     expect(resolveLook({ env: 'cards' })).toBe('cards');
+  });
+
+  it('keeps a browser that remembered classic on classic (the escape hatch)', () => {
+    expect(resolveLook({ stored: 'classic' })).toBe('classic');
   });
 
   it('prefers a remembered choice over the env', () => {
@@ -25,7 +30,7 @@ describe('resolveLook', () => {
   it('ignores unknown values and is forgiving about case and spaces', () => {
     expect(resolveLook({ query: 'neon', stored: 'cards' })).toBe('cards');
     expect(resolveLook({ query: ' Cards ' })).toBe('cards');
-    expect(resolveLook({ env: 'true' })).toBe('classic');
+    expect(resolveLook({ env: 'true' })).toBe('cards');
   });
 
   it('knows its looks', () => {

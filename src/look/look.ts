@@ -1,25 +1,27 @@
 import { useSyncExternalStore } from 'react';
 
 /**
- * Which look the app wears (Memory Cards, design/memory-cards/):
- * - 'classic' — Pastel Sky, the app as it ships today. The default.
- * - 'cards'   — Memory Cards, the redesign Ryan approved on 2026-11-16.
+ * Which look the app wears (design/memory-cards/SHIPPED.md):
+ * - 'cards'   — Memory Cards, the default since 2026-11-17.
+ * - 'classic' — Pastel Sky, the look before it, kept as an escape hatch.
+ *   The last build with only the classic look is the tag
+ *   `classic-design-final` (branch `archive/classic-design`).
  *
  * The look is `html[data-look]`. Everything Memory Cards draws is scoped to
  * `html[data-look="cards"]` (src/styles/cards/), and components branch on
- * `useLook()`, so the classic look is untouched unless the flag is on.
+ * `useLook()`, so the classic look renders as it did before Memory Cards.
  *
- * Turning it on, strongest first:
- * 1. `?look=cards` or `?look=classic` in the URL (remembered in this browser)
+ * Choosing, strongest first:
+ * 1. `?look=classic` or `?look=cards` in the URL (remembered in this browser)
  * 2. The remembered choice (localStorage `memex.look`, written by 1 and by
- *    the “New look” switch in Settings, both looks)
- * 3. `VITE_MEMEX_LOOK=cards` at build/dev time
- * 4. 'classic'
+ *    Settings → Look)
+ * 3. `VITE_MEMEX_LOOK=classic|cards` at build/dev time
+ * 4. 'cards'
  */
 export type Look = 'classic' | 'cards';
 
 export const LOOKS: readonly Look[] = ['classic', 'cards'];
-export const DEFAULT_LOOK: Look = 'classic';
+export const DEFAULT_LOOK: Look = 'cards';
 export const LOOK_STORAGE_KEY = 'memex.look';
 export const LOOK_PARAM = 'look';
 const EVENT = 'memex:look';

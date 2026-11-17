@@ -35,7 +35,7 @@ const render = () =>
     </React.StrictMode>,
   );
 
-// The Memory Cards look (behind a flag, src/look/look.ts) paints only once
+// The Memory Cards look (the default, src/look/look.ts) paints only once
 // its stylesheet is in, so it never flashes classic styles first
 if (look === 'cards') void loadCardsStyles().finally(render);
 else render();
