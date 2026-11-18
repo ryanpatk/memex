@@ -192,7 +192,7 @@ export const CardsLibrary = () => {
           ) : null}
         </View>
       ) : (
-        journal && journal.spaces.length > 0 && <SpacePills spaces={journal.spaces} selected={space} onSelect={setSpace} />
+        journal && journal.spaces.length > 0 && <SpacePills spaces={journal.spaces.filter((s) => !s.hidden || s.id === space)} selected={space} onSelect={setSpace} />
       )}
 
       {library.isLoading ? (

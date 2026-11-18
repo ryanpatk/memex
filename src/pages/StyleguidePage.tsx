@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, MoreHorizontal, Pencil, Pin, Plus, Search, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, GripVertical, MoreHorizontal, Pencil, Pin, Plus, Search, Trash2, X } from 'lucide-react';
 import { MC_MOTION, MC_RADIUS, MC_SPACE, MC_SPACE_COLORS, MC_TYPE } from '@memex/core';
 import '../styles/cards/kitpage.css';
 import { JOURNAL_PATH } from '../constants/modules';
@@ -14,7 +14,8 @@ import Wordmark from '../components/ui/Wordmark';
 
 /*
  * The Memory Cards kit (/styleguide): every component from the design
- * sheets s01–s14 (design/memory-cards/png/) plus s15 (pinned sites), built from the real kit
+ * sheets s01–s14 (design/memory-cards/png/) plus s15 (pinned sites) and s16
+ * (the sticky bar, drop tray and Edit spaces), built from the real kit
  * classes and components, in every state, in light, dark and Plex. All
  * content is made up. The classic catalog that lived here is in the tag
  * `classic-design-final`.
@@ -83,6 +84,7 @@ const SECTIONS: [string, string][] = [
   ['s13', 'Themes'],
   ['s14', 'Card write'],
   ['s15', 'Pinned sites'],
+  ['s16', 'Spaces row'],
 ];
 
 const StyleguidePage = () => {
@@ -1125,6 +1127,101 @@ const StyleguidePage = () => {
               </div>
               <p className="mc-launch-empty">Nothing pinned in Kitchen reno yet. Pin a save from its card’s ••• or drop a card on the pin button.</p>
             </div>
+          </Cell>
+        </div>
+      </Section>
+      {/* s16 */}
+      <Section
+        id="s16"
+        title="Spaces row: sticky bar, drop tray, Edit spaces"
+        lede="Scrolled past the pills, one slim bar sticks: back to top, the spaces that fit, More, Pinned. Dragging a card opens a tray of every space. Edit spaces orders them and hides any from the row."
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 48, alignItems: 'stretch' }}>
+          <Cell name="The sticky bar (Cards, a space board, Tasks)">
+            <div className="mc-stick is-shown" style={{ position: 'relative', height: 84, margin: 0, width: '100%' }}>
+              <div className="mc-stick-bar" style={{ position: 'absolute', borderRadius: 20, padding: '0 24px' }}>
+                <button type="button" className="mc-stick-top" aria-label="Back to the top of Everything">
+                  <span className="mc-stick-top-disc" aria-hidden="true">
+                    <ArrowUp />
+                  </span>
+                  <span className="mc-stick-top-name">Everything</span>
+                  <sup aria-hidden="true">41</sup>
+                </button>
+                <span className="mc-stick-sep" aria-hidden="true" />
+                <div className="mc-stick-pills">
+                  <div className="mc-pills is-compact">
+                    <SpacePill name="All" plain on size="small" />
+                    <SpacePill name="Kitchen reno" color={C.coral} size="small" />
+                    <SpacePill name="Kyoto trip" color={C.cyan} size="small" />
+                    <SpacePill name="Reading" color={C.blue} size="small" />
+                    <button type="button" className="mc-pill is-plain is-small">
+                      <MoreHorizontal aria-hidden="true" width={22} height={22} /> More
+                    </button>
+                  </div>
+                </div>
+                <button type="button" className="mc-rb mc-pins-btn" aria-label="Pinned, 7 sites">
+                  <Pin aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          </Cell>
+          <Cell name="The drop tray (while a card moves)">
+            <div className="mc-tray" style={{ position: 'static', maxHeight: 'none', borderRadius: 40 }}>
+              <div className="mc-tray-head">
+                <h3 className="mc-tray-title">Drop on a space</h3>
+                <span className="mc-tray-hint">Esc, or drop anywhere else, to cancel</span>
+              </div>
+              <div className="mc-tray-pills">
+                <SpacePill name="Kitchen reno" color={C.coral} target="idle" />
+                <SpacePill name="Kyoto trip" color={C.cyan} target="over" />
+                <SpacePill name="Reading" color={C.blue} target="idle" />
+                <SpacePill name="Garden" color={C.green} target="idle" />
+                <button type="button" className="mc-pill is-slot mc-tray-new">
+                  <Plus aria-hidden="true" /> New space
+                </button>
+                <button type="button" className="mc-pill mc-tray-pin">
+                  <span className="mc-tray-pin-disc" aria-hidden="true">
+                    <Pin />
+                  </span>
+                  Pin
+                </button>
+              </div>
+            </div>
+          </Cell>
+          <Cell name="Edit spaces (More → Edit spaces…, or Settings)">
+            <ol className="mc-es-list" style={{ maxWidth: 680 }} aria-label="Spaces in order">
+              {[
+                ['Kitchen reno', C.coral, false],
+                ['Kyoto trip', C.cyan, false],
+                ['Reading', C.blue, true],
+              ].map(([name, color, hidden], index) => (
+                <li key={String(name)} className={`mc-es-row${hidden ? ' is-hidden' : ''}`}>
+                  <button type="button" className="mc-es-grip" aria-label={`${name}, place ${index + 1}`}>
+                    <GripVertical aria-hidden="true" />
+                  </button>
+                  <span className="mc-es-dot" style={{ '--c': color } as CSSProperties} aria-hidden="true" />
+                  <span className="mc-es-name">{String(name)}</span>
+                  {hidden && <span className="mc-es-tag">Hidden</span>}
+                  <span className="mc-es-moves" style={{ opacity: index === 1 ? 1 : undefined }}>
+                    <button type="button" className="mc-rb is-small" aria-label={`Move ${name} up`}>
+                      <ArrowUp aria-hidden="true" />
+                    </button>
+                    <button type="button" className="mc-rb is-small" aria-label={`Move ${name} down`}>
+                      <ArrowDown aria-hidden="true" />
+                    </button>
+                  </span>
+                  <span className="mc-es-show">
+                    <span className="mc-es-show-label" aria-hidden="true">
+                      In the row
+                    </span>
+                    <Switch checked={!hidden} onChange={noop} label={`Show ${name} in the pill row`} />
+                  </span>
+                </li>
+              ))}
+              <li className="mc-es-line" aria-hidden="true">
+                <span>In More at this window width</span>
+              </li>
+            </ol>
           </Cell>
         </div>
       </Section>

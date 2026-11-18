@@ -40,6 +40,7 @@ const GROUPS: { title: string; rows: [string, string][] }[] = [
     rows: [
       ['⇧←→', 'Move the focused pin'],
       ['⌫', 'Unpin it, with Undo'],
+      [`${ALT}↑↓`, 'Move a space in Edit spaces'],
     ],
   },
 ];

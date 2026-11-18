@@ -222,7 +222,7 @@ export default function TasksScreen() {
       <View style={styles.pills}>
         <SpacePills
           label="Filter by space"
-          spaces={spaces.filter((s) => (view.counts.get(s.id) ?? 0) > 0 || s.id === space)}
+          spaces={spaces.filter((s) => s.id === space || (!s.hidden && (view.counts.get(s.id) ?? 0) > 0))}
           selected={space}
           onSelect={pickSpace}
           allCount={totals?.open}

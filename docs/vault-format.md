@@ -137,7 +137,7 @@ A reference implementation (`parseJournalBody`, `splitFrontmatter`) is exported 
 
 ## Spaces
 
-`spaces/<slug>.md`: frontmatter `schema`, `type: "space"`, `id`, `name`, `color` (the colour the user chose for the space, as `#rrggbb`, when the `profiles.color` column holds one; otherwise an OKLCH colour the app assigns from the canvas palette by creation order, so the export records the same value), `created`, `updated`, `board` (the board file's name). The body is a generated index of the space's links, notes and tasks for browsing in Obsidian.
+`spaces/<slug>.md`: frontmatter `schema`, `type: "space"`, `id`, `name`, `color` (the colour the user chose for the space, as `#rrggbb`, when the `profiles.color` column holds one; otherwise an OKLCH colour the app assigns from the canvas palette by creation order, so the export records the same value), `position` (the space's place in your order, 1 first; omitted when unset; since 2026-11-19), `hidden` (`true` when it's hidden from the space pill rows; omitted otherwise), `created`, `updated`, `board` (the board file's name). The body is a generated index of the space's links, notes and tasks for browsing in Obsidian.
 
 Spaces are index notes, not folders, because an item can be in several spaces. Membership lives on the item (`spaces:` in its frontmatter); the board file adds what the item can't say about itself:
 

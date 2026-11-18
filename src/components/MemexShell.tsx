@@ -6,12 +6,15 @@ import ShellNotices from './ShellNotices';
 import { useProfiles } from '../hooks/useProfiles';
 import { useItemDragSource } from '../hooks/useItemDragSource';
 import CardsTopBar from './cards/CardsTopBar';
+import DropTray from './cards/DropTray';
+import EditSpacesSheet from './cards/EditSpacesSheet';
 
 /**
  * The signed-in frame: the top bar over the current page (an Outlet, or the
  * Journal at `/`), one scrolling column. Also hosts what works on every
- * page: ⌘/Ctrl K (Go to), item drags onto space pills, the offline line
- * and the fallback toast for failed writes (ShellNotices).
+ * page: ⌘/Ctrl K (Go to), item drags (and the drop tray they open), Edit
+ * spaces, the offline line and the fallback toast for failed writes
+ * (ShellNotices).
  */
 const MemexShell = ({ children }: { children?: ReactNode }) => {
   const { spaceId } = useParams<{ spaceId?: string }>();
@@ -37,6 +40,8 @@ const MemexShell = ({ children }: { children?: ReactNode }) => {
         <ShellNotices />
       </div>
       <GoToPalette />
+      <DropTray />
+      <EditSpacesSheet />
     </div>
   );
 };

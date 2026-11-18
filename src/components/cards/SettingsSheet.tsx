@@ -10,6 +10,8 @@ import { useSession } from '../../context/SessionContext';
 import { repository } from '../../data/repository';
 import { setCardsFont, useCardsFont, type CardsFont } from '../../utils/cardsFont';
 import { userDisplayName } from '../../utils/userDisplay';
+import { useAppStore } from '../../store';
+import { useProfiles } from '../../hooks/useProfiles';
 import Sheet from './Sheet';
 import { Swatch, Switch, ToggleGroup } from './Controls';
 import AgentTokensSheet from './AgentTokensSheet';
@@ -27,6 +29,8 @@ const FONT_OPTIONS: readonly { value: CardsFont; label: string }[] = [
  * (decision 12).
  */
 const SettingsSheet = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+  const setEditSpacesOpen = useAppStore((state) => state.setEditSpacesOpen);
+  const { data: spaces } = useProfiles();
   const navigate = useNavigate();
   const { session } = useSession();
   const user = session?.user ?? null;
@@ -89,6 +93,20 @@ const SettingsSheet = ({ open, onClose }: { open: boolean; onClose: () => void }
             ))}
           </div>
         </div>
+        <button
+          type="button"
+          className="mc-setrow"
+          onClick={() => {
+            onClose();
+            setEditSpacesOpen(true);
+          }}
+        >
+          Spaces: order and hiding
+          <small>
+            {(spaces ?? []).length > 0 && <span>{(spaces ?? []).length}</span>}
+            <ChevronRight aria-hidden="true" />
+          </small>
+        </button>
         <button type="button" className="mc-setrow" onClick={() => setSub('api')}>
           Access tokens
           <small>

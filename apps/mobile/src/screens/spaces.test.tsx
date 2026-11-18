@@ -72,6 +72,36 @@ describe('Spaces tab', () => {
     expect(order()).toEqual(['Calm Technology', 'The Shape of Design', 'Notes on a personal library, for the reading pile']);
   });
 
+  it('long-press moves a space earlier, in the Spaces tab and in the Cards pills', async () => {
+    const { repository } = await renderWithData(<SpacesScreen />);
+    await flush();
+    const tiles = () =>
+      screen
+        .getAllByRole('link')
+        .map((el) => el.props.accessibilityLabel as string)
+        .filter((label) => / cards/.test(label) && !label.startsWith('Tasks'))
+        .map((label) => label.split(',')[0]);
+    expect(tiles()).toEqual(['Studio', 'Kyoto trip', 'Reading', 'Home']);
+    await fireEvent(screen.getByLabelText(/^Reading, /), 'longPress');
+    const menu = within(screen.getByTestId('menu'));
+    await fireEvent.press(menu.getByRole('menuitem', { name: 'Move earlier' }));
+    await flush();
+    expect(tiles()).toEqual(['Studio', 'Reading', 'Kyoto trip', 'Home']);
+    const stored = (await repository.spaces.getAll()).map((s) => s.name);
+    expect(stored).toEqual(['Studio', 'Reading', 'Kyoto trip', 'Home']);
+  });
+
+  it('long-press hides a space from the Cards row; its tile says so', async () => {
+    const { repository } = await renderWithData(<SpacesScreen />);
+    await flush();
+    await fireEvent(screen.getByLabelText(/^Kyoto trip, /), 'longPress');
+    await fireEvent.press(within(screen.getByTestId('menu')).getByRole('menuitem', { name: 'Hide from the Cards row' }));
+    await flush();
+    expect(screen.getByLabelText(/^Kyoto trip, .*hidden from the Cards row$/)).toBeTruthy();
+    expect(screen.getByText('Hidden from Cards')).toBeTruthy();
+    expect((await repository.spaces.getAll()).find((s) => s.id === 'kyoto')?.hidden).toBe(true);
+  });
+
   it('opens a space’s board and Tasks', async () => {
     await renderWithData(<SpacesScreen />);
     await flush();

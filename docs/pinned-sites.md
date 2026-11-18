@@ -21,14 +21,14 @@ The first build the same day was A + C: up to five pins inside the Journal · Ca
 
 | | Web | Phone |
 |---|---|---|
-| Pin | The open card's ••• → **Pin** (on Cards with one space chosen: **Pin in Kitchen reno**). Or drop a link card on the gold button: while a link is dragged the button gets a dashed ring, which turns solid when you're over it. Or use the pin toggle on a space board's saves. | Not yet (pinning happens on the web) |
+| Pin | The open card's ••• → **Pin** (on Cards with one space chosen: **Pin in Kitchen reno**). Or drag a link card onto the gold **Pin** in the drop tray, which opens over the top of the window while a card moves (`docs/spaces-row.md`). Or use the pin toggle on a space board's saves. | Not yet (pinning happens on the web) |
 | Unpin | ••• → **Unpin**. Or, in the launcher, drag a pin out and drop it anywhere on the page, press Delete on a focused pin, or use **Edit pins…**, which shows an ✕ on each. Every way offers Undo, which puts the pin back in its place. | Long-press → **Unpin**, with Undo |
 | Reorder | Drag a pin within the launcher; a blue bar shows where it will land. Shift+← / Shift+→ moves the focused pin. | Long-press → **Move earlier** / **Move later** |
 | Open | Click a site in the launcher (new tab). ⌥1 … ⌥9 open the first nine from anywhere (Alt on Windows/Linux), matched by the physical digit key. | Press |
 
 - Every phone menu row is also one of the pin's VoiceOver actions.
 - ⌥1–9 is ignored while you type in a field, so ⌥-characters like ¡ and the brackets on non-US keyboards still type.
-- Pinning a link into a space it isn't filed in also files it there. This can only happen by dropping a card on the button while you're in that space.
+- Pinning a link into a space it isn't filed in also files it there. This can only happen by dropping a card on Pin in the tray while you're in that space.
 - Pressing Esc mid-drag cancels the drag and doesn't unpin. Dropping a pin outside the browser window does nothing.
 
 ## Data
@@ -50,18 +50,18 @@ The first build the same day was A + C: up to five pins inside the Journal · Ca
 ## Code
 
 - **Components:**
-  - `src/components/cards/PinnedButton.tsx`: the gold button, ⌥ keys, card drops, toasts.
+  - `src/components/cards/PinnedButton.tsx`: the gold button, ⌥ keys, toasts. The sticky bar has a second copy (`shortcuts={false}`). Card drops to pin go through `DropTray.tsx`.
   - `PinLauncher.tsx`: the launcher (C), on the shared `Popover`, with its empty state.
   - `PinIcon.tsx`: favicon or letter.
   - `pinDrag.ts`: drag to reorder in the launcher, drag out to unpin.
-- **CSS:** `src/styles/cards/kit.css` ("Pinned sites"). The button is `.mc-rb.mc-pins-btn`, with `.is-drop-ready` and `.is-drop-over` for card drags. `.mc-pin` is still the gold badge on cards.
+- **CSS:** `src/styles/cards/kit.css` ("Pinned sites"). The button is `.mc-rb.mc-pins-btn`. `.mc-pin` is still the gold badge on cards.
 - **Styleguide:** `/styleguide#s15`.
-- **Checks:** `node scripts/check-pins.mjs <url>` against a demo-data dev server (`VITE_MEMEX_FIXTURES=1`, which has seven global pins, two placed by hand). It runs 27 checks: the plain nav pill, the gold button beside the Inbox, launcher order, fit and focus, Esc, Shift+→, drag reorder, drag-out unpin and Undo, ⌥1, dropping a card on the button, the open card's •••, scope (Cards in a space, the space page, the board, a space with no pins), 1024 and 390 widths, and dark. `SHOTS=<dir>` saves screenshots.
+- **Checks:** `node scripts/check-pins.mjs <url>` against a demo-data dev server (`VITE_MEMEX_FIXTURES=1`, which has seven global pins, two placed by hand). It runs 27 checks: the plain nav pill, the gold button beside the Inbox, launcher order, fit and focus, Esc, Shift+→, drag reorder, drag-out unpin and Undo, ⌥1, dropping a card on Pin in the tray, the open card's •••, scope (Cards in a space, the space page, the board, a space with no pins), 1024 and 390 widths, and dark. `SHOTS=<dir>` saves screenshots.
 
 ## Choices Ryan can reverse
 
 - **Pins live only in the launcher** (design C). The A + C bar, with five pins in the pill, is in git history (`636946f`) if it's ever wanted back.
 - **Dragging a pin out of the launcher unpins it** (with Undo). If that proves too easy to do by accident, require Edit pins instead.
-- **The gold button shows even with no pins**, so it can take a dropped card and say how to pin one.
+- **The gold button shows even with no pins**, so it can say how to pin one.
 - **Pinning on the phone** isn't built (only reorder and unpin). Adding "Pin" to a link's long-press menu is small.
 - **⌘K lists the global pins** even inside a space.

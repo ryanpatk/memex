@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Keyboard, LogOut, Settings } from 'lucide-react';
 import { INBOX_PATH, JOURNAL_PATH, LIBRARY_PATH, SPACES_PATH, TASKS_PATH } from '../../constants/modules';
@@ -10,6 +10,7 @@ import Wordmark from '../ui/Wordmark';
 import AccountAvatar from '../AccountAvatar';
 import Menu from './Menu';
 import PinnedButton from './PinnedButton';
+import { scrollShellToTop } from './stickyScroll';
 import SettingsSheet from './SettingsSheet';
 import ShortcutsSheet from './ShortcutsSheet';
 import { useShortcutsKey } from './useShortcutsKey';
@@ -23,7 +24,7 @@ import { useNotNow } from './journal/notNow';
  * page under the hero. On phones the three words become a bottom tab bar.
  */
 const CardsTopBar = () => {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const navigate = useNavigate();
   const { inbox, proposals } = useJournal();
   const { notNow } = useNotNow();
@@ -37,6 +38,15 @@ const CardsTopBar = () => {
 
   const name = userDisplayName(user);
   const cardsActive = pathname === LIBRARY_PATH || pathname.startsWith(`${SPACES_PATH}/`);
+
+  // Pressing the page you're on (scrolled down) takes you back to its top, as a tab bar does
+  const toTopIfHere = (path: string) => (event: MouseEvent<HTMLAnchorElement>) => {
+    const scroller = event.currentTarget.closest('.mc-shell-main');
+    if (pathname === path && !search && scroller && scroller.scrollTop > 0) {
+      event.preventDefault();
+      scrollShellToTop(event.currentTarget);
+    }
+  };
 
   const signOut = async () => {
     try {
@@ -53,13 +63,18 @@ const CardsTopBar = () => {
         <Wordmark />
       </Link>
       <nav className="mc-seg" aria-label="Main">
-        <NavLink to={JOURNAL_PATH} end className={({ isActive }) => (isActive ? 'is-on' : '')}>
+        <NavLink to={JOURNAL_PATH} end className={({ isActive }) => (isActive ? 'is-on' : '')} onClick={toTopIfHere(JOURNAL_PATH)}>
           Journal
         </NavLink>
-        <NavLink to={LIBRARY_PATH} className={cardsActive ? 'is-on' : ''} aria-current={cardsActive ? 'page' : undefined}>
+        <NavLink
+          to={LIBRARY_PATH}
+          className={cardsActive ? 'is-on' : ''}
+          aria-current={cardsActive ? 'page' : undefined}
+          onClick={toTopIfHere(LIBRARY_PATH)}
+        >
           Cards
         </NavLink>
-        <NavLink to={TASKS_PATH} className={({ isActive }) => (isActive ? 'is-on' : '')}>
+        <NavLink to={TASKS_PATH} className={({ isActive }) => (isActive ? 'is-on' : '')} onClick={toTopIfHere(TASKS_PATH)}>
           Tasks
         </NavLink>
       </nav>

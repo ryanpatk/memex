@@ -31,6 +31,13 @@ interface AppState {
   itemDrag: { keys: string[] } | null;
   setItemDrag: (drag: { keys: string[] } | null) => void;
 
+  /** The Edit spaces sheet (docs/spaces-row.md), opened from More and Settings. */
+  editSpacesOpen: boolean;
+  setEditSpacesOpen: (open: boolean) => void;
+  /** How many spaces the last measured pill row fit (Edit spaces draws its “In More” line there). */
+  spaceRowFit: number | null;
+  setSpaceRowFit: (fit: number) => void;
+
   // Actions
   setProjects: (projects: Project[]) => void;
   setCurrentProject: (project: Project | null) => void;
@@ -81,6 +88,10 @@ export const useAppStore = create<AppState>()(
       clearItemSelection: () => set({ selectedItemKeys: [] }),
       itemDrag: null,
       setItemDrag: (drag) => set({ itemDrag: drag }),
+      editSpacesOpen: false,
+      setEditSpacesOpen: (open) => set({ editSpacesOpen: open }),
+      spaceRowFit: null,
+      setSpaceRowFit: (fit) => set((state) => (state.spaceRowFit === fit ? state : { spaceRowFit: fit })),
 
       // Project actions
       setProjects: (projects) => set({ projects }),

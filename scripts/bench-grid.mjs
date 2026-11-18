@@ -116,8 +116,8 @@ await sleep(1500);
 // 3. Filter toggles: time to next paint, long tasks, worst frame in the following 700ms
 results.filters = await evaluate(`(async () => {
   // The first two space pills, each pressed twice (on, then back to All)
-  const pills = [...document.querySelectorAll('.mc-pills a.mc-pill')].filter((a) => a.textContent.trim() !== 'All');
-  const chip = (t) => [...document.querySelectorAll('.mc-pills a.mc-pill')].find((a) => a.textContent.trim() === t);
+  const pills = [...document.querySelectorAll('.mc-pills:not(.is-compact) a.mc-pill')].filter((a) => a.textContent.trim() !== 'All');
+  const chip = (t) => [...document.querySelectorAll('.mc-pills:not(.is-compact) a.mc-pill')].find((a) => a.textContent.trim() === t);
   const labels = [0, 0, 1, 1].map((i) => pills[i].textContent.trim());
   const out = [];
   for (const label of labels) {

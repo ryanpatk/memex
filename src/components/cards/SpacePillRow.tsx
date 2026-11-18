@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MoreHorizontal, Plus } from 'lucide-react';
-import type { Profile } from '@memex/core';
+import { MoreHorizontal, Plus, SlidersHorizontal } from 'lucide-react';
+import { fitPillCount, spaceRow, type Profile } from '@memex/core';
 import { useAppStore } from '../../store';
 import { useProfileLinkMembership } from '../../hooks/useProfileLinks';
 import { useProfileNoteMembership } from '../../hooks/useProfileNotes';
 import { useProfileTaskMembership } from '../../hooks/useProfileTasks';
 import { useAllSelfMessages } from '../../hooks/useSelfMessages';
 import { ITEM_DRAG_TYPE, isFileableKey, parseDragKeys } from '../../utils/itemDrag';
-import Menu from './Menu';
+import Menu, { type MenuEntry } from './Menu';
 import SpacePill from './SpacePill';
-import { visibleSpacePills } from './spacePills';
 
 const JUST_ADDED_MS = 1400;
 
@@ -26,18 +25,41 @@ interface SpacePillRowProps {
   hrefFor: (spaceId: string | null) => string;
   /** Files items in a space (drag, or the selection); resolves to how many were added. */
   onAdd: (spaceId: string, keys: string[]) => Promise<number>;
-  onNewSpace: () => void;
+  /** The “+” slot; left out (the sticky bar), no slot. */
+  onNewSpace?: () => void;
+  /** The sticky bar's smaller pills (48px). */
+  compact?: boolean;
+  /** Label for “All” (Tasks says “All tasks”); default “All”. */
+  allLabel?: string;
 }
 
 /**
- * The space pill row (d01/d02, decision 3 A): All, then each space as a
- * cartridge pill (the chosen one fills with its colour), More past six, and
- * an empty “+” slot for a new space. Pills keep the sidebar's jobs: drop
- * cards on one to file them (d10), and while cards are selected the row
- * reads “Add N to…” and each pill adds the selection (“All in” when it holds
- * them already).
+ * The space pill row (d01/d02, decision 3 A; docs/spaces-row.md): All, then
+ * the spaces in your order, as many as fit the row's width (measured, and
+ * re-measured when the window changes), then More for the rest (hidden
+ * spaces last) and “Edit spaces…”, and an empty “+” slot for a new space.
+ * Hidden spaces never take a pill unless chosen; the chosen space always
+ * has one. Pills keep the sidebar's jobs: drop cards on one to file them
+ * (d10), and while cards are selected the row reads “Add N to…” and each
+ * pill adds the selection (“All in” when it holds them already). `compact`
+ * is the sticky bar's version (smaller pills, no “+”).
  */
-const SpacePillRow = ({ spaces, colors, selectedId, allOn, hrefFor, onAdd, onNewSpace }: SpacePillRowProps) => {
+const SpacePillRow = ({
+  spaces,
+  colors,
+  selectedId,
+  allOn,
+  hrefFor,
+  onAdd,
+  onNewSpace,
+  compact = false,
+  allLabel = 'All',
+}: SpacePillRowProps) => {
+  const setSpaceRowFit = useAppStore((state) => state.setSpaceRowFit);
+  const setEditSpacesOpen = useAppStore((state) => state.setEditSpacesOpen);
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const measureRef = useRef<HTMLDivElement | null>(null);
+  const [fit, setFit] = useState<number>(() => useAppStore.getState().spaceRowFit ?? 6);
   const selectionMode = useAppStore((state) => state.selectionMode);
   const selectedItemKeys = useAppStore((state) => state.selectedItemKeys);
   const itemDrag = useAppStore((state) => state.itemDrag);
@@ -108,12 +130,59 @@ const SpacePillRow = ({ spaces, colors, selectedId, allOn, hrefFor, onAdd, onNew
   };
 
   const fileable = targetKeys.filter(isFileableKey);
-  const { shown, more } = visibleSpacePills(spaces ?? [], selectedId);
+  const candidates = useMemo(() => (spaces ?? []).filter((space) => !space.hidden || space.id === selectedId), [selectedId, spaces]);
+  const anyHidden = (spaces ?? []).some((space) => space.hidden);
+
+  // How many pills fit: every candidate is laid out once, off screen, at its
+  // real size; the row's own width (less All, “+” and padding) decides.
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    const measure = measureRef.current;
+    if (!row || !measure) return;
+    const recompute = () => {
+      const style = getComputedStyle(row);
+      const gap = parseFloat(style.columnGap) || 12;
+      const inner = row.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const fixed = Array.from(row.children)
+        .filter((el) => (el as HTMLElement).dataset.fixed === 'true')
+        .reduce((sum, el) => sum + (el as HTMLElement).getBoundingClientRect().width + gap, 0);
+      const pills = Array.from(measure.querySelectorAll<HTMLElement>('[data-measure="space"]')).map((el) => el.getBoundingClientRect().width);
+      const moreWidth = measure.querySelector<HTMLElement>('[data-measure="more"]')?.getBoundingClientRect().width ?? 120;
+      const available = inner - fixed;
+      // More is needed for hidden spaces even when every visible one fits
+      const count = fitPillCount(pills, available - (anyHidden ? moreWidth + gap : 0), gap, moreWidth);
+      setFit(count);
+      if (!compact) setSpaceRowFit(count);
+    };
+    recompute();
+    const observer = new ResizeObserver(recompute);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [anyHidden, candidates, compact, setSpaceRowFit, targetMode]);
+
+  const { shown, more } = spaceRow(spaces ?? [], fit, selectedId);
+  const size = compact ? 'small' : 'default';
+  const moreEntries: MenuEntry[] = more.map((space) => ({
+    id: space.id,
+    label: space.name,
+    color: colors.get(space.id),
+    shortcut: space.hidden ? 'hidden' : undefined,
+    onSelect: () => {
+      if (targetMode) void add(space.id, selectedItemKeys);
+      else navigate(hrefFor(space.id));
+    },
+  }));
+  if (!targetMode) {
+    moreEntries.push(
+      { kind: 'separator', id: 'sep-edit' },
+      { id: 'edit-spaces', label: 'Edit spaces…', icon: <SlidersHorizontal />, onSelect: () => setEditSpacesOpen(true) },
+    );
+  }
 
   if (!spaces) {
     return (
-      <div className="mc-pills" aria-busy="true" aria-label="Loading spaces…">
-        <SpacePill name="All" plain on={allOn} to={hrefFor(null)} />
+      <div className={`mc-pills${compact ? ' is-compact' : ''}`} aria-busy="true" aria-label="Loading spaces…">
+        <SpacePill name={allLabel} plain on={allOn} to={hrefFor(null)} size={size} />
         {[0, 1, 2, 3].map((index) => (
           <span key={index} className="mc-pill is-loading" aria-hidden="true">
             <span className="mc-pill-dot" />
@@ -124,13 +193,20 @@ const SpacePillRow = ({ spaces, colors, selectedId, allOn, hrefFor, onAdd, onNew
   }
 
   return (
-    <div className="mc-pills" role="group" aria-label={targetMode ? `Add ${targetKeys.length} to a space` : 'Spaces'}>
+    <div
+      ref={rowRef}
+      className={`mc-pills${compact ? ' is-compact' : ''}`}
+      role="group"
+      aria-label={targetMode ? `Add ${targetKeys.length} to a space` : 'Spaces'}
+    >
       {targetMode ? (
-        <span className="mc-pills-label" aria-live="polite">
+        <span className="mc-pills-label" aria-live="polite" data-fixed="true">
           Add <strong>{targetKeys.length}</strong> to…
         </span>
       ) : (
-        <SpacePill name="All" plain on={allOn} to={hrefFor(null)} />
+        <span className="mc-pills-fixed" data-fixed="true">
+          <SpacePill name={allLabel} plain on={allOn} to={hrefFor(null)} size={size} />
+        </span>
       )}
       {shown.map((space) => {
         const color = colors.get(space.id);
@@ -142,6 +218,7 @@ const SpacePillRow = ({ spaces, colors, selectedId, allOn, hrefFor, onAdd, onNew
               key={space.id}
               name={space.name}
               color={color}
+              size={size}
               target={state}
               onClick={() => void add(space.id, selectedItemKeys)}
               dropHandlers={dropHandlers(space.id)}
@@ -158,6 +235,7 @@ const SpacePillRow = ({ spaces, colors, selectedId, allOn, hrefFor, onAdd, onNew
             key={space.id}
             name={space.name}
             color={color}
+            size={size}
             selected={space.id === selectedId}
             to={hrefFor(space.id === selectedId ? null : space.id)}
             dropHandlers={dropHandlers(space.id)}
@@ -169,27 +247,31 @@ const SpacePillRow = ({ spaces, colors, selectedId, allOn, hrefFor, onAdd, onNew
         <Menu
           label="More spaces"
           align="start"
-          entries={more.map((space) => ({
-            id: space.id,
-            label: space.name,
-            color: colors.get(space.id),
-            onSelect: () => {
-              if (targetMode) void add(space.id, selectedItemKeys);
-              else navigate(hrefFor(space.id));
-            },
-          }))}
+          entries={moreEntries}
           trigger={(props) => (
-            <button {...props} type="button" className="mc-pill is-plain">
+            <button {...props} type="button" className={`mc-pill is-plain${compact ? ' is-small' : ''}`}>
               <MoreHorizontal aria-hidden="true" width={22} height={22} /> More
             </button>
           )}
         />
       )}
-      {!targetMode && (
-        <button type="button" className="mc-pill is-slot" onClick={onNewSpace} aria-label="New space" title="New space">
+      {!targetMode && onNewSpace && (
+        <button type="button" className="mc-pill is-slot" onClick={onNewSpace} aria-label="New space" title="New space" data-fixed="true">
           <Plus aria-hidden="true" />
         </button>
       )}
+      {/* Every candidate at its real size, off screen, to count what fits */}
+      <div ref={measureRef} className="mc-pills-measure" aria-hidden="true" inert>
+        {candidates.map((space) => (
+          <span key={space.id} data-measure="space" className={`mc-pill${compact ? ' is-small' : ''}`}>
+            <span className="mc-pill-dot" />
+            <span className="mc-pill-name">{space.name}</span>
+          </span>
+        ))}
+        <span data-measure="more" className={`mc-pill is-plain${compact ? ' is-small' : ''}`}>
+          <MoreHorizontal width={22} height={22} /> More
+        </span>
+      </div>
     </div>
   );
 };

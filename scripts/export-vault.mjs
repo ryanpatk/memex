@@ -618,6 +618,9 @@ function renderSpace(space) {
     id: space.id,
     name: space.name,
     color: space.color,
+    // Your order (profiles.position, 1 first) and hiding from the pill rows; omitted when unset
+    position: Number.isInteger(space.position) ? space.position : undefined,
+    hidden: space.hidden === true ? true : undefined,
     created: space.created_at,
     updated: space.updated_at,
     board: path.basename(space.boardPath),

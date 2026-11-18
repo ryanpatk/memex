@@ -1,3 +1,4 @@
+import { orderSpaces } from '../spaceOrder';
 import type { AuthSession, AuthUser, Repository } from '../repository';
 import type {
   AgentToken,
@@ -287,7 +288,7 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
     },
 
     spaces: {
-      getAll: () => wait([...db.spaces].sort((a, b) => (a.created_at < b.created_at ? -1 : 1))),
+      getAll: () => wait(orderSpaces(db.spaces)),
       getById: (id) => wait(db.spaces.find((space) => space.id === id) ?? null),
       create: (data) => {
         const space: Profile = { id: newId(), user_id: userId, name: data.name, color: data.color ?? null, created_at: now(), updated_at: now() };

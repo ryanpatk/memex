@@ -198,6 +198,10 @@ export interface Profile {
    * 20261116120000_add_space_color.sql; databases without it never return it.
    */
   color?: string | null
+  /** The space's place in your order (1 first); null/absent sorts after, by created_at (migration 20261119120000). */
+  position?: number | null
+  /** Hidden from the space pill rows; still in More, Move to…, the drop tray and search. */
+  hidden?: boolean
   created_at: string
   updated_at: string
 }
@@ -331,6 +335,10 @@ export interface UpdateProfileData {
   name?: string
   /** `#rrggbb`, or null to go back to automatic. Needs the `profiles.color` column. */
   color?: string | null
+  /** Place in your order. Needs `profiles.position` (migration 20261119120000). */
+  position?: number | null
+  /** Hidden from the pill rows. Needs `profiles.hidden`. */
+  hidden?: boolean
 }
 
 export interface CreateLinkData {

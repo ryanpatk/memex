@@ -13,8 +13,8 @@ export interface NewSpaceSheetProps {
   open: boolean;
   onClose: () => void;
   onFeedback?: (message: string) => void;
-  /** Called with the new space's id once it exists (default: navigate into it). */
-  onCreated?: (spaceId: string) => void;
+  /** Called with the new space's id (and name) once it exists (default: navigate into it). */
+  onCreated?: (spaceId: string, name: string) => void;
 }
 
 interface SpaceColorPickerProps {
@@ -107,7 +107,7 @@ const NewSpaceSheet = ({ open, onClose, onFeedback, onCreated }: NewSpaceSheetPr
       cue('confirm');
       onFeedback?.(`Created “${trimmed}”.`);
       onClose();
-      if (onCreated) onCreated(created.id);
+      if (onCreated) onCreated(created.id, created.name);
       else navigate(spacePath(created.id));
     } catch (err) {
       cue('error');

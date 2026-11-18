@@ -9,6 +9,7 @@ import { useJournal } from '../data/useJournal';
 import { useEntryActions } from '../journal/useEntryActions';
 import { PinnedSites } from '../spaces/PinnedSites';
 import { usePinMenu } from '../spaces/usePinMenu';
+import { useSpaceMenu } from '../spaces/useSpaceMenu';
 import { AccountButton } from '../ui/AccountButton';
 import { Canvas } from '../ui/Canvas';
 import { FeedError, FeedSkeleton } from '../ui/FeedStates';
@@ -21,7 +22,8 @@ import { useCards } from './useCards';
  * The Spaces tab (m02, x03 tiles): your global pinned sites on top (the
  * web's top-bar pins; long-press one to move or unpin it), a wide ink Tasks
  * tile with the open count, then each space as a colour tile with its count
- * big. A tile opens the space's board.
+ * big, in your order. A tile opens the space's board; a long press moves it
+ * or hides it from the Cards row (docs/spaces-row.md).
  */
 export const CardsSpaces = () => {
   const c = useCards();
@@ -36,6 +38,7 @@ export const CardsSpaces = () => {
   );
   const positions = useMemo(() => new Map<string, PinPosition>(pins.map((p) => [p.id, p.pin_position ?? null])), [pins]);
   const pinMenu = usePinMenu({ pins, spaceId: null, positions, onOpen: actions.openLink });
+  const spaceMenu = useSpaceMenu();
 
   return (
     <Canvas>
@@ -81,6 +84,9 @@ export const CardsSpaces = () => {
                   name={summary.space.name}
                   count={summary.count}
                   color={summary.space.color}
+                  hidden={summary.space.hidden}
+                  onLongPress={() => spaceMenu.show(summary.space.id, summary.space.name)}
+                  actions={spaceMenu.rows(summary.space.id)}
                   onPress={() => router.push({ pathname: '/space/[id]', params: { id: summary.space.id } })}
                   accessibilityLabel={`${summary.space.name}, ${summary.count} cards${summary.openTasks ? `, ${summary.openTasks} open tasks` : ''}`}
                 />

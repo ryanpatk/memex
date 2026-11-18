@@ -48,11 +48,14 @@ import { FeedbackToast } from '../components/ui';
 import LoadErrorState from '../components/LoadErrorState';
 import { HANDLES_ERRORS } from '../utils/mutationErrors';
 import { loadStateOf } from '../utils/loadState';
-import { DONE_PARAM, GROUP_PARAM, SPACE_PARAM } from '../constants/modules';
+import { DONE_PARAM, GROUP_PARAM, SPACE_PARAM, TASKS_PATH } from '../constants/modules';
 import { cue } from '../utils/sound';
 import { TaskRow } from '../components/tasks/TaskRow';
 import CardsMenu, { type MenuEntry as CardsMenuEntry } from '../components/cards/Menu';
 import MoveSheet from '../components/cards/MoveSheet';
+import StickyBar from '../components/cards/StickyBar';
+import SpacePillRow from '../components/cards/SpacePillRow';
+import { useAddToSpace } from '../hooks/useAddToSpace';
 import { EmptySlot, ToggleGroup } from '../components/cards/Controls';
 import '../styles/journal.css';
 
@@ -113,6 +116,19 @@ const TasksPage = () => {
   /** Memory Cards: the task whose “File in…” sheet is open. */
   const [fileInKey, setFileInKey] = useState<string | null>(null);
   const composerRef = useRef<TaskComposerHandle>(null);
+  // The sticky bar (StickyBar) slides in once the heading scrolls away
+  const headRef = useRef<HTMLDivElement | null>(null);
+  const addToSpace = useAddToSpace(flash);
+  const tasksHref = useCallback(
+    (spaceId: string | null) => {
+      const params = new URLSearchParams(searchParams);
+      if (spaceId) params.set(SPACE_PARAM, spaceId);
+      else params.delete(SPACE_PARAM);
+      const query = params.toString();
+      return query ? `${TASKS_PATH}?${query}` : TASKS_PATH;
+    },
+    [searchParams],
+  );
   const listRef = useRef<HTMLDivElement>(null);
   const focusAfter = useRef<string | null>(null);
 
@@ -324,8 +340,24 @@ const TasksPage = () => {
 
   return (
     <main className="mc-page mc-tasks" aria-label="Tasks">
-      <div className="mc-page-head">
-        <h1 className="mc-hero">
+      <StickyBar
+        watch={headRef}
+        title="Tasks"
+        count={loadState === 'ready' ? openCount : undefined}
+        pills={
+          <SpacePillRow
+            compact
+            spaces={profiles}
+            colors={colors}
+            selectedId={spaceFilter.length === 1 && spaceFilter[0] !== UNFILED_TASKS ? spaceFilter[0] : null}
+            allOn={spaceFilter.length === 0}
+            hrefFor={tasksHref}
+            onAdd={(id, keys) => addToSpace(id, keys)}
+          />
+        }
+      />
+      <div className="mc-page-head" ref={headRef}>
+        <h1 className="mc-hero" tabIndex={-1}>
           Tasks
           {loadState === 'ready' && <sup aria-label={`${openCount} open`}>{openCount}</sup>}
         </h1>

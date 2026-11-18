@@ -105,7 +105,7 @@ const CLICK = (sel) => `(() => { const el = typeof ${JSON.stringify(sel)} === 's
 /** Adds spaces through the New space sheet until the pill row folds some into More. */
 const ensureMoreSpaces = async () => {
   for (let i = 0; i < 6; i++) {
-    const hasMore = await evaluate(`[...document.querySelectorAll('.mc-pills button')].some((b) => b.textContent.trim() === 'More')`);
+    const hasMore = await evaluate(`[...document.querySelectorAll('.mc-pills:not(.is-compact) button')].some((b) => b.textContent.trim() === 'More')`);
     if (hasMore) return true;
     if (!(await evaluate(CLICK('button[aria-label="New space"]')))) return false;
     await sleep(400);
@@ -117,7 +117,7 @@ const ensureMoreSpaces = async () => {
     await evaluate(`document.querySelector('nav[aria-label="Main"] a[href="/library"]')?.click()`);
     await sleep(700);
   }
-  return evaluate(`[...document.querySelectorAll('.mc-pills button')].some((b) => b.textContent.trim() === 'More')`);
+  return evaluate(`[...document.querySelectorAll('.mc-pills:not(.is-compact) button')].some((b) => b.textContent.trim() === 'More')`);
 };
 
 const CASES = [
@@ -129,7 +129,7 @@ const CASES = [
   {
     name: 'more-spaces', note: 'space pills → More (inside the scrolling pill row, over the grid)', path: '/library', shot: true, setup: ensureMoreSpaces,
     // Scrolled into view in the pill row first, as you would before clicking it
-    open: `(() => { const b = [...document.querySelectorAll('.mc-pills button')].find((x) => x.textContent.trim() === 'More'); b.scrollIntoView({ inline: 'nearest', block: 'nearest' }); b.click(); })()`,
+    open: `(() => { const b = [...document.querySelectorAll('.mc-pills:not(.is-compact) button')].find((x) => x.textContent.trim() === 'More'); b.scrollIntoView({ inline: 'nearest', block: 'nearest' }); b.click(); })()`,
     trigger: null, popover: '[role="menu"][aria-label="More spaces"]', menu: true,
   },
   {
@@ -183,11 +183,11 @@ for (const [w, h] of VIEWPORTS) {
     if (m.found && c.name === 'more-spaces') {
       await evaluate(`document.querySelector('.mc-shell-main').scrollBy(0, 120)`);
       await sleep(300);
-      afterScroll = await evaluate(`(() => { const p = document.querySelector(${JSON.stringify(c.popover)}); const t = [...document.querySelectorAll('.mc-pills button')].find((b) => b.textContent.trim() === 'More'); if (!p) return 'closed'; const pr = p.getBoundingClientRect(), tr = t.getBoundingClientRect(); return Math.abs(pr.top - tr.bottom) < 40 || Math.abs(tr.top - pr.bottom) < 40 ? 'follows' : 'detached'; })()`);
+      afterScroll = await evaluate(`(() => { const p = document.querySelector(${JSON.stringify(c.popover)}); const t = [...document.querySelectorAll('.mc-pills:not(.is-compact) button')].find((b) => b.textContent.trim() === 'More'); if (!p) return 'closed'; const pr = p.getBoundingClientRect(), tr = t.getBoundingClientRect(); return Math.abs(pr.top - tr.bottom) < 40 || Math.abs(tr.top - pr.bottom) < 40 ? 'follows' : 'detached'; })()`);
       await evaluate(`document.querySelector('.mc-shell-main').scrollBy(0, -120)`);
       await sleep(200);
     }
-    const TRIGGER = c.trigger === '__window' ? 'window.__trigger' : c.trigger ? `document.querySelector(${JSON.stringify(c.trigger)})` : `[...document.querySelectorAll('.mc-pills button')].find((b) => b.textContent.trim() === 'More')`;
+    const TRIGGER = c.trigger === '__window' ? 'window.__trigger' : c.trigger ? `document.querySelector(${JSON.stringify(c.trigger)})` : `[...document.querySelectorAll('.mc-pills:not(.is-compact) button')].find((b) => b.textContent.trim() === 'More')`;
     let escape = null;
     if (c.menu && m.found) {
       await key('Escape');

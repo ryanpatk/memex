@@ -19,13 +19,17 @@ import { useProfileLinkMembership } from '../hooks/useProfileLinks';
 import { usePins } from '../hooks/usePins';
 import { useProfileTaskMembership } from '../hooks/useProfileTasks';
 import { useTaskActions } from '../hooks/useTaskActions';
+import { useSpaceColors } from '../hooks/useSpaceColors';
+import { useAddToSpace } from '../hooks/useAddToSpace';
 import JournalFeed, { type JournalFeedHandle } from '../components/journal/JournalFeed';
 import { FeedbackToast } from '../components/ui';
 import LoadErrorState from '../components/LoadErrorState';
 import { loadStateOf } from '../utils/loadState';
-import { JOURNAL_PATH, LIBRARY_PATH, LINK_PARAM, NOTE_PARAM, SPACE_PARAM, TASKS_PATH } from '../constants/modules';
+import { JOURNAL_PATH, LIBRARY_PATH, LINK_PARAM, NOTE_PARAM, SPACE_PARAM, TASKS_PATH, spacePath } from '../constants/modules';
 import { cue } from '../utils/sound';
 import SpaceBoard from '../components/space/SpaceBoard';
+import StickyBar from '../components/cards/StickyBar';
+import SpacePillRow from '../components/cards/SpacePillRow';
 import SpaceDetailsSheet from '../components/cards/SpaceDetailsSheet';
 import MoveSheet from '../components/cards/MoveSheet';
 import CardsMenu from '../components/cards/Menu';
@@ -57,6 +61,10 @@ const SpacePage = () => {
   const { data: taskRows } = useProfileTaskMembership();
   const { toast, flash, dismiss, handleAnimationEnd } = useFeedbackToast();
   const feedRef = useRef<JournalFeedHandle>(null);
+  // The sticky bar (StickyBar) slides in once the band scrolls away
+  const bandRef = useRef<HTMLElement | null>(null);
+  const spaceColors = useSpaceColors();
+  const addToSpace = useAddToSpace(flash);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const showJournal = searchParams.get(SHOW_PARAM) === 'journal';
   const [fileInKey, setFileInKey] = useState<string | null>(null);
@@ -160,9 +168,28 @@ const SpacePage = () => {
 
   return (
     <main className="mc-page mc-sp" aria-label={space.name} style={{ '--c': space.color } as CSSProperties}>
-      <header className="mc-band mc-sp-band">
+      {!showJournal && (
+        <StickyBar
+          watch={bandRef}
+          title={space.name}
+          count={loadState === 'ready' ? cardCount : undefined}
+          pills={
+            <SpacePillRow
+              compact
+              spaces={profiles}
+              colors={spaceColors}
+              selectedId={spaceId}
+              allOn={false}
+              allLabel="Cards"
+              hrefFor={(id) => (id ? spacePath(id) : LIBRARY_PATH)}
+              onAdd={(id, keys) => addToSpace(id, keys)}
+            />
+          }
+        />
+      )}
+      <header className="mc-band mc-sp-band" ref={bandRef}>
         <div className="mc-sp-band-text">
-          <h1 className="mc-hero mc-sp-hero">
+          <h1 className="mc-hero mc-sp-hero" tabIndex={-1}>
             <span translate="no">{space.name}</span>
             {loadState === 'ready' && <sup aria-label={`${cardCount} cards`}>{cardCount}</sup>}
           </h1>

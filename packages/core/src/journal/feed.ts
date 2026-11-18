@@ -1,3 +1,4 @@
+import { orderSpaces } from '../spaceOrder';
 import { stripMarkdown } from '../markdown';
 import { sourceOf, type Source } from '../sources';
 import type { LinkWithTag, NoteWithTags, Profile, SelfMessage, TaskWithTags } from '../types';
@@ -9,7 +10,13 @@ import type { LinkWithTag, NoteWithTags, Profile, SelfMessage, TaskWithTags } fr
  * suggester (journal/filer.ts). Plain TS with no React.
  */
 
-export type JournalSpace = { id: string; name: string; color: string };
+export type JournalSpace = {
+  id: string;
+  name: string;
+  color: string;
+  /** Hidden from the space pill rows (still everywhere else; spaceOrder.ts). */
+  hidden?: boolean;
+};
 
 /** Entry ids are stream item keys (`link:<id>`), so filing reuses useAddToSpace. */
 export type Entry =
@@ -45,17 +52,22 @@ interface MembershipRows {
 }
 
 /**
- * Spaces in creation order with their colours. A space without one falls back
- * to `fallbackColor` (the web app's accent variable by default).
+ * Spaces in your order (spaceOrder.ts: position, then creation date) with
+ * their colours, which stay tied to creation date (`colors`, from
+ * buildSpaceColors). A space without one falls back to `fallbackColor` (the
+ * web app's accent variable by default).
  */
 export const toJournalSpaces = (
   profiles: Profile[],
   colors: Map<string, string>,
   fallbackColor = 'var(--color-1)',
 ): JournalSpace[] =>
-  [...profiles]
-    .sort((a, b) => a.created_at.localeCompare(b.created_at))
-    .map((p) => ({ id: p.id, name: p.name, color: colors.get(p.id) ?? fallbackColor }));
+  orderSpaces(profiles).map((p) => ({
+    id: p.id,
+    name: p.name,
+    color: colors.get(p.id) ?? fallbackColor,
+    ...(p.hidden ? { hidden: true } : {}),
+  }));
 
 /** Every jot, link, note and task as entries, oldest first. */
 export const buildEntries = (input: {

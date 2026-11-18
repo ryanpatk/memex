@@ -7,6 +7,7 @@ import CaptureSheet from '../components/cards/CaptureSheet';
 import OpenCardSheet, { type RescrapeResult } from '../components/cards/OpenCardSheet';
 import ViewPanel, { type ViewPanelTab } from '../components/cards/ViewPanel';
 import SpacePillRow from '../components/cards/SpacePillRow';
+import StickyBar from '../components/cards/StickyBar';
 import CardsSelectionBar from '../components/cards/SelectionBar';
 import MoveSheet from '../components/cards/MoveSheet';
 import NewSpaceSheet from '../components/cards/NewSpaceSheet';
@@ -1113,6 +1114,8 @@ const StreamPage = () => {
   // A new set of results fades in over the old (opacity only, ≤300ms) rather
   // than snapping; the old results stay up until the new ones are ready
   const streamBodyRef = useRef<HTMLDivElement>(null);
+  // The sticky bar (StickyBar) slides in once the space pills scroll away
+  const pillsRef = useRef<HTMLDivElement | null>(null);
   const shownQueryKey = useRef(gridQueryKey);
   useLayoutEffect(() => {
     if (shownQueryKey.current === gridQueryKey) return;
@@ -1659,8 +1662,24 @@ const StreamPage = () => {
           />
         ) : (
           <>
+            <StickyBar
+              watch={pillsRef}
+              title={mcHeroName}
+              count={loadState === 'ready' ? mcShownCount : undefined}
+              pills={
+                <SpacePillRow
+                  compact
+                  spaces={profiles}
+                  colors={spaceColors}
+                  selectedId={mcSpaceId}
+                  allOn={activeFilters.spaces.length === 0}
+                  hrefFor={spaceHref}
+                  onAdd={(spaceId, keys) => addToSpace(spaceId, keys)}
+                />
+              }
+            />
             <div className="mc-page-head">
-              <h1 className="mc-hero">
+              <h1 className="mc-hero" tabIndex={-1}>
                 <span translate={mcSpace ? 'no' : undefined}>{mcHeroName}</span>
                 {loadState === 'ready' && <sup aria-label={`${mcShownCount} cards`}>{numberFormat.format(mcShownCount)}</sup>}
               </h1>
@@ -1781,15 +1800,17 @@ const StreamPage = () => {
               </div>
             </div>
 
-            <SpacePillRow
-              spaces={profiles}
-              colors={spaceColors}
-              selectedId={mcSpaceId}
-              allOn={activeFilters.spaces.length === 0}
-              hrefFor={spaceHref}
-              onAdd={(spaceId, keys) => addToSpace(spaceId, keys)}
-              onNewSpace={() => setNewSpaceOpen(true)}
-            />
+            <div ref={pillsRef}>
+              <SpacePillRow
+                spaces={profiles}
+                colors={spaceColors}
+                selectedId={mcSpaceId}
+                allOn={activeFilters.spaces.length === 0}
+                hrefFor={spaceHref}
+                onAdd={(spaceId, keys) => addToSpace(spaceId, keys)}
+                onNewSpace={() => setNewSpaceOpen(true)}
+              />
+            </div>
 
             <div key={view} ref={streamBodyRef} className={`memex-stream-body mc-stream is-${view}`}>
               {body}

@@ -1431,7 +1431,7 @@ textarea.mc-inp {
 
 /* ---------- Pinned sites (C, components/cards/PinnedButton) ----------
    One gold round pin button beside the Inbox opens the Pinned launcher.
-   While a link card is dragged it shows it's a drop target. */
+   Cards are pinned by dragging onto Pin in the drop tray. */
 
 .mc-rb.mc-pins-btn {
   background: var(--mc-gold);
@@ -1440,14 +1440,6 @@ textarea.mc-inp {
 }
 .mc-pins-btn svg {
   pointer-events: none;
-}
-.mc-pins-btn.is-drop-ready {
-  outline: 3px dashed var(--mc-pri);
-  outline-offset: 4px;
-}
-.mc-rb.mc-pins-btn.is-drop-over {
-  outline-style: solid;
-  transform: scale(1.12);
 }
 @media (hover: hover) {
   .mc-rb.mc-pins-btn:hover:not(:disabled),
@@ -2175,5 +2167,376 @@ html[data-theme='dark'] .mc-diff .is-ins {
   .mc-btn[aria-busy='true']::before,
   .mc-rb[aria-busy='true']::after {
     animation-duration: 2.4s;
+  }
+}
+
+
+/* ---------- The sticky bar, the drop tray, Edit spaces (docs/spaces-row.md) ---------- */
+
+/* Sticky bar (A): a zero-height sticky slot at the page's top; the bar inside
+   slides in once the page's pills (or hero) scroll away. Full bleed: it
+   undoes the page's side padding. */
+.mc-stick {
+  position: sticky;
+  top: 0;
+  height: 0;
+  z-index: var(--mc-z-stick);
+  margin: 0 calc(-1 * var(--mc-page-x, 64px));
+}
+.mc-stick-bar {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 84px;
+  box-sizing: border-box;
+  padding: 0 var(--mc-page-x, 64px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--mc-bg);
+  box-shadow: 0 12px 28px -18px rgba(29, 33, 39, 0.45);
+  transform: translateY(-110%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.mc-stick.is-shown .mc-stick-bar {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mc-stick-bar {
+    transition:
+      transform var(--mc-m-base) var(--mc-ease),
+      opacity var(--mc-m-base) var(--mc-ease),
+      visibility 0s linear var(--mc-m-base);
+  }
+  .mc-stick.is-shown .mc-stick-bar {
+    transition:
+      transform var(--mc-m-base) var(--mc-ease),
+      opacity var(--mc-m-base) var(--mc-ease),
+      visibility 0s;
+  }
+}
+.mc-stick-top {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--mc-ctl-sm);
+  padding: 0 18px 0 7px;
+  border-radius: var(--mc-r-pill);
+  background: var(--mc-paper);
+  color: var(--mc-ink);
+  font: 900 20px / 1 var(--mc-font-display);
+  box-shadow: var(--mc-bevel), 0 0 0 2px var(--mc-line) inset, inset 0 -4px 0 var(--mc-line);
+  cursor: pointer;
+  max-width: 280px;
+  transition: transform var(--mc-m-press) var(--mc-ease);
+}
+.mc-stick-top:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 4px;
+}
+.mc-stick-top-disc {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--mc-ink);
+  color: var(--mc-paper);
+  flex: none;
+}
+.mc-stick-top-disc svg {
+  width: 20px;
+  height: 20px;
+}
+.mc-stick-top-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.mc-stick-top sup {
+  font: 700 15px / 1 var(--mc-font-ui);
+  color: var(--mc-mut);
+  margin-left: -4px;
+  align-self: flex-start;
+  margin-top: 8px;
+}
+@media (hover: hover) {
+  .mc-stick-top:hover {
+    transform: translateY(-2px);
+  }
+}
+.mc-stick-sep {
+  width: 2px;
+  height: 28px;
+  border-radius: 2px;
+  background: var(--mc-line);
+  margin: 0 6px;
+  flex: none;
+}
+.mc-stick-pills {
+  flex: 1;
+  min-width: 0;
+}
+.mc-stick .mc-pins-btn {
+  width: var(--mc-ctl-sm);
+  height: var(--mc-ctl-sm);
+}
+
+/* The pill row's compact size (the sticky bar) and its off-screen measure */
+.mc-pills {
+  position: relative;
+}
+.mc-pills.is-compact {
+  margin: 0;
+  padding: 0;
+  gap: 10px;
+  overflow: hidden;
+  mask-image: none;
+}
+.mc-pills-fixed {
+  display: flex;
+  flex: none;
+}
+.mc-pills-measure {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  display: flex;
+  gap: inherit;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Drop tray (C): every space, while a card moves */
+.mc-tray {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: var(--mc-z-tray);
+  max-height: 70vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+  padding: 24px 64px 32px;
+  background: var(--mc-paper);
+  color: var(--mc-ink);
+  border-radius: 0 0 var(--mc-r-sheet) var(--mc-r-sheet);
+  box-shadow: 0 30px 60px -24px rgba(29, 33, 39, 0.5);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mc-tray {
+    animation: mc-tray-in var(--mc-m-base) var(--mc-ease) both;
+  }
+}
+@keyframes mc-tray-in {
+  from {
+    transform: translateY(-24px);
+    opacity: 0;
+  }
+}
+.mc-tray-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.mc-tray-title {
+  margin: 0;
+  font: 900 32px / 1.1 var(--mc-font-display);
+}
+.mc-tray-hint {
+  font: 500 18px / 1.3 var(--mc-font-ui);
+  color: var(--mc-mut);
+}
+.mc-tray-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.mc-tray-pills .mc-pill.is-drop {
+  transform: scale(1.08);
+}
+.mc-tray .mc-pill.mc-tray-new {
+  width: auto;
+  padding: 0 24px;
+  gap: 8px;
+  font: 800 20px / 1 var(--mc-font-display);
+  color: var(--mc-mut);
+}
+.mc-tray .mc-pill.mc-tray-new svg {
+  width: 22px;
+  height: 22px;
+}
+.mc-tray .mc-pill.mc-tray-new.is-drop {
+  color: var(--mc-ink);
+  outline-style: solid;
+}
+.mc-tray .mc-pill.mc-tray-pin {
+  background: var(--mc-gold);
+  color: #3d2f00;
+  box-shadow: var(--mc-lit), var(--mc-shade);
+}
+.mc-tray-pin-disc {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.45);
+}
+.mc-tray-pin-disc svg {
+  width: 22px;
+  height: 22px;
+}
+.mc-tray .mc-pill.mc-tray-pin.is-drop {
+  outline: 4px solid var(--mc-ink);
+  outline-offset: 2px;
+}
+
+/* Edit spaces (B) */
+.mc-es-lede {
+  margin: 0 0 20px;
+  font: 500 18px / 1.45 var(--mc-font-ui);
+  color: var(--mc-mut);
+}
+.mc-es-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.mc-es-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 0 12px 0 4px;
+  border-radius: 18px;
+  background: var(--mc-well);
+  font: 800 20px / 1.2 var(--mc-font-display);
+}
+.mc-es-row.is-hidden .mc-es-name {
+  color: var(--mc-mut);
+}
+.mc-es-row.is-drop-before::before,
+.mc-es-row.is-drop-after::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--mc-pri);
+}
+.mc-es-row.is-drop-before::before {
+  top: -6px;
+}
+.mc-es-row.is-drop-after::after {
+  bottom: -6px;
+}
+.mc-es-grip {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--mc-faint);
+  cursor: grab;
+  flex: none;
+}
+.mc-es-grip svg {
+  width: 22px;
+  height: 22px;
+}
+.mc-es-grip:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 0;
+}
+.mc-es-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--c, var(--mc-line));
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.14);
+  flex: none;
+}
+.mc-es-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.mc-es-tag {
+  font: 700 15px / 1 var(--mc-font-ui);
+  color: var(--mc-mut);
+  background: var(--mc-paper);
+  border-radius: 999px;
+  padding: 6px 10px;
+  flex: none;
+}
+.mc-es-moves {
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  flex: none;
+  margin-left: auto;
+}
+.mc-es-row:hover .mc-es-moves,
+.mc-es-row:focus-within .mc-es-moves {
+  opacity: 1;
+}
+@media (hover: none) {
+  .mc-es-moves {
+    opacity: 1;
+  }
+}
+.mc-es-show {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+.mc-es-show-label {
+  font: 600 15px / 1 var(--mc-font-ui);
+  color: var(--mc-mut);
+}
+.mc-es-line {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 0;
+  font: 700 15px / 1 var(--mc-font-ui);
+  color: var(--mc-mut);
+}
+.mc-es-line::before,
+.mc-es-line::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: var(--mc-line);
+}
+@media (max-width: 760px) {
+  .mc-es-show-label {
+    display: none;
   }
 }

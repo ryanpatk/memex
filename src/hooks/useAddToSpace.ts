@@ -48,8 +48,9 @@ export function useAddToSpace(flash: Flash) {
   const jots = useMoveJots();
 
   return useCallback(
-    async (spaceId: string, keys: string[]): Promise<number> => {
-      const name = (profiles ?? []).find((space) => space.id === spaceId)?.name ?? 'space';
+    async (spaceId: string, keys: string[], spaceName?: string): Promise<number> => {
+      // A space made a moment ago isn't in the list yet: its name comes along
+      const name = spaceName ?? (profiles ?? []).find((space) => space.id === spaceId)?.name ?? 'space';
 
       const unique = Array.from(new Set(keys));
       const usable = unique.filter((key) => {

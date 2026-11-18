@@ -11,7 +11,7 @@
  *   - order: Shift+→ on a site and a drag inside the launcher both reorder
  *   - unpin: a pin dragged out of the launcher (Undo puts it back in its
  *     place), and “Edit pins”
- *   - pin: a link card dropped on the gold button; the open card's •••
+ *   - pin: a link card dropped on Pin in the drop tray; the open card's •••
  *   - ⌥1 opens the first pin, not while typing
  *   - scope: Cards with one space chosen, and a space page, show that
  *     space's pins (the board shows the same); everywhere else the global ones
@@ -188,28 +188,28 @@ try {
   check('⌥1 does nothing while typing', (await evaluate(`window.__opened.length`)) === 1);
   await evaluate(`document.activeElement?.blur()`);
 
-  // 6. Drop a link card on the gold button
+  // 6. Drop a link card on Pin in the drop tray
   const dropped = await evaluate(`(async () => {
     const card = [...document.querySelectorAll('[data-item-key^="link:"]')].find((c) => !c.querySelector('.mc-pin'));
     if (!card) return 'no card';
     const dt = new DataTransfer();
     card.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
-    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 120)));
-    const btn = document.querySelector(${JSON.stringify(BTN)});
-    const ready = btn.classList.contains('is-drop-ready');
-    const r = btn.getBoundingClientRect();
+    await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 160)));
+    const pin = document.querySelector('.mc-tray .mc-tray-pin');
+    if (!pin) return 'no Pin in the tray';
+    const r = pin.getBoundingClientRect();
     const opts = { bubbles: true, cancelable: true, dataTransfer: dt, clientX: r.left + 20, clientY: r.top + 20 };
-    btn.dispatchEvent(new DragEvent('dragenter', opts)); btn.dispatchEvent(new DragEvent('dragover', opts));
+    pin.dispatchEvent(new DragEvent('dragenter', opts)); pin.dispatchEvent(new DragEvent('dragover', opts));
     await new Promise((r) => setTimeout(r, 60));
-    const over = btn.classList.contains('is-drop-over');
-    btn.dispatchEvent(new DragEvent('drop', opts));
+    const over = pin.classList.contains('is-drop');
+    pin.dispatchEvent(new DragEvent('drop', opts));
     card.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }));
     await new Promise((r) => setTimeout(r, 400));
-    return (ready ? 'ready ' : '') + (over ? 'over ' : '') + 'ok';
+    return (over ? 'over ' : '') + 'ok';
   })()`);
   const label8 = await evaluate(`document.querySelector(${JSON.stringify(BTN)}).getAttribute('aria-label')`);
-  check('a card dropped on the button is pinned', dropped === 'ready over ok' && label8 === 'Pinned, 8 sites', `${dropped}; ${label8}; ${await toasts()}`);
-  check('the button is back to normal after the drop', !(await evaluate(`document.querySelector(${JSON.stringify(BTN)}).matches('.is-drop-ready, .is-drop-over')`)));
+  check('a card dropped on Pin in the tray is pinned', dropped === 'over ok' && label8 === 'Pinned, 8 sites', `${dropped}; ${label8}; ${await toasts()}`);
+  check('the tray folds away after the drop', !(await evaluate(`Boolean(document.querySelector('.mc-tray'))`)));
 
   // 7. The open card's •••
   await go('/library?link=ln-10');

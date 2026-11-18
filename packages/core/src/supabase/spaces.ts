@@ -4,6 +4,7 @@ import { getErrorMessage } from '../errors'
 import type { SpacesRepository } from '../repository'
 import type { CreateProfileData, Profile, UpdateProfileData } from '../types'
 import type { MemexSupabaseClient } from './client'
+import { orderSpaces } from '../spaceOrder'
 
 
 /**
@@ -15,6 +16,13 @@ export const isMissingColorColumn = (error: unknown): boolean => {
   const message = getErrorMessage(error)
   const code = (error as { code?: string } | null)?.code
   return /'color' column/i.test(message) || (code === 'PGRST204' && /color/i.test(message)) || (code === '42703' && /color/i.test(message))
+}
+
+/** True when a write named `position` or `hidden` and the database lacks them (PGRST204 / 42703). */
+export const isMissingOrderColumns = (error: unknown): boolean => {
+  const message = getErrorMessage(error)
+  const code = (error as { code?: string } | null)?.code
+  return /'(position|hidden)' column/i.test(message) || ((code === 'PGRST204' || code === '42703') && /position|hidden/i.test(message))
 }
 
 /** Drops `color` from a write, for databases without the column. */
@@ -34,7 +42,8 @@ export const createSpacesRepository = (client: MemexSupabaseClient): SpacesRepos
           .order('created_at', { ascending: true })
 
         if (error) throw error
-        return data || []
+        // In your order (position, then created_at); colours stay by created_at
+        return orderSpaces(data || [])
       } catch (error: unknown) {
         const message = getErrorMessage(error)
         if (message.includes('profiles') && message.includes('does not exist')) {
@@ -98,6 +107,10 @@ export const createSpacesRepository = (client: MemexSupabaseClient): SpacesRepos
           .single()
 
       let result = await update(updates)
+      if (result.error && (updates.position !== undefined || updates.hidden !== undefined) && isMissingOrderColumns(result.error)) {
+        // Space order migration (20261119120000) isn't applied: nowhere to keep it
+        throw new Error('Space order needs the profiles.position and profiles.hidden columns (migration not applied yet).')
+      }
       if (result.error && updates.color !== undefined && isMissingColorColumn(result.error)) {
         const rest = withoutColor(updates)
         if (Object.keys(rest).length === 0) {

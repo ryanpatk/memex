@@ -1,10 +1,12 @@
 import type { QueryClient, QueryKey } from '@tanstack/react-query';
 import {
   getHostname,
+  orderSpaces,
   type ComposerResult,
   type InboxProposal,
   type LinkWithTag,
   type NoteWithTags,
+  type Profile,
   type Repository,
   type SelfMessage,
   type TaskWithTags,
@@ -434,6 +436,36 @@ export const createJournalActions = ({ queryClient, repository, client, enrich, 
         throw error;
       } finally {
         void settle(keys.links);
+      }
+    },
+
+    /**
+     * Space order and hiding (docs/spaces-row.md): new places for some spaces
+     * and/or a space hidden from the pill rows. The spaces cache is patched
+     * (and re-sorted) first; a failed write puts it back.
+     */
+    async setSpaces(changes: { id: string; position?: number | null; hidden?: boolean }[]) {
+      if (!changes.length) return;
+      await queryClient.cancelQueries({ queryKey: keys.spaces });
+      const before = queryClient.getQueryData<Profile[]>(keys.spaces);
+      const byId = new Map(changes.map((c) => [c.id, c]));
+      queryClient.setQueryData<Profile[]>(keys.spaces, (rows) =>
+        orderSpaces(
+          (rows ?? []).map((row) => {
+            const change = byId.get(row.id);
+            return change ? { ...row, ...change } : row;
+          }),
+        ),
+      );
+      try {
+        await Promise.all(
+          changes.map(({ id, ...fields }) => repository.spaces.update(id, fields)),
+        );
+      } catch (error) {
+        if (before) queryClient.setQueryData(keys.spaces, before);
+        throw error;
+      } finally {
+        void settle(keys.spaces);
       }
     },
 
