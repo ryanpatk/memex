@@ -48,8 +48,8 @@ interface OpenCardSheetProps {
  * The open card (d11, decision 4): a centred card sheet in place of the 3C
  * in-place expand. Picture on the left, then the card's space pills with
  * “+ Space”, the title big, host and saved date, the description, one
- * primary action (Open) and ••• for the rest: Copy link, Pin to the bar
- * (or Pin in <space> when Cards shows one space; PinBar),
+ * primary action (Open) and ••• for the rest: Copy link, Pin (or Pin in
+ * <space> when Cards shows one space; the gold Pinned button's launcher),
  * Refresh preview, Edit…, Delete. A label edge in the space's colour runs
  * along the sheet's foot.
  */
@@ -111,7 +111,7 @@ const OpenCardSheet = ({
   const togglePin = async () => {
     try {
       await onTogglePin(!isPinned);
-      onFeedback(isPinned ? 'Unpinned.' : pinSpaceName ? `Pinned in ${pinSpaceName}.` : 'Pinned to the bar.');
+      onFeedback(isPinned ? 'Unpinned.' : pinSpaceName ? `Pinned in ${pinSpaceName}.` : 'Pinned.');
     } catch {
       cue('error');
       onFeedback('Couldn’t change the pin. Try again.');
@@ -174,8 +174,8 @@ const OpenCardSheet = ({
                         ? `Unpin from ${pinSpaceName}`
                         : `Pin in ${pinSpaceName}`
                       : isPinned
-                        ? 'Unpin from the bar'
-                        : 'Pin to the bar',
+                        ? 'Unpin'
+                        : 'Pin',
                     icon: isPinned ? <PinOff /> : <Pin />,
                     onSelect: () => void togglePin(),
                   },

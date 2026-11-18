@@ -13,6 +13,8 @@ interface PinLauncherProps {
   pins: LinkWithTag[];
   /** “Pinned” or “Pinned in Kitchen reno”. */
   title: string;
+  /** What it says when this scope has no pins. */
+  emptyText: string;
   onMove: (from: number, to: number, focusId?: string) => void;
   onUnpin: (link: LinkWithTag) => void;
 }
@@ -21,14 +23,14 @@ const COLUMNS = 3;
 
 /**
  * The Pinned launcher (design C): every pin in this scope as a grid of round
- * site buttons with their names. It opens from “+N” in the top bar (more
- * than five pins) and from the folded pin button in narrow windows. Drag a
+ * site buttons with their names, opened by the gold pin button in the top
+ * bar (PinnedButton). With no pins it says how to pin one. Drag a
  * pin to reorder; arrows move between pins and Shift+←/→ moves the focused
  * pin; “Edit pins” shows an ✕ on each to unpin (Undo in the toast). A
  * non-modal dialog: Esc closes and returns focus, clicking outside closes,
  * opening a site closes it.
  */
-const PinLauncher = ({ anchor, open, onClose, pins, title, onMove, onUnpin }: PinLauncherProps) => {
+const PinLauncher = ({ anchor, open, onClose, pins, title, emptyText, onMove, onUnpin }: PinLauncherProps) => {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const [editing, setEditing] = useState(false);
   const draggingPin = usePinDragging();
@@ -45,8 +47,10 @@ const PinLauncher = ({ anchor, open, onClose, pins, title, onMove, onUnpin }: Pi
       setEditing(false);
       return;
     }
-    // Focus the first site once it's placed
-    const frame = requestAnimationFrame(() => panelRef.current?.querySelector<HTMLElement>('.mc-launch-site')?.focus());
+    // Focus the first site once it's placed (the panel itself when there are none)
+    const frame = requestAnimationFrame(() =>
+      (panelRef.current?.querySelector<HTMLElement>('.mc-launch-site') ?? panelRef.current)?.focus(),
+    );
     const onPointer = (event: MouseEvent) => {
       const target = event.target as Node;
       if (panelRef.current?.contains(target) || anchor?.contains(target)) return;
@@ -58,11 +62,6 @@ const PinLauncher = ({ anchor, open, onClose, pins, title, onMove, onUnpin }: Pi
       document.removeEventListener('mousedown', onPointer);
     };
   }, [anchor, onClose, open]);
-
-  // Nothing left to show (the last pin was unpinned)
-  useEffect(() => {
-    if (open && pins.length === 0) onClose(true);
-  }, [onClose, open, pins.length]);
 
   const sites = () => Array.from(panelRef.current?.querySelectorAll<HTMLElement>('.mc-launch-site') ?? []);
 
@@ -98,8 +97,9 @@ const PinLauncher = ({ anchor, open, onClose, pins, title, onMove, onUnpin }: Pi
     <Popover
       anchor={anchor}
       open={open}
-      placement="bottom"
+      placement="bottom-end"
       popoverRef={panelRef}
+      tabIndex={-1}
       role="dialog"
       aria-label={title}
       className="mc-launcher"
@@ -112,11 +112,14 @@ const PinLauncher = ({ anchor, open, onClose, pins, title, onMove, onUnpin }: Pi
     >
       <div className="mc-launch-head">
         <h2 className="mc-launch-title">{title}</h2>
-        <span className="mc-keyhint" aria-label={`Option 1 to ${Math.min(PIN_SHORTCUTS, pins.length)} open these`}>
-          <kbd className="mc-kb">⌥</kbd>
-          <kbd className="mc-kb">1–{Math.min(PIN_SHORTCUTS, Math.max(1, pins.length))}</kbd>
-        </span>
+        {pins.length > 0 && (
+          <span className="mc-keyhint" aria-label={`Option 1 to ${Math.min(PIN_SHORTCUTS, pins.length)} open these`}>
+            <kbd className="mc-kb">⌥</kbd>
+            <kbd className="mc-kb">{pins.length === 1 ? '1' : `1–${Math.min(PIN_SHORTCUTS, pins.length)}`}</kbd>
+          </span>
+        )}
       </div>
+      {pins.length === 0 && <p className="mc-launch-empty">{emptyText}</p>}
       <ul className={`mc-launch-grid${editing ? ' is-editing' : ''}`} {...listProps}>
         {pins.map((link, index) => {
           const label = pinLabel(link);
@@ -147,18 +150,20 @@ const PinLauncher = ({ anchor, open, onClose, pins, title, onMove, onUnpin }: Pi
           );
         })}
       </ul>
-      <div className="mc-launch-foot">
-        {draggingPin ? (
-          <p className="mc-launch-hint">Drop on a pin to move it, or outside to unpin it.</p>
-        ) : (
-          <>
-            <p className="mc-launch-hint">Drag to reorder.</p>
-            <button type="button" className="mc-btn is-quiet is-small" aria-pressed={editing} onClick={() => setEditing((v) => !v)}>
-              {editing ? 'Done' : 'Edit pins…'}
-            </button>
-          </>
-        )}
-      </div>
+      {pins.length > 0 && (
+        <div className="mc-launch-foot">
+          {draggingPin ? (
+            <p className="mc-launch-hint">Drop on a pin to move it, or outside to unpin it.</p>
+          ) : (
+            <>
+              <p className="mc-launch-hint">Drag to reorder.</p>
+              <button type="button" className="mc-btn is-quiet is-small" aria-pressed={editing} onClick={() => setEditing((v) => !v)}>
+                {editing ? 'Done' : 'Edit pins…'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </Popover>
   );
 };

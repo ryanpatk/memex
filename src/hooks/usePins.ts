@@ -20,15 +20,15 @@ import { profileLinkKeys, useProfileLinkMembership } from './useProfileLinks';
 import { useProfiles } from './useProfiles';
 
 /*
- * Pinned sites on the web (docs/pinned-sites.md): the top bar's pins and the
- * Pinned launcher show the space you're in (a space page, or Cards with one
- * space chosen) and the global pins everywhere else. Order, positions and
- * moves come from @memex/core (pins.ts); this hook writes through the
- * Repository and patches the React Query caches first, so the bar moves at
- * once. A failed write refetches and rethrows for the caller to report.
+ * Pinned sites on the web (docs/pinned-sites.md): the Pinned launcher (the
+ * gold pin button in the top bar) shows the space you're in (a space page,
+ * or Cards with one space chosen) and the global pins everywhere else.
+ * Order, positions and moves come from @memex/core (pins.ts); this hook
+ * writes through the Repository and patches the React Query caches first,
+ * so the launcher moves at once. A failed write refetches and rethrows for the caller to report.
  */
 
-/** The space whose pins the bar shows, or null for the global pins. */
+/** The space whose pins the launcher shows, or null for the global pins. */
 export const pinScopeOf = (pathname: string, search: string, spaces: readonly Pick<Profile, 'id'>[] | undefined) => {
   const onSpacePage = matchPath(`${SPACES_PATH}/:spaceId`, pathname)?.params.spaceId;
   let id: string | null = onSpacePage ?? null;

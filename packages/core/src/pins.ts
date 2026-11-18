@@ -5,16 +5,14 @@ import type { LinkWithTag, ProfileLinkMembership } from './types';
  * Pinned sites (super favourites), 2026-11-18. Two scopes:
  *   global  — links.is_super_favorite, ordered by links.pin_position
  *   a space — profile_links.is_super_favorite, ordered by profile_links.pin_position
- * The web's top bar and launcher show the scope you're in (a space page, or
- * Cards filtered to one space) and the global pins everywhere else; a space's
+ * The web's Pinned launcher (the gold pin button in the top bar) shows the
+ * scope you're in (a space page, or Cards filtered to one space) and the
+ * global pins everywhere else; a space's
  * board and the phone's space page show that space's pins; the phone's
  * Spaces tab shows the global ones. Order: numbered pins first (lowest
  * first), then any without a number by name. Moving a pin renumbers the
  * scope 1…n and writes only the rows whose number changed.
  */
-
-/** How many pins sit in the web's top bar; the rest open from “+N”. */
-export const PINS_IN_BAR = 5;
 
 /** ⌥1…⌥9 open the first nine pins. */
 export const PIN_SHORTCUTS = 9;

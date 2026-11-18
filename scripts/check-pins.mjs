@@ -1,21 +1,22 @@
 #!/usr/bin/env node
 /* eslint-env node */
 /*
- * Pinned sites check (components/cards/PinBar.tsx, PinLauncher.tsx;
+ * Pinned sites check (components/cards/PinnedButton.tsx, PinLauncher.tsx;
  * docs/pinned-sites.md), on the demo data's seven global pins:
- *   - the bar: a divider, five pins in their order, “+2”; names on hover
- *   - the launcher: opens from “+2” with all seven, inside the window and on
- *     top, focus on the first site, Esc closes and returns focus
- *   - order: Shift+→ on a pin, a drag inside the launcher, both in the bar
- *   - unpin: dragged off the bar (Undo puts it back in its place), and from
- *     “Edit pins” in the launcher
- *   - pin: a link card dragged onto the bar's slot; the open card's •••
- *   - ⌥1 opens the first pin
+ *   - the top bar: the nav pill is only Journal · Cards · Tasks; one gold
+ *     pin button sits beside the Inbox, and hovering it moves nothing else
+ *   - the launcher: opens from the button with all seven in their order,
+ *     inside the window and on top, focus on the first site, Esc closes and
+ *     returns focus to the button
+ *   - order: Shift+→ on a site and a drag inside the launcher both reorder
+ *   - unpin: a pin dragged out of the launcher (Undo puts it back in its
+ *     place), and “Edit pins”
+ *   - pin: a link card dropped on the gold button; the open card's •••
+ *   - ⌥1 opens the first pin, not while typing
  *   - scope: Cards with one space chosen, and a space page, show that
- *     space's pins; everywhere else the global ones
- *   - narrow (1024) and phone (390) widths: one pin button opens the launcher
- *   - hovering a pin doesn't move the pill
- *   - no pins: no divider, nothing extra in the pill
+ *     space's pins (the board shows the same); everywhere else the global ones
+ *   - 1024 and 390 widths: the button is there and the launcher fits
+ *   - no pins: the launcher says how to pin one
  * Prints a table and exits 1 on any failure. SHOTS=<dir> saves screenshots.
  *
  *   VITE_MEMEX_FIXTURES=1 npx vite --port 5391
@@ -83,11 +84,12 @@ const results = [];
 const check = (name, ok, detail = '') => results.push({ name, ok: Boolean(ok), detail: String(detail) });
 
 // Page helpers (run inside the app)
-const BAR = `document.querySelector('.mc-pinbar')`;
-const barNames = () => evaluate(`[...document.querySelectorAll('.mc-pinbar .mc-pinbar-pins .mc-pinbtn')].map((a) => a.getAttribute('aria-label').replace(' (opens in a new tab)', ''))`);
+const BTN = '.mc-top .mc-pins-btn';
 const launcherNames = () => evaluate(`[...document.querySelectorAll('.mc-launcher .mc-launch-site')].map((a) => a.getAttribute('aria-label').replace(' (opens in a new tab)', ''))`);
 const visible = (sel) => evaluate(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) return false; const r = el.getBoundingClientRect(); return getComputedStyle(el).display !== 'none' && r.width > 0; })()`);
 const centre = (sel) => evaluate(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) return null; const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })()`);
+const openLauncher = async () => { await evaluate(`document.querySelector(${JSON.stringify(BTN)}).click()`); await sleep(450); };
+const closeLauncher = async () => { await key('Escape'); await sleep(250); };
 const launcherFit = () => evaluate(`(() => {
   const el = document.querySelector('.mc-launcher'); if (!el) return null;
   const r = el.getBoundingClientRect();
@@ -95,7 +97,7 @@ const launcherFit = () => evaluate(`(() => {
   const covered = pts.filter(([x, y]) => !el.contains(document.elementFromPoint(x, y))).length;
   return { inside: r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight, covered, points: pts.length };
 })()`);
-/** A synthetic HTML5 drag from one element to another (React sees real DragEvents with a shared DataTransfer). */
+/** A synthetic HTML5 drag from one element to another, or onto the page (React sees real DragEvents with a shared DataTransfer). */
 const synthDrag = (fromSel, toSel, { side = 'after', toBody = false } = {}) => evaluate(`(async () => {
   const from = document.querySelector(${JSON.stringify(fromSel)});
   const to = ${toBody ? 'document.querySelector(".mc-page, main") ?? document.body' : `document.querySelector(${JSON.stringify(toSel)})`};
@@ -113,76 +115,66 @@ const synthDrag = (fromSel, toSel, { side = 'after', toBody = false } = {}) => e
   await new Promise((r) => setTimeout(r, 300));
   return true;
 })()`);
+const toasts = () => evaluate(`[...document.querySelectorAll('.mc-toast')].map((t) => t.textContent).join(' | ')`);
 
 await send('Page.enable');
 await send('Runtime.enable');
 await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
 
 try {
-  // 1. The bar at a wide window
+  // 1. The top bar: plain nav pill, one gold button
   await size(1440, 900);
   await go('/library');
-  const names = await barNames();
-  check('bar: five pins', names.length === 5, names.join(' · '));
-  check('bar: hand-placed pins first', names[0]?.startsWith('Local-first') && names[1]?.startsWith('Calm Technology'), names.slice(0, 2).join(' · '));
-  check('bar: divider', await visible('.mc-pinbar-sep'));
-  check('bar: “+2”', (await evaluate(`document.querySelector('.mc-pin-more')?.textContent`)) === '+2');
-  check('bar: fold button hidden', !(await visible('.mc-pin-fold')));
-
-  // Hover: the name shows, the pill stays put
-  const pillBefore = await evaluate(`JSON.stringify(document.querySelector('.mc-navpill').getBoundingClientRect())`);
-  const firstPin = await centre('.mc-pinbar-pins .mc-pinbtn');
-  await mouse('mouseMoved', firstPin[0], firstPin[1]);
-  await sleep(900);
-  const tip = await evaluate(`(() => { const t = document.querySelector('.mc-pinbar-pins .mc-pinbtn .mc-pin-tip'); return { o: getComputedStyle(t).opacity, text: t.textContent }; })()`);
-  check('hover: name and ⌥1 show', tip.o === '1' && tip.text.includes('⌥1'), tip.text);
-  const pillAfter = await evaluate(`JSON.stringify(document.querySelector('.mc-navpill').getBoundingClientRect())`);
-  check('hover: pill doesn’t move', pillBefore === pillAfter);
-  await shot('bar-hover');
+  const pill = await evaluate(`[...document.querySelectorAll('.mc-top .mc-seg > *')].map((el) => el.textContent.trim())`);
+  check('nav pill is just Journal · Cards · Tasks', JSON.stringify(pill) === JSON.stringify(['Journal', 'Cards', 'Tasks']), pill.join(' · '));
+  const btn = await evaluate(`(() => { const b = document.querySelector(${JSON.stringify(BTN)}); if (!b) return null; const next = b.parentElement.querySelector('.mc-inbox-btn'); return { label: b.getAttribute('aria-label'), bg: getComputedStyle(b).backgroundColor, beforeInbox: Boolean(next) && (b.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING) > 0 }; })()`);
+  check('one gold pin button, beside the Inbox', btn && btn.beforeInbox && btn.bg === 'rgb(255, 201, 40)' && btn.label === 'Pinned, 7 sites', JSON.stringify(btn));
+  check('no pins or +N in the bar', (await evaluate(`document.querySelectorAll('.mc-top a[target="_blank"]').length`)) === 0);
+  const barBefore = await evaluate(`JSON.stringify([...document.querySelectorAll('.mc-top .mc-seg, .mc-top .mc-inbox-btn, .mc-top .mc-avatar')].map((e) => e.getBoundingClientRect()))`);
+  const c = await centre(BTN);
+  await mouse('mouseMoved', c[0], c[1]);
+  await sleep(400);
+  check('hovering the button moves nothing else', barBefore === (await evaluate(`JSON.stringify([...document.querySelectorAll('.mc-top .mc-seg, .mc-top .mc-inbox-btn, .mc-top .mc-avatar')].map((e) => e.getBoundingClientRect()))`)));
+  await shot('bar');
   await mouse('mouseMoved', 700, 600);
 
   // 2. The launcher
-  await evaluate(`document.querySelector('.mc-pin-more').click()`);
-  await sleep(500);
-  const all = await launcherNames();
-  check('launcher: all seven pins', all.length === 7, all.join(' · '));
+  await openLauncher();
+  const names = await launcherNames();
+  check('launcher: all seven, hand-placed first', names.length === 7 && names[0].startsWith('Local-first') && names[1].startsWith('Calm Technology'), names.join(' · '));
   const fit = await launcherFit();
   check('launcher: inside the window, on top', fit && fit.inside && fit.covered === 0, JSON.stringify(fit));
-  check('launcher: focus on the first site', await evaluate(`document.activeElement?.classList.contains('mc-launch-site') && document.activeElement === document.querySelector('.mc-launch-site')`));
+  check('launcher: focus on the first site', await evaluate(`document.activeElement === document.querySelector('.mc-launch-site')`));
+  check('button holds its open look', (await evaluate(`document.querySelector(${JSON.stringify(BTN)}).getAttribute('aria-expanded')`)) === 'true');
   await shot('launcher');
-  await key('Escape');
-  await sleep(300);
-  check('launcher: Esc closes, focus back on “+2”', !(await visible('.mc-launcher')) && (await evaluate(`document.activeElement?.classList.contains('mc-pin-more')`)));
+  await closeLauncher();
+  check('Esc closes, focus back on the button', !(await visible('.mc-launcher')) && (await evaluate(`document.activeElement?.classList.contains('mc-pins-btn')`)));
 
-  // 3. Order: Shift+→ on the first pin
-  await evaluate(`document.querySelector('.mc-pinbar-pins .mc-pinbtn').focus()`);
+  // 3. Order: Shift+→ on the first site, then a drag
+  await openLauncher();
   await key('ArrowRight', 'ArrowRight', 8);
   await sleep(400);
-  const moved = await barNames();
+  const moved = await launcherNames();
   check('Shift+→ moves the focused pin', moved[0] === names[1] && moved[1] === names[0], moved.slice(0, 2).join(' · '));
   check('Shift+→ keeps focus on the moved pin', await evaluate(`document.activeElement?.getAttribute('aria-label')?.startsWith(${JSON.stringify(names[0])})`));
-
-  // Drag inside the launcher: the first tile after the fourth
-  await evaluate(`document.querySelector('.mc-pin-more').click()`);
-  await sleep(400);
   const beforeDrag = await launcherNames();
   await synthDrag('.mc-launch-tile:nth-child(1)', '.mc-launch-tile:nth-child(4)', { side: 'after' });
   const afterDrag = await launcherNames();
   check('drag in the launcher reorders', afterDrag[3] === beforeDrag[0] && afterDrag[0] === beforeDrag[1], afterDrag.slice(0, 4).join(' · '));
-  check('the bar follows the launcher’s order', JSON.stringify((await barNames())) === JSON.stringify(afterDrag.slice(0, 5)));
-  await key('Escape');
-  await sleep(200);
 
-  // 4. Unpin by dragging off the bar, then Undo
-  const order = await barNames();
-  await synthDrag('.mc-pinbar-pins .mc-pinbtn:nth-child(2)', null, { toBody: true });
-  const afterUnpin = await barNames();
-  check('drag off the bar unpins', !afterUnpin.includes(order[1]) && (await evaluate(`document.querySelector('.mc-pin-more')?.textContent`)) === '+1', afterUnpin.join(' · '));
-  const toast = await evaluate(`[...document.querySelectorAll('.mc-toast')].map((t) => t.textContent).join(' | ')`);
-  check('unpin toast offers Undo', /Unpinned/.test(toast) && /Undo/.test(toast), toast);
+  // 4. Unpin by dragging a pin out of the launcher, then Undo
+  const order = await launcherNames();
+  await synthDrag('.mc-launch-tile:nth-child(2)', null, { toBody: true });
+  await sleep(200);
+  if (!(await visible('.mc-launcher'))) await openLauncher();
+  const afterUnpin = await launcherNames();
+  check('dragging a pin out unpins it', afterUnpin.length === 6 && !afterUnpin.includes(order[1]), afterUnpin.join(' · '));
+  const t = await toasts();
+  check('unpin toast offers Undo', /Unpinned/.test(t) && /Undo/.test(t), t);
   await evaluate(`[...document.querySelectorAll('.mc-toast button')].find((b) => b.textContent.trim() === 'Undo')?.click()`);
   await sleep(500);
-  check('Undo puts it back in its place', JSON.stringify(await barNames()) === JSON.stringify(order), (await barNames()).join(' · '));
+  check('Undo puts it back in its place', JSON.stringify(await launcherNames()) === JSON.stringify(order), (await launcherNames()).slice(0, 3).join(' · '));
+  await closeLauncher();
 
   // 5. ⌥1 opens the first pin
   await evaluate(`window.__opened = []; window.open = (url) => { window.__opened.push(url); return null; }; document.activeElement?.blur()`);
@@ -194,105 +186,83 @@ try {
   await key('¡', 'Digit1', 1);
   await sleep(200);
   check('⌥1 does nothing while typing', (await evaluate(`window.__opened.length`)) === 1);
+  await evaluate(`document.activeElement?.blur()`);
 
-  // 6. Pin a card by dragging it onto the bar (an unpinned link card)
-  const unpinnedCard = await evaluate(`(() => {
-    const pinned = new Set([...document.querySelectorAll('.mc-launch-site, .mc-pinbar .mc-pinbtn')].map((a) => a.getAttribute('href')));
-    const card = [...document.querySelectorAll('[data-item-key^="link:"]')].find((c) => !c.querySelector('.mc-pin'));
-    if (!card) return null; card.setAttribute('data-check-pin', '1'); return card.getAttribute('data-item-key');
-  })()`);
-  const countBefore = (await barNames()).length + Number((await evaluate(`document.querySelector('.mc-pin-more')?.textContent ?? '+0'`)).slice(1));
+  // 6. Drop a link card on the gold button
   const dropped = await evaluate(`(async () => {
-    const card = document.querySelector('[data-check-pin="1"]');
+    const card = [...document.querySelectorAll('[data-item-key^="link:"]')].find((c) => !c.querySelector('.mc-pin'));
+    if (!card) return 'no card';
     const dt = new DataTransfer();
     card.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt }));
     await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 120)));
-    const slot = document.querySelector('.mc-pin-drop');
-    if (!slot) return 'no slot';
-    const r = slot.getBoundingClientRect();
-    const opts = { bubbles: true, cancelable: true, dataTransfer: dt, clientX: r.left + 10, clientY: r.top + 10 };
-    slot.dispatchEvent(new DragEvent('dragenter', opts)); slot.dispatchEvent(new DragEvent('dragover', opts));
+    const btn = document.querySelector(${JSON.stringify(BTN)});
+    const ready = btn.classList.contains('is-drop-ready');
+    const r = btn.getBoundingClientRect();
+    const opts = { bubbles: true, cancelable: true, dataTransfer: dt, clientX: r.left + 20, clientY: r.top + 20 };
+    btn.dispatchEvent(new DragEvent('dragenter', opts)); btn.dispatchEvent(new DragEvent('dragover', opts));
     await new Promise((r) => setTimeout(r, 60));
-    slot.dispatchEvent(new DragEvent('drop', opts));
+    const over = btn.classList.contains('is-drop-over');
+    btn.dispatchEvent(new DragEvent('drop', opts));
     card.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }));
     await new Promise((r) => setTimeout(r, 400));
-    return 'ok';
+    return (ready ? 'ready ' : '') + (over ? 'over ' : '') + 'ok';
   })()`);
-  const countAfter = (await barNames()).length + Number((await evaluate(`document.querySelector('.mc-pin-more')?.textContent ?? '+0'`)).slice(1));
-  check('a card dropped on the bar is pinned (at the end)', dropped === 'ok' && countAfter === countBefore + 1, `${unpinnedCard}: ${countBefore} → ${countAfter} (${dropped})`);
+  const label8 = await evaluate(`document.querySelector(${JSON.stringify(BTN)}).getAttribute('aria-label')`);
+  check('a card dropped on the button is pinned', dropped === 'ready over ok' && label8 === 'Pinned, 8 sites', `${dropped}; ${label8}; ${await toasts()}`);
+  check('the button is back to normal after the drop', !(await evaluate(`document.querySelector(${JSON.stringify(BTN)}).matches('.is-drop-ready, .is-drop-over')`)));
 
-  // 7. The open card's ••• says Pin to the bar / Unpin from the bar
+  // 7. The open card's •••
   await go('/library?link=ln-10');
   await evaluate(`document.querySelector('dialog[open] button[aria-label="More actions"]')?.click()`);
   await sleep(300);
   const items = await evaluate(`[...document.querySelectorAll('[role="menu"] [role^="menuitem"]')].map((b) => b.textContent)`);
-  check('open card ••• on a pinned link: “Unpin from the bar”', items.some((t) => t.includes('Unpin from the bar')), items.join(' · '));
+  check('open card ••• on a pinned link: “Unpin”', items.includes('Unpin'), items.join(' · '));
   await key('Escape');
 
-  // 8. Scope: one space on Cards, a space page
+  // 8. Scope
   await go('/library?space=sp-kitchen');
-  const kitchen = await barNames();
-  const label = await evaluate(`${BAR}?.getAttribute('aria-label') ?? ''`);
-  check('Cards with one space: that space’s pins', label.includes('Kitchen') && JSON.stringify(kitchen) !== JSON.stringify(names), `${label}: ${kitchen.join(' · ')}`);
+  await openLauncher();
+  const kitchen = await launcherNames();
+  const title = await evaluate(`document.querySelector('.mc-launch-title')?.textContent`);
+  check('Cards with one space: that space’s pins', title === 'Pinned in Kitchen reno' && kitchen.length === 2, `${title}: ${kitchen.join(' · ')}`);
+  await closeLauncher();
   await go('/spaces/sp-kitchen');
-  const spacePage = await barNames();
-  check('space page: the same pins as Cards in that space', JSON.stringify(spacePage) === JSON.stringify(kitchen), spacePage.join(' · '));
+  await openLauncher();
+  const spacePage = await launcherNames();
+  check('space page: the same pins', JSON.stringify(spacePage) === JSON.stringify(kitchen), spacePage.join(' · '));
+  await closeLauncher();
   const board = await evaluate(`[...document.querySelectorAll('.mc-sp-pins a')].map((a) => a.getAttribute('aria-label').replace(' (opens in a new tab)', ''))`);
   check('space board keeps its pins, same order', JSON.stringify(board) === JSON.stringify(spacePage), board.join(' · '));
-  await shot('space');
+  await go('/spaces/sp-jobs');
+  await openLauncher();
+  const empty = await evaluate(`document.querySelector('.mc-launch-empty')?.textContent ?? ''`);
+  check('a space with no pins says how to pin one', /Nothing pinned in Job search/.test(empty) && (await launcherNames()).length === 0, empty);
+  await shot('empty-space');
+  await closeLauncher();
   await go('/tasks');
-  check('outside a space: the global pins', (await barNames()).length === 5 && !(await evaluate(`${BAR}.getAttribute('aria-label')`)).includes(' in '));
+  await openLauncher();
+  check('outside a space: the global pins', (await launcherNames()).length === 7 && (await evaluate(`document.querySelector('.mc-launch-title')?.textContent`)) === 'Pinned');
+  await closeLauncher();
 
-  // 9. Narrow window: one pin button
-  await size(1024, 700);
-  await go('/library');
-  check('1024: pins folded into one button', !(await visible('.mc-pinbar-pins')) && (await visible('.mc-pin-fold')));
-  await evaluate(`document.querySelector('.mc-pin-fold').click()`);
-  await sleep(500);
-  const narrowFit = await launcherFit();
-  check('1024: the button opens the launcher', (await launcherNames()).length === 7 && narrowFit?.inside && narrowFit.covered === 0, JSON.stringify(narrowFit));
-  await shot('narrow');
-  await key('Escape');
+  // 9. Narrow and phone widths
+  for (const [w, h, mobile, name] of [[1024, 700, false, 'narrow'], [390, 844, true, 'phone']]) {
+    await size(w, h, mobile);
+    await go('/library');
+    const inBar = await evaluate(`(() => { const b = document.querySelector(${JSON.stringify(BTN)}); if (!b) return null; const r = b.getBoundingClientRect(); return r.width > 0 && r.left >= 0 && r.right <= innerWidth && r.top >= 0; })()`);
+    await openLauncher();
+    const f = await launcherFit();
+    check(`${w}: button in the top bar, launcher fits`, inBar && f?.inside && f.covered === 0, JSON.stringify(f));
+    await shot(name);
+    await closeLauncher();
+  }
 
-  // 10. Phone width: the button sits in the tab bar; the launcher opens above it
-  await size(390, 844, true);
-  await go('/library');
-  const tab = await evaluate(`(() => { const b = document.querySelector('.mc-pin-fold'); const bar = document.querySelector('.mc-navpill'); if (!b) return null; const r = b.getBoundingClientRect(); const s = bar.getBoundingClientRect(); return { inBar: r.top >= s.top && r.bottom <= s.bottom, inside: r.right <= innerWidth && r.left >= 0, fixed: getComputedStyle(bar).position }; })()`);
-  check('390: pin button in the tab bar', tab?.inBar && tab.inside && tab.fixed === 'fixed', JSON.stringify(tab));
-  await evaluate(`document.querySelector('.mc-pin-fold').click()`);
-  await sleep(500);
-  const phoneFit = await launcherFit();
-  check('390: launcher fits the screen', phoneFit?.inside && phoneFit.covered === 0, JSON.stringify(phoneFit));
-  await shot('phone');
-  await key('Escape');
-
-  // 11. Dark
+  // 10. Dark
   await size(1440, 900);
   await go('/library');
   await evaluate(`document.documentElement.setAttribute('data-theme', 'dark')`);
-  await evaluate(`document.querySelector('.mc-pin-more').click()`);
-  await sleep(400);
+  await openLauncher();
   await shot('dark');
-  await key('Escape');
-
-  // 12. No pins: unpin everything from “Edit pins”, then nothing extra shows
-  await go('/library');
-  await evaluate(`document.querySelector('.mc-pin-more').click()`);
-  await sleep(300);
-  await evaluate(`[...document.querySelectorAll('.mc-launcher button')].find((b) => b.textContent.startsWith('Edit pins'))?.click()`);
-  for (let i = 0; i < 10; i++) {
-    const x = await evaluate(`(() => { const b = document.querySelector('.mc-launch-x'); if (!b) return false; b.click(); return true; })()`);
-    if (!x) break;
-    await sleep(250);
-  }
-  // The last few are in the bar once the launcher closes: unpin them by dragging off
-  for (let i = 0; i < 6; i++) {
-    if (!(await evaluate(`Boolean(document.querySelector('.mc-pinbar-pins .mc-pinbtn'))`))) break;
-    await synthDrag('.mc-pinbar-pins .mc-pinbtn', null, { toBody: true });
-  }
-  check('no pins: no divider, no pin group', !(await evaluate(`Boolean(document.querySelector('.mc-pinbar'))`)));
-  check('no pins: the pill is just the three words', (await evaluate(`document.querySelectorAll('.mc-navpill a, .mc-navpill button').length`)) === 3);
-  await shot('empty');
+  await closeLauncher();
 } catch (error) {
   check('script ran', false, error.message);
 }

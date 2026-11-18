@@ -194,27 +194,11 @@ html:root .memex-offline-notice {
   padding: 12px 24px;
 }
 
-/* The top bar paints over the page (pin names hang below it) */
-@media (min-width: 761px) {
-  .mc-top {
-    position: relative;
-    z-index: 5;
-  }
-}
-
 /* ---------- Narrow windows ---------- */
 
 @media (max-width: 1100px) {
   .mc-top {
     padding: 16px 32px 0;
-  }
-  /* Pins fold into one button that opens the launcher */
-  .mc-seg .mc-pinbar .mc-pinbar-pins,
-  .mc-seg .mc-pinbar .mc-pin-more {
-    display: none;
-  }
-  .mc-seg .mc-pinbar .mc-pin-fold {
-    display: grid;
   }
   .mc-page {
     padding: 16px 32px 96px;
@@ -293,28 +277,6 @@ html:root .memex-offline-notice {
     text-align: center;
     padding: 0 8px;
     font-size: 18px;
-  }
-  .mc-top .mc-seg-nav {
-    flex: 1;
-    min-width: 0;
-    justify-content: space-around;
-  }
-  .mc-top .mc-seg-nav a {
-    min-width: 0;
-  }
-  .mc-top .mc-pinbar {
-    flex: none;
-  }
-  .mc-top .mc-seg .mc-pinbar .mc-pinbtn {
-    flex: none;
-    padding: 0;
-  }
-  .mc-top .mc-seg .mc-pinbar-sep {
-    margin: 0 4px;
-  }
-  .mc-pinbar-hint {
-    top: auto;
-    bottom: calc(100% + 18px);
   }
   dialog.mc-sheet {
     padding: 32px 24px;

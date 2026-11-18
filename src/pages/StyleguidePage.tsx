@@ -1064,72 +1064,30 @@ const StyleguidePage = () => {
       <Section
         id="s15"
         title="Pinned sites"
-        lede="Pins sit in the nav pill after a divider: five round site buttons, then +N for the rest, which opens the launcher. Under 1100px they fold into one gold pin. Inside a space they are that space's pins. ⌥1–9 opens them; drag to reorder."
+        lede="One gold pin button beside the Inbox opens the launcher: every pin, in your order. Inside a space it shows that space's pins. ⌥1–9 opens them; drag to reorder; drop a link card on the button to pin it."
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 48, alignItems: 'flex-start' }}>
-          <Cell name="Five pins and +2">
-            <div className="mc-seg mc-navpill" style={{ display: 'inline-flex' }}>
-              <div className="mc-seg-nav">
-                <button type="button" className="is-on">Cards</button>
-              </div>
-              <div className="mc-pinbar">
-                <span className="mc-pinbar-sep" aria-hidden="true" />
-                <span className="mc-pinbar-pins">
-                  {SG_PINS.slice(0, 5).map((p) => (
-                    <button key={p} type="button" className="mc-pinbtn" aria-label={p}>
-                      <span className="mc-pin-letter" style={{ width: 28, height: 28 }} aria-hidden="true">
-                        {p.slice(0, 1)}
-                      </span>
-                    </button>
-                  ))}
-                </span>
-                <button type="button" className="mc-pinbtn mc-pin-more" aria-label="2 more pinned sites">
-                  +2
-                </button>
-              </div>
-            </div>
+          <Cell name="The Pinned button">
+            <button type="button" className="mc-rb mc-pins-btn" aria-label="Pinned, 7 sites">
+              <Pin aria-hidden="true" />
+            </button>
           </Cell>
-          <Cell name="Hover: the name and its key">
-            <div className="mc-seg mc-navpill" style={{ display: 'inline-flex', marginBottom: 64 }}>
-              <div className="mc-pinbar">
-                <span className="mc-pinbar-pins">
-                  <button type="button" className="mc-pinbtn" aria-label={SG_PINS[0]} style={{ background: 'var(--mc-well)', transform: 'translateY(-2px)' }}>
-                    <span className="mc-pin-letter" style={{ width: 28, height: 28 }} aria-hidden="true">
-                      {SG_PINS[0].slice(0, 1)}
-                    </span>
-                    <span className="mc-pin-tip is-shown" aria-hidden="true">
-                      {SG_PINS[0]} <span className="mc-pin-tip-key">⌥1</span>
-                    </span>
-                  </button>
-                </span>
-              </div>
-            </div>
+          <Cell name="Open">
+            <button type="button" className="mc-rb mc-pins-btn" aria-label="Pinned, 7 sites" aria-expanded="true">
+              <Pin aria-hidden="true" />
+            </button>
           </Cell>
-          <Cell name="Dragging a link card: drop to pin">
-            <div className="mc-seg mc-navpill" style={{ display: 'inline-flex', marginBottom: 64 }}>
-              <div className="mc-pinbar">
-                <span className="mc-pinbar-sep" aria-hidden="true" />
-                <span className="mc-pinbtn mc-pin-drop is-over" aria-hidden="true">
-                  <Plus />
-                  <span className="mc-pin-tip is-shown">Drop to pin</span>
-                </span>
-              </div>
-            </div>
+          <Cell name="A link card is dragged">
+            <button type="button" className="mc-rb mc-pins-btn is-drop-ready" aria-label="Pinned: drop to pin">
+              <Pin aria-hidden="true" />
+            </button>
           </Cell>
-          <Cell name="Narrow window: one pin button">
-            <div className="mc-seg mc-navpill" style={{ display: 'inline-flex' }}>
-              <div className="mc-seg-nav">
-                <button type="button" className="is-on">Cards</button>
-              </div>
-              <div className="mc-pinbar">
-                <span className="mc-pinbar-sep" aria-hidden="true" />
-                <button type="button" className="mc-pinbtn mc-pin-fold" style={{ display: 'grid' }} aria-label="Pinned: 7 sites">
-                  <Pin aria-hidden="true" />
-                </button>
-              </div>
-            </div>
+          <Cell name="Over it: drop to pin">
+            <button type="button" className="mc-rb mc-pins-btn is-drop-ready is-drop-over" aria-label="Pinned: drop to pin">
+              <Pin aria-hidden="true" />
+            </button>
           </Cell>
-          <Cell name="The launcher (from +N or the pin button)">
+          <Cell name="The launcher">
             <div className="mc-launcher" style={{ position: 'static', maxHeight: 'none', width: 432 }}>
               <div className="mc-launch-head">
                 <h3 className="mc-launch-title">Pinned</h3>
@@ -1158,6 +1116,14 @@ const StyleguidePage = () => {
                   Edit pins…
                 </button>
               </div>
+            </div>
+          </Cell>
+          <Cell name="Nothing pinned in a space yet">
+            <div className="mc-launcher" style={{ position: 'static', maxHeight: 'none', width: 432 }}>
+              <div className="mc-launch-head">
+                <h3 className="mc-launch-title">Pinned in Kitchen reno</h3>
+              </div>
+              <p className="mc-launch-empty">Nothing pinned in Kitchen reno yet. Pin a save from its card’s ••• or drop a card on the pin button.</p>
             </div>
           </Cell>
         </div>

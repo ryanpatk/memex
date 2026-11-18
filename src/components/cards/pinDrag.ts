@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type DragEvent as ReactDragEvent } from 'react';
 
 /*
- * Dragging pins into order (the top bar and the Pinned launcher). A pin's
+ * Dragging pins into order inside the Pinned launcher. A pin's
  * own drag carries PIN_DRAG_TYPE (plus its URL, so it still drops into
  * another app as a link). Over a pin list, the nearest pin shows where it
  * will land (before or after it); dropping there moves it. Dropping it
@@ -17,7 +17,6 @@ let dragging: { id: string; from: number } | null = null;
 const listeners = new Set<(active: boolean) => void>();
 const setDragging = (next: typeof dragging) => {
   dragging = next;
-  document.documentElement.classList.toggle('is-pin-dragging', next !== null);
   listeners.forEach((l) => l(next !== null));
 };
 
