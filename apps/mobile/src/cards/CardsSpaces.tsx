@@ -1,10 +1,14 @@
 import { useMemo } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text as RNText, View } from 'react-native';
+import { globalPins, type LinkWithTag, type PinPosition } from '@memex/core';
 import { useRouter } from 'expo-router';
 import { Shapes } from 'lucide-react-native';
 import { summarizeSpaces } from '../data/journal';
 import { taskTotals } from '../data/tasks';
 import { useJournal } from '../data/useJournal';
+import { useEntryActions } from '../journal/useEntryActions';
+import { PinnedSites } from '../spaces/PinnedSites';
+import { usePinMenu } from '../spaces/usePinMenu';
 import { AccountButton } from '../ui/AccountButton';
 import { Canvas } from '../ui/Canvas';
 import { FeedError, FeedSkeleton } from '../ui/FeedStates';
@@ -14,9 +18,10 @@ import { SpaceTile } from './SpaceTile';
 import { useCards } from './useCards';
 
 /*
- * The Spaces tab (m02, x03 tiles): a wide ink Tasks
- * tile with the open count on top, then each space as a colour tile with its
- * count big. A tile opens the space's board.
+ * The Spaces tab (m02, x03 tiles): your global pinned sites on top (the
+ * web's top-bar pins; long-press one to move or unpin it), a wide ink Tasks
+ * tile with the open count, then each space as a colour tile with its count
+ * big. A tile opens the space's board.
  */
 export const CardsSpaces = () => {
   const c = useCards();
@@ -24,6 +29,13 @@ export const CardsSpaces = () => {
   const { journal, isLoading, unavailable, error, refreshing, refresh } = useJournal();
   const summaries = useMemo(() => (journal ? summarizeSpaces(journal) : []), [journal]);
   const totals = journal ? taskTotals(journal.tasks) : null;
+  const actions = useEntryActions();
+  const pins = useMemo(
+    () => (journal ? globalPins(journal.entries.flatMap((e) => (e.kind === 'link' ? [e.link] : [] as LinkWithTag[]))) : []),
+    [journal],
+  );
+  const positions = useMemo(() => new Map<string, PinPosition>(pins.map((p) => [p.id, p.pin_position ?? null])), [pins]);
+  const pinMenu = usePinMenu({ pins, spaceId: null, positions, onOpen: actions.openLink });
 
   return (
     <Canvas>
@@ -38,6 +50,14 @@ export const CardsSpaces = () => {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.colors.muted} />}
           accessibilityLabel="Spaces"
         >
+          {pins.length > 0 && (
+            <View style={styles.pins}>
+              <RNText style={[c.type.label, styles.pinsLabel, { color: c.colors.muted }]} accessibilityRole="header">
+                Pinned
+              </RNText>
+              <PinnedSites links={pins} onOpen={actions.openLink} onLongPress={pinMenu.show} actionsFor={pinMenu.rows} />
+            </View>
+          )}
           {totals && (
             <SpaceTile
               wide
@@ -76,4 +96,7 @@ export const CardsSpaces = () => {
 const styles = StyleSheet.create({
   scroll: { paddingTop: 4, paddingBottom: 40, paddingHorizontal: 20, gap: 14 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
+  // The row scrolls edge to edge; its own padding lines the pins up with the tiles
+  pins: { marginHorizontal: -20, marginBottom: -6 },
+  pinsLabel: { paddingHorizontal: 20, marginBottom: 6 },
 });

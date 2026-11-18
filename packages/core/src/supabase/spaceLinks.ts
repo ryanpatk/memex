@@ -13,12 +13,19 @@ export const createSpaceLinksRepository = (client: MemexSupabaseClient): SpaceLi
       try {
         const { data, error } = await client
           .from('profile_links')
-          .select('profile_id, link_id, is_super_favorite')
+          .select('profile_id, link_id, is_super_favorite, pin_position')
 
         if (error) throw error
         return data || []
       } catch (error: unknown) {
         const message = getErrorMessage(error)
+        // Pin order (migration 20261118120000) not applied yet: pins sort by name
+        if (message.includes('pin_position')) {
+          const { data, error: fallbackError } = await client
+            .from('profile_links')
+            .select('profile_id, link_id, is_super_favorite')
+          if (!fallbackError) return data || []
+        }
         // Migration for per-space super favorites not applied yet — the error
         // reads "column profile_links.is_super_favorite does not exist", so this
         // must be checked before the table-missing case. Degrade to plain
@@ -37,18 +44,23 @@ export const createSpaceLinksRepository = (client: MemexSupabaseClient): SpaceLi
       }
     },
 
-    /** Pin/unpin a link to the header inside one space. */
+    /** Pin/unpin a link in one space's top bar, optionally setting its place. */
     setSuperFavorite: async (
       profileId: string,
       linkId: string,
       isSuperFavorite: boolean,
+      pinPosition?: number | null,
     ): Promise<void> => {
-      const { error } = await client
-        .from('profile_links')
-        .update({ is_super_favorite: isSuperFavorite })
-        .eq('profile_id', profileId)
-        .eq('link_id', linkId)
-
+      const run = (values: { is_super_favorite: boolean; pin_position?: number | null }) =>
+        client.from('profile_links').update(values).eq('profile_id', profileId).eq('link_id', linkId)
+      const values = pinPosition === undefined ? { is_super_favorite: isSuperFavorite } : { is_super_favorite: isSuperFavorite, pin_position: pinPosition }
+      const { error } = await run(values)
+      if (error && pinPosition !== undefined && getErrorMessage(error).includes('pin_position')) {
+        // The pin-order migration isn't applied: pin without a place
+        const retry = await run({ is_super_favorite: isSuperFavorite })
+        if (retry.error) throw retry.error
+        return
+      }
       if (error) throw error
     },
 

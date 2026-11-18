@@ -34,8 +34,8 @@ export interface JournalInput {
   tasks: TaskWithTags[];
   spaces: Profile[];
   membership: {
-    /** `is_super_favorite` pins a link in that space (the board's pinned sites). */
-    links: { profile_id: string; link_id: string; is_super_favorite?: boolean }[];
+    /** `is_super_favorite` pins a link in that space (the board's pinned sites); `pin_position` is its place. */
+    links: { profile_id: string; link_id: string; is_super_favorite?: boolean; pin_position?: number | null }[];
     notes: { profile_id: string; note_id: string }[];
     tasks: { profile_id: string; task_id: string }[];
   };

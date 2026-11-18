@@ -15,13 +15,13 @@ import {
 import { useJournal } from '../hooks/useJournal';
 import { useFeedbackToast } from '../hooks/useFeedbackToast';
 import { useProfiles } from '../hooks/useProfiles';
-import { useProfileLinkMembership, useSetProfileLinkSuperFavorite } from '../hooks/useProfileLinks';
+import { useProfileLinkMembership } from '../hooks/useProfileLinks';
+import { usePins } from '../hooks/usePins';
 import { useProfileTaskMembership } from '../hooks/useProfileTasks';
 import { useTaskActions } from '../hooks/useTaskActions';
 import JournalFeed, { type JournalFeedHandle } from '../components/journal/JournalFeed';
 import { FeedbackToast } from '../components/ui';
 import LoadErrorState from '../components/LoadErrorState';
-import { HANDLES_ERRORS } from '../utils/mutationErrors';
 import { loadStateOf } from '../utils/loadState';
 import { JOURNAL_PATH, LIBRARY_PATH, LINK_PARAM, NOTE_PARAM, SPACE_PARAM, TASKS_PATH } from '../constants/modules';
 import { cue } from '../utils/sound';
@@ -55,8 +55,6 @@ const SpacePage = () => {
   const spaceLoad = loadStateOf([profilesQuery]);
   const { data: linkRows } = useProfileLinkMembership();
   const { data: taskRows } = useProfileTaskMembership();
-  // togglePin reports its own failure
-  const setPin = useSetProfileLinkSuperFavorite(HANDLES_ERRORS);
   const { toast, flash, dismiss, handleAnimationEnd } = useFeedbackToast();
   const feedRef = useRef<JournalFeedHandle>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -88,20 +86,17 @@ const SpacePage = () => {
     [board],
   );
 
+  // The same pins as the top bar's while you're here (usePins: order, places, Undo)
+  const { pin: pinLinks, unpin: unpinLink } = usePins(spaceId);
   const togglePin = useCallback(
     (link: LinkWithTag, pinned: boolean) => {
       cue('toggle');
-      setPin.mutate(
-        { profileId: spaceId, linkId: link.id, isSuperFavorite: pinned },
-        {
-          onError: () => {
-            cue('error');
-            flash('Couldn’t change the pin. Try again.');
-          },
-        },
-      );
+      (pinned ? pinLinks([link.id]) : unpinLink(link.id)).catch(() => {
+        cue('error');
+        flash('Couldn’t change the pin. Try again.');
+      });
     },
-    [flash, setPin, spaceId],
+    [flash, pinLinks, unpinLink],
   );
 
   const openNote = useCallback((noteId: string) => navigate(`${LIBRARY_PATH}?${NOTE_PARAM}=${noteId}`), [navigate]);

@@ -13,6 +13,7 @@ export * from './tlds';
 export * from './links';
 export * from './stream/items';
 export * from './stream/filters';
+export * from './pins';
 export * from './stream/sort';
 export * from './stream/views';
 export * from './stream/table';

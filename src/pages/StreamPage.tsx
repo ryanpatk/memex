@@ -99,6 +99,7 @@ import { useAddToSpace } from '../hooks/useAddToSpace';
 import { useAllLinks, useDeleteLink, useUpdateLink } from '../hooks/useLinks';
 import { useAllNotes, useDeleteNote, useUpdateNote } from '../hooks/useNotes';
 import { useProfileLinkMembership } from '../hooks/useProfileLinks';
+import { usePinScope, usePins } from '../hooks/usePins';
 import { useProfileNoteMembership } from '../hooks/useProfileNotes';
 import { useProfileTaskMembership } from '../hooks/useProfileTasks';
 import { useProfiles } from '../hooks/useProfiles';
@@ -654,7 +655,10 @@ const StreamPage = () => {
     if (expandedLinkId && allLinks && !expandedLink) setExpandedLinkId(null);
   }, [allLinks, expandedLink, expandedLinkId, setExpandedLinkId]);
 
-  const expandedIsPinned = Boolean(expandedLink?.is_super_favorite);
+  // Pins follow the top bar: this space's when one space is chosen, the global ones otherwise
+  const pinScope = usePinScope();
+  const pinsApi = usePins(pinScope.spaceId);
+  const expandedIsPinned = expandedLinkId ? pinsApi.isPinned(expandedLinkId) : false;
 
   const handleOpenLinkDetails = useCallback(
     (link: LinkWithTag) => {
@@ -666,13 +670,15 @@ const StreamPage = () => {
     [clearItemSelection, expandedLinkId, setExpandedLinkId, setSelectionMode],
   );
 
+  const { pin: pinLinks, unpin: unpinLink } = pinsApi;
   const handleTogglePin = useCallback(
     async (next: boolean) => {
       if (!expandedLinkId) return;
       cue('toggle');
-      await updateLink.mutateAsync({ id: expandedLinkId, updates: { is_super_favorite: next } });
+      if (next) await pinLinks([expandedLinkId]);
+      else await unpinLink(expandedLinkId);
     },
-    [expandedLinkId, updateLink],
+    [expandedLinkId, pinLinks, unpinLink],
   );
 
   // Field-level merge: a fresh value overwrites, a missing one never blanks
@@ -1458,7 +1464,7 @@ const StreamPage = () => {
           onImageError={previewBroken}
           selected={isSelected}
           selectionMode={selectionMode}
-          pinned={Boolean(item.link.is_super_favorite)}
+          pinned={pinsApi.isPinned(item.link.id)}
         />
       );
     }
@@ -1806,6 +1812,7 @@ const StreamPage = () => {
           link={openLink}
           onClose={() => setExpandedLinkId(null)}
           isPinned={expandedIsPinned}
+          pinSpaceName={pinScope.spaceName}
           onTogglePin={handleTogglePin}
           onOpen={() => openLink && handleOpenLink(openLink)}
           onRescrape={handleRescrape}

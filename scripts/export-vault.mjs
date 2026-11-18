@@ -404,6 +404,7 @@ function buildModel(data, opts, spaceColors) {
         id: item.row.id,
         order: join.order_index ?? 0,
         pinned: join.is_super_favorite === true ? true : undefined,
+        pinPosition: join.is_super_favorite === true && Number.isInteger(join.pin_position) ? join.pin_position : undefined,
         added: join.created_at,
         item,
       });
@@ -526,6 +527,7 @@ function renderLink(item, model, assets) {
     pinnedIn: item.pinnedIn.length ? item.pinnedIn.map((s) => wikilink(s.path, s.name)) : undefined,
     tags: item.tags,
     superFavorite: link.is_super_favorite === true ? true : undefined,
+    superFavoritePosition: link.is_super_favorite === true && Number.isInteger(link.pin_position) ? link.pin_position : undefined,
     order: link.order_index ?? 0,
     description: link.description ?? undefined,
     image: preview?.status === 'ok' ? preview.file : undefined,
@@ -641,7 +643,7 @@ function renderBoard(space) {
   const typeOrder = { link: 0, note: 1, task: 2 };
   const items = [...space.members]
     .sort((a, b) => typeOrder[a.type] - typeOrder[b.type] || a.order - b.order || String(a.added).localeCompare(String(b.added)))
-    .map(({ type, id, order, pinned, added }) => ({ type, id, order, ...(pinned ? { pinned } : {}), added }));
+    .map(({ type, id, order, pinned, pinPosition, added }) => ({ type, id, order, ...(pinned ? { pinned } : {}), ...(pinPosition !== undefined ? { pinPosition } : {}), added }));
   return `${JSON.stringify({ schema: SCHEMA, type: 'space-board', space: space.id, items }, null, 2)}\n`;
 }
 

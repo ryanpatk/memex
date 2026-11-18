@@ -52,11 +52,14 @@ export const useSetProfileLinkSuperFavorite = (options?: MutationHookOptions) =>
       profileId,
       linkId,
       isSuperFavorite,
+      pinPosition,
     }: {
       profileId: string
       linkId: string
       isSuperFavorite: boolean
-    }) => profileLinksApi.setSuperFavorite(profileId, linkId, isSuperFavorite),
+      /** The pin's place among the space's pins; left out, unchanged. */
+      pinPosition?: number | null
+    }) => profileLinksApi.setSuperFavorite(profileId, linkId, isSuperFavorite, pinPosition),
     onMutate: async (variables) => {
       await queryClient.cancelQueries({ queryKey: profileLinkKeys.membership() })
       const previous = queryClient.getQueryData<ProfileLinkMembership[]>(
@@ -67,7 +70,11 @@ export const useSetProfileLinkSuperFavorite = (options?: MutationHookOptions) =>
         (rows) =>
           (rows ?? []).map((row) =>
             row.profile_id === variables.profileId && row.link_id === variables.linkId
-              ? { ...row, is_super_favorite: variables.isSuperFavorite }
+              ? {
+                  ...row,
+                  is_super_favorite: variables.isSuperFavorite,
+                  ...(variables.pinPosition !== undefined ? { pin_position: variables.pinPosition } : {}),
+                }
               : row,
           ),
       )

@@ -116,6 +116,15 @@ const capturedToRow = (link: CapturedLink, base: LinkWithTag): LinkWithTag => ({
   created_at: link.created_at || base.created_at,
 });
 
+/** One pin's new state (spaces/pinMenu.ts). */
+export interface PinChange {
+  id: string;
+  pinned: boolean;
+  position: number | null;
+}
+
+type LinkMembershipRow = { profile_id: string; link_id: string; is_super_favorite?: boolean; pin_position?: number | null };
+
 export const createJournalActions = ({ queryClient, repository, client, enrich, now = () => new Date() }: ActionsDeps) => {
   const list = <T extends Row>(key: QueryKey) => queryClient.getQueryData<T[]>(key);
   const setList = <T extends Row>(key: QueryKey, update: (rows: T[]) => T[]) =>
@@ -380,6 +389,51 @@ export const createJournalActions = ({ queryClient, repository, client, enrich, 
         throw error;
       } finally {
         void settle(MEMBERSHIP[kind].key);
+      }
+    },
+
+    /**
+     * Pin, unpin or reorder pinned sites: the global pins (`spaceId` null:
+     * links.is_super_favorite / pin_position) or one space's
+     * (profile_links). Caches first; a failed write puts them back.
+     */
+    async setPins(spaceId: string | null, changes: PinChange[]) {
+      if (!changes.length) return;
+      const byId = new Map(changes.map((c) => [c.id, c]));
+      if (spaceId) {
+        await queryClient.cancelQueries({ queryKey: keys.linkMembership });
+        const before = queryClient.getQueryData<LinkMembershipRow[]>(keys.linkMembership);
+        queryClient.setQueryData<LinkMembershipRow[]>(keys.linkMembership, (rows) =>
+          (rows ?? []).map((row) => {
+            const change = row.profile_id === spaceId ? byId.get(row.link_id) : undefined;
+            return change ? { ...row, is_super_favorite: change.pinned, pin_position: change.position } : row;
+          }),
+        );
+        try {
+          await Promise.all(changes.map((c) => repository.spaceLinks.setSuperFavorite(spaceId, c.id, c.pinned, c.position)));
+        } catch (error) {
+          if (before) queryClient.setQueryData(keys.linkMembership, before);
+          throw error;
+        } finally {
+          void settle(keys.linkMembership);
+        }
+        return;
+      }
+      await queryClient.cancelQueries({ queryKey: keys.links });
+      const before = list<LinkWithTag>(keys.links);
+      setList<LinkWithTag>(keys.links, (rows) =>
+        rows.map((row) => {
+          const change = byId.get(row.id);
+          return change ? { ...row, is_super_favorite: change.pinned, pin_position: change.position } : row;
+        }),
+      );
+      try {
+        await Promise.all(changes.map((c) => repository.links.update(c.id, { is_super_favorite: c.pinned, pin_position: c.position })));
+      } catch (error) {
+        if (before) queryClient.setQueryData(keys.links, before);
+        throw error;
+      } finally {
+        void settle(keys.links);
       }
     },
 

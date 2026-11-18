@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom';
 import { ArrowUpRight, Check, ListTodo, Pin, Plus } from 'lucide-react';
 import {
   compareOpenTasks,
-  getHostname,
   getLinkTitle,
   isPinnedInSpace,
+  pinLabel,
   type JournalSpace,
   type LinkWithTag,
   type NoteWithTags,
@@ -18,6 +18,7 @@ import type { TaskRowHandlers } from '../tasks/taskList';
 import { taskListKeyDown } from '../tasks/taskList';
 import { LinkMemoryCard, NoteMemoryCard } from '../cards/cards';
 import { EmptySlot } from '../cards/Controls';
+import PinIcon from '../cards/PinIcon';
 import { useCardLabels } from '../../hooks/useCardLabels';
 import { dragAttrs } from '../../utils/itemDrag';
 import { LIBRARY_PATH, SPACE_PARAM, TASKS_PATH } from '../../constants/modules';
@@ -49,15 +50,7 @@ interface SpaceBoardProps {
   onFileIn: (key: string) => void;
 }
 
-/** Short launcher label: the site name before any " | tagline". */
-const pinLabel = (link: LinkWithTag) => {
-  const title = link.title?.trim();
-  if (!title) return getHostname(link.url);
-  return title.split(/\s[|·—–-]\s|\s[|·—–]|[|·—–]\s/)[0].trim() || getHostname(link.url);
-};
-
 const PinButton = ({ link }: { link: LinkWithTag }) => {
-  const [failed, setFailed] = useState(false);
   const label = pinLabel(link);
   return (
     <a
@@ -70,11 +63,7 @@ const PinButton = ({ link }: { link: LinkWithTag }) => {
       data-item-key={`link:${link.id}`}
       {...dragAttrs(`link:${link.id}`, getLinkTitle(link))}
     >
-      {link.favicon_url && !failed ? (
-        <img src={link.favicon_url} alt="" width={28} height={28} onError={() => setFailed(true)} />
-      ) : (
-        <span aria-hidden="true">{label.slice(0, 1).toUpperCase()}</span>
-      )}
+      <PinIcon link={link} />
     </a>
   );
 };

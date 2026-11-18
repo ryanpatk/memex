@@ -11,7 +11,6 @@ import {
   orderTagsForRow,
   parseList,
   parseTypeFilter,
-  pinnedLinks,
 } from './filters';
 import { buildStreamItems } from './items';
 
@@ -147,32 +146,3 @@ describe('itemKeysInSpace', () => {
   });
 });
 
-describe('pinnedLinks', () => {
-  const items = buildStreamItems(
-    [
-      link('global', { title: 'Zeta', is_super_favorite: true }),
-      link('inSpace', { title: 'alpha' }),
-      link('elsewhere', { url: 'https://beta.dev' }),
-      link('plain', { title: 'Plain' }),
-    ],
-    [],
-    [],
-  );
-  const membership = [
-    { profile_id: 's', link_id: 'inSpace', is_super_favorite: true },
-    { profile_id: 'other', link_id: 'elsewhere', is_super_favorite: true },
-    { profile_id: 's', link_id: 'plain', is_super_favorite: false },
-  ];
-
-  it('outside a space, shows links pinned globally or in any space, by title', () => {
-    expect(pinnedLinks(items, membership, undefined).map((l) => l.id)).toEqual(['inSpace', 'elsewhere', 'global']);
-  });
-
-  it('inside a space, shows only links pinned there', () => {
-    expect(pinnedLinks(items, membership, 's').map((l) => l.id)).toEqual(['inSpace']);
-  });
-
-  it('is empty when nothing is pinned', () => {
-    expect(pinnedLinks(items, [], 's')).toEqual([]);
-  });
-});

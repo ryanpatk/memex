@@ -244,13 +244,16 @@ export const createLinksRepository = (client: MemexSupabaseClient): LinksReposit
     },
 
     update: async (id: string, updates: UpdateLinkData): Promise<Link> => {
-      const { data, error } = await client
-        .from('links')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
-
+      const run = (values: UpdateLinkData) => client.from('links').update(values).eq('id', id).select().single()
+      const { data, error } = await run(updates)
+      if (error && 'pin_position' in updates && getErrorMessage(error).includes('pin_position')) {
+        // The pin-order migration (20261118120000) isn't applied: pin without a place
+        const rest: UpdateLinkData = { ...updates }
+        delete rest.pin_position
+        const retry = await run(rest)
+        if (retry.error) throw retry.error
+        return retry.data
+      }
       if (error) throw error
       return data
     },

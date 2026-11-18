@@ -64,7 +64,8 @@ pinnedIn:                      # spaces whose header pins this link (omitted whe
   - "[[spaces/inspiration|Inspiration]]"
 tags:
   - "design"
-superFavorite: true            # pinned in the Home header (omitted when false)
+superFavorite: true            # a global pin: in the top bar outside any space (omitted when false)
+superFavoritePosition: 2       # its place among the global pins, 1 first (omitted when unplaced; since 2026-11-18)
 order: 0                       # order_index
 description: "…"               # omitted when null
 image: "assets/1a1f3c9e/preview.svg"     # local copy; omitted if there's none or the download failed
@@ -76,7 +77,7 @@ legacyProjectId: "9a000000-…"            # links.project_id → legacy/project
 <!-- memex:generated … --> title, embedded image, description, link <!-- /memex:generated -->
 ```
 
-Defaults: `title` null, `sourceId` null, `capturedClient` null, `lists` `[]`, `sourceTag` null, `spaces`/`pinnedIn`/`tags` `[]`, `superFavorite` false, `order` 0. A link's image is shown in the body as an Obsidian embed (`![[assets/…/preview.jpg]]`).
+Defaults: `title` null, `sourceId` null, `capturedClient` null, `lists` `[]`, `sourceTag` null, `spaces`/`pinnedIn`/`tags` `[]`, `superFavorite` false, `superFavoritePosition` null, `order` 0. A link's image is shown in the body as an Obsidian embed (`![[assets/…/preview.jpg]]`).
 
 ## Notes
 
@@ -147,12 +148,12 @@ Spaces are index notes, not folders, because an item can be in several spaces. M
   "space": "5a000000-0000-4000-8000-000000000001",
   "items": [
     { "type": "link", "id": "1a2f3c9e-…", "order": 0, "added": "2026-10-24T15:03:00+00:00" },
-    { "type": "link", "id": "1a1f3c9e-…", "order": 0, "pinned": true, "added": "…" }
+    { "type": "link", "id": "1a1f3c9e-…", "order": 0, "pinned": true, "pinPosition": 1, "added": "…" }
   ]
 }
 ```
 
-`order` is the item's position in that space, `pinned` (omitted when false) pins a link to the space's header, `added` is when it was filed there. The v2 board layout (ROADMAP §3.3) will extend this file.
+`order` is the item's position in that space, `pinned` (omitted when false) pins a link to the space's top bar, `pinPosition` (omitted when unplaced) is its place among that space's pins (1 first; since 2026-11-18), `added` is when it was filed there. The v2 board layout (ROADMAP §3.3) will extend this file.
 
 ## Saved views
 

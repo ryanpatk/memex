@@ -64,6 +64,7 @@ export const createDemoData = (nowMs: number = Date.now()): MemoryData => {
   const X = favicon('X', 260);
   const P = favicon('P', 20);
   const Y = favicon('▶', 25);
+  const GLOBAL_PINS = ['ln-6', 'ln-10', 'ln-4', 'ln-11', 'ln-15', 'ln-19', 'ln-21'];
   const seeds: Seed[] = [
     { id: 'ln-1', at: 2 * HOUR, url: 'https://www.pinterest.com/pin/880453', source: 'pinterest:save', title: 'Warm oak open shelving over a zellige backsplash', favicon_url: P, preview_image_url: picture(70, 40, 'grid', 1.4) },
     { id: 'ln-2', at: 3 * HOUR, url: 'https://x.com/softhardware/status/1852', source: 'x:bookmark', title: 'Interfaces should feel like objects you can pick up, not paper you squint at', description: 'A thread on tactile UI, with examples from late-2000s console menus.', favicon_url: X },
@@ -94,7 +95,9 @@ export const createDemoData = (nowMs: number = Date.now()): MemoryData => {
     order_index: index,
     created_at: ago(at),
     updated_at: ago(edited ?? at),
-    is_super_favorite: rest.id === 'ln-6' || rest.id === 'ln-10',
+    // Seven global pins, so the top bar shows five and “+2” (two placed by hand, the rest by name)
+    is_super_favorite: GLOBAL_PINS.includes(rest.id),
+    pin_position: rest.id === 'ln-10' ? 1 : rest.id === 'ln-6' ? 2 : null,
   }));
 
   const notes: Note[] = [

@@ -1,5 +1,5 @@
 import { isItemType, type ItemType } from '../itemTypes';
-import type { LinkWithTag, ProfileLinkMembership, Tag } from '../types';
+import type { Tag } from '../types';
 import { itemKey, type StreamItem } from './items';
 
 /*
@@ -100,29 +100,4 @@ export const itemKeysInSpace = (membership: SpaceMembership, spaceId: string): S
     if (row.profile_id === spaceId) set.add(itemKey('task', row.task_id));
   });
   return set;
-};
-
-/**
- * Pinned sites for the header, by title: inside a space, links pinned there;
- * everywhere else, links pinned globally or in any space.
- */
-export const pinnedLinks = (
-  items: readonly StreamItem[],
-  linkMembership: readonly ProfileLinkMembership[],
-  spaceId: string | undefined,
-): LinkWithTag[] => {
-  const pinnedInSpace = new Set<string>();
-  const pinnedAnywhere = new Set<string>();
-  linkMembership.forEach((row) => {
-    if (!row.is_super_favorite) return;
-    pinnedAnywhere.add(row.link_id);
-    if (row.profile_id === spaceId) pinnedInSpace.add(row.link_id);
-  });
-  return items
-    .filter((item): item is Extract<StreamItem, { type: 'link' }> => item.type === 'link')
-    .map((item) => item.link)
-    .filter((link) =>
-      spaceId ? pinnedInSpace.has(link.id) : Boolean(link.is_super_favorite) || pinnedAnywhere.has(link.id),
-    )
-    .sort((a, b) => (a.title || a.url).toLowerCase().localeCompare((b.title || b.url).toLowerCase()));
 };

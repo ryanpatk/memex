@@ -179,8 +179,12 @@ export interface JotsRepository {
 /** Which links are filed in which spaces, plus per-space pins. */
 export interface SpaceLinksRepository {
   listMembership(): Promise<ProfileLinkMembership[]>;
-  /** Pin or unpin a link to the header inside one space. */
-  setSuperFavorite(spaceId: string, linkId: string, isSuperFavorite: boolean): Promise<void>;
+  /**
+   * Pin or unpin a link in one space's top bar. `pinPosition` sets its place
+   * among the space's pins (null clears it); left out, the place is unchanged.
+   * Reordering a space's pins calls this with `isSuperFavorite` true.
+   */
+  setSuperFavorite(spaceId: string, linkId: string, isSuperFavorite: boolean, pinPosition?: number | null): Promise<void>;
   /** One space's links with their link rows, in the space's order. */
   getBySpace(spaceId: string): Promise<ProfileLinkWithLink[]>;
   /** Files links in a space, after its existing ones; already-filed ids are skipped. */

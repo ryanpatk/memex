@@ -2,6 +2,7 @@ import type { ComposerResult, ComposerSpace } from '../composer';
 import { compareDoneTasks, compareOpenTasks } from '../tasks/tasks';
 import type { LinkWithTag, NoteWithTags, ProfileLinkMembership, TaskWithTags } from '../types';
 import { entriesInSpace, type Entry } from './feed';
+import { spacePins } from '../pins';
 
 /*
  * A space page (decision 14B, ROADMAP.md Phase 1): the space's own Journal,
@@ -21,7 +22,7 @@ export const withDefaultSpace = <R extends ComposerResult>(result: R, space: Com
 
 /** The board column, 14B: pinned sites, open tasks, saves, notes. */
 export interface SpaceBoard {
-  /** Sites pinned in this space (`profile_links.is_super_favorite`), by name. */
+  /** Sites pinned in this space (`profile_links.is_super_favorite`), in their order (pins.ts). */
   pinned: LinkWithTag[];
   /** Open tasks in the Tasks view's order: soonest due first, then manual order. */
   openTasks: TaskWithTags[];
@@ -36,8 +37,6 @@ export interface SpaceBoard {
   /** Every entry in the space (jots, links, notes, tasks). */
   total: number;
 }
-
-const pinLabel = (link: LinkWithTag) => (link.title?.trim() || link.url).toLowerCase();
 
 /**
  * The board for one space, from the Journal's entries (all of them; this
@@ -61,14 +60,8 @@ export const spaceBoard = (
     else jotCount += 1;
   });
 
-  const pinnedIds = new Set(
-    linkMembership.filter((row) => row.profile_id === spaceId && row.is_super_favorite).map((row) => row.link_id),
-  );
-
   return {
-    pinned: links
-      .filter((l) => pinnedIds.has(l.id) && !l.id.startsWith('temp-'))
-      .sort((a, b) => pinLabel(a).localeCompare(pinLabel(b))),
+    pinned: spacePins(links, linkMembership, spaceId),
     openTasks: tasks.filter((t) => !t.is_done).sort(compareOpenTasks),
     doneTasks: tasks.filter((t) => t.is_done).sort(compareDoneTasks),
     saves: [...links].sort((a, b) => b.created_at.localeCompare(a.created_at)),

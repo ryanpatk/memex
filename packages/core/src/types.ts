@@ -93,7 +93,10 @@ export interface Link {
   favicon_url?: string
   preview_image_url?: string
   tag_id?: string
+  /** Pinned to the top bar outside any space (a global pin). */
   is_super_favorite?: boolean
+  /** The global pin's place (1 first); null when unpinned or not yet placed (migration 20261118120000). */
+  pin_position?: number | null
   /**
    * Platform the link came from: 'x' · 'pinterest' · 'youtube' · 'web' (set by
    * memex-api since 2026-11-01). Older captures hold a legacy tag ('extension',
@@ -260,8 +263,10 @@ export interface ProfileLink {
   profile_id: string
   link_id: string
   order_index: number
-  /** Pinned to the header while standing in this space (per-space super favorite). */
+  /** Pinned to the top bar while standing in this space (per-space super favorite). */
   is_super_favorite?: boolean
+  /** That pin's place among the space's pins (1 first); null when unpinned or not yet placed. */
+  pin_position?: number | null
   created_at: string
 }
 
@@ -270,6 +275,7 @@ export interface ProfileLinkMembership {
   profile_id: string
   link_id: string
   is_super_favorite?: boolean
+  pin_position?: number | null
 }
 
 export interface ProfileLinkWithLink extends ProfileLink {
@@ -356,6 +362,7 @@ export interface UpdateLinkData {
   tag_id?: string
   order_index?: number
   is_super_favorite?: boolean
+  pin_position?: number | null
 }
 
 export interface CreateNoteData {

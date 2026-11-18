@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { act, fireEvent, screen } from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { NOW, renderWithData } from '../testing/render';
 import SpacesScreen from '../app/(tabs)/spaces';
 import SpaceScreen from '../app/space/[id]';
@@ -34,6 +34,42 @@ describe('Spaces tab', () => {
     expect(screen.getByLabelText('Tasks, 6 open, 1 overdue')).toBeTruthy();
     expect(screen.getByLabelText('Studio, 7 cards, 2 open tasks')).toBeTruthy();
     expect(screen.getByLabelText('Reading, 3 cards')).toBeTruthy();
+  });
+
+  it('shows the global pinned sites on top, in their order, and opens them', async () => {
+    await renderWithData(<SpacesScreen />);
+    await flush();
+    expect(screen.getByRole('header', { name: 'Pinned' })).toBeTruthy();
+    const pins = screen.getAllByLabelText(/^Pinned: /).map((el) => el.props.accessibilityLabel);
+    expect(pins).toEqual(['Pinned: Calm Technology', 'Pinned: Notes on a personal library, for the reading pile', 'Pinned: The Shape of Design']);
+    await fireEvent.press(screen.getByLabelText('Pinned: Calm Technology'));
+    expect(routerMock.__router.push).toHaveBeenCalledWith({ pathname: '/link/[id]', params: { id: 'l2' } });
+  });
+
+  it('long-press moves a pin earlier, and unpins with Undo', async () => {
+    const { repository } = await renderWithData(<SpacesScreen />);
+    await flush();
+    await fireEvent(screen.getByLabelText('Pinned: The Shape of Design'), 'longPress');
+    let menu = within(screen.getByTestId('menu'));
+    expect(menu.queryByRole('menuitem', { name: 'Move later' })).toBeNull();
+    await fireEvent.press(menu.getByRole('menuitem', { name: 'Move earlier' }));
+    await flush();
+    const order = () => screen.getAllByLabelText(/^Pinned: /).map((el) => el.props.accessibilityLabel.replace('Pinned: ', ''));
+    expect(order()).toEqual(['Calm Technology', 'The Shape of Design', 'Notes on a personal library, for the reading pile']);
+    const stored = async () =>
+      Object.fromEntries((await repository.links.getAll()).filter((l) => l.is_super_favorite).map((l) => [l.id, l.pin_position]));
+    expect(await stored()).toEqual({ l2: 1, l1: 2, l3: 3 });
+
+    await fireEvent(screen.getByLabelText('Pinned: Calm Technology'), 'longPress');
+    menu = within(screen.getByTestId('menu'));
+    await fireEvent.press(menu.getByRole('menuitem', { name: 'Unpin' }));
+    await flush();
+    expect(order()).toEqual(['The Shape of Design', 'Notes on a personal library, for the reading pile']);
+    const toast = within(screen.getByTestId('toast'));
+    expect(toast.getByText('Unpinned Calm Technology.')).toBeTruthy();
+    await fireEvent.press(toast.getByRole('button', { name: 'Undo' }));
+    await flush();
+    expect(order()).toEqual(['Calm Technology', 'The Shape of Design', 'Notes on a personal library, for the reading pile']);
   });
 
   it('opens a space’s board and Tasks', async () => {
@@ -85,6 +121,21 @@ describe('A space’s board', () => {
     expect(pins).toEqual(['Pinned: Calm Technology', 'Pinned: The Shape of Design']);
     await fireEvent.press(screen.getByLabelText('Pinned: Calm Technology'));
     expect(routerMock.__router.push).toHaveBeenCalledWith({ pathname: '/link/[id]', params: { id: 'l2' } });
+  });
+
+  it('long-press moves a space pin within that space only', async () => {
+    routerMock.__setParams({ id: 'reading' });
+    const { repository } = await renderWithData(<SpaceScreen />);
+    await flush();
+    await fireEvent(screen.getByLabelText('Pinned: The Shape of Design'), 'longPress');
+    await fireEvent.press(within(screen.getByTestId('menu')).getByRole('menuitem', { name: 'Move earlier' }));
+    await flush();
+    const pins = screen.getAllByLabelText(/^Pinned: /).map((el) => el.props.accessibilityLabel);
+    expect(pins).toEqual(['Pinned: The Shape of Design', 'Pinned: Calm Technology']);
+    const rows = (await repository.spaceLinks.listMembership()).filter((r) => r.profile_id === 'reading' && r.is_super_favorite);
+    expect(Object.fromEntries(rows.map((r) => [r.link_id, r.pin_position]))).toEqual({ l1: 1, l2: 2 });
+    // The global pins keep their own order
+    expect((await repository.links.getAll()).find((l) => l.id === 'l1')?.pin_position).toBeUndefined();
   });
 
   it('opens Tasks filtered to the space', async () => {

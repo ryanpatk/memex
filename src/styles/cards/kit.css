@@ -1428,6 +1428,318 @@ textarea.mc-inp {
   align-items: center;
   gap: 16px;
 }
+
+/* ---------- Pinned sites in the top bar (A + C, components/cards/PinBar) ----------
+   The nav pill holds the three words, a divider, up to five pins and “+N”.
+   Pins are 48px round buttons with the site's 28px icon, quiet until hovered.
+   Under 1100px they fold into one gold pin button; both open the launcher. */
+
+.mc-navpill {
+  align-items: center;
+}
+.mc-seg-nav {
+  display: flex;
+  gap: 4px;
+}
+.mc-pinbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+}
+.mc-pinbar-sep {
+  width: 2px;
+  height: 28px;
+  border-radius: 2px;
+  background: var(--mc-line);
+  margin: 0 8px;
+  flex: none;
+}
+.mc-pinbar-pins {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mc-seg .mc-pinbar .mc-pinbtn {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  position: relative;
+  background: transparent;
+  color: var(--mc-ink);
+  font: 900 18px / 1 var(--mc-font-display);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform var(--mc-m-press) var(--mc-ease),
+    background-color var(--mc-m-base) var(--mc-ease);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.mc-seg .mc-pinbar .mc-pinbtn:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 2px;
+}
+.mc-pin-fav {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  object-fit: contain;
+  pointer-events: none;
+}
+.mc-pin-letter {
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--mc-well);
+  box-shadow: inset 0 -2px 0 var(--mc-line);
+  font: 900 16px / 1 var(--mc-font-display);
+  color: var(--mc-ink);
+}
+.mc-seg .mc-pinbar .mc-pin-more {
+  background: var(--mc-well);
+  color: var(--mc-mut);
+  font: 800 17px / 1 var(--mc-font-display);
+  margin-left: 4px;
+}
+.mc-seg .mc-pinbar .mc-pin-fold {
+  display: none;
+  background: var(--mc-gold);
+  color: #5a4500;
+  box-shadow: var(--mc-shade);
+}
+.mc-pin-fold svg {
+  width: 22px;
+  height: 22px;
+}
+.mc-seg .mc-pinbar .mc-pin-drop {
+  background: color-mix(in oklab, var(--mc-pri) 12%, var(--mc-paper));
+  color: var(--mc-pri-ink);
+  outline: 3px dashed var(--mc-pri);
+  outline-offset: -3px;
+  margin-left: 4px;
+  cursor: copy;
+}
+.mc-seg .mc-pinbar .mc-pin-drop.is-over {
+  background: color-mix(in oklab, var(--mc-pri) 26%, var(--mc-paper));
+  transform: scale(1.1);
+}
+.mc-pin-drop svg {
+  width: 22px;
+  height: 22px;
+}
+/* Where a dragged pin will land */
+.mc-pinbtn.is-drop-before::before,
+.mc-pinbtn.is-drop-after::after,
+.mc-launch-tile.is-drop-before::before,
+.mc-launch-tile.is-drop-after::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--mc-pri);
+}
+.mc-pinbtn.is-drop-before::before {
+  left: -4px;
+}
+.mc-pinbtn.is-drop-after::after {
+  right: -4px;
+}
+.mc-launch-tile.is-drop-before::before {
+  left: -2px;
+}
+.mc-launch-tile.is-drop-after::after {
+  right: -2px;
+}
+/* The name (and ⌥ number) under a pin, after a short wait */
+.mc-pin-tip {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--mc-toast);
+  color: #fff;
+  font: 600 16px / 1 var(--mc-font-ui);
+  padding: 11px 14px;
+  border-radius: 12px;
+  box-shadow: var(--mc-sh2);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--mc-m-press) var(--mc-ease);
+  z-index: 2;
+}
+.mc-pin-tip-key {
+  color: #c3c8d0;
+  font-weight: 500;
+  margin-left: 6px;
+}
+.mc-pinbtn:focus-visible .mc-pin-tip,
+.mc-pin-tip.is-shown {
+  opacity: 1;
+}
+.mc-pinbar-hint {
+  position: absolute;
+  top: calc(100% + 18px);
+  right: 0;
+  white-space: nowrap;
+  background: var(--mc-toast);
+  color: #fff;
+  font: 600 16px / 1 var(--mc-font-ui);
+  padding: 11px 14px;
+  border-radius: 12px;
+  pointer-events: none;
+}
+html.is-pin-dragging .mc-pin-tip {
+  opacity: 0;
+}
+@media (hover: hover) {
+  .mc-seg .mc-pinbar .mc-pinbtn:hover,
+  .mc-seg .mc-pinbar .mc-pinbtn[aria-expanded='true'] {
+    background: var(--mc-well);
+    transform: translateY(-2px);
+  }
+  .mc-seg .mc-pinbar .mc-pin-fold:hover,
+  .mc-seg .mc-pinbar .mc-pin-fold[aria-expanded='true'] {
+    background: var(--mc-gold);
+    filter: brightness(1.04);
+  }
+  .mc-seg .mc-pinbar .mc-pin-more[aria-expanded='true'] {
+    background: var(--mc-ink);
+    color: var(--mc-paper);
+  }
+  .mc-pinbtn:hover .mc-pin-tip {
+    opacity: 1;
+    transition-delay: 450ms;
+  }
+}
+
+/* The Pinned launcher (C): a grid of every pin in this scope */
+.mc-launcher {
+  width: 432px;
+  max-width: min(calc(100vw - 32px), var(--mc-pop-max-w, 100vw));
+  max-height: min(70vh, 640px, var(--mc-pop-max-h, 100vh));
+  overflow: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+  background: var(--mc-paper);
+  color: var(--mc-ink);
+  border-radius: 28px;
+  padding: 20px 20px 12px;
+  box-shadow: var(--mc-sh3);
+}
+.mc-launch-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 8px 12px;
+}
+.mc-launch-title {
+  margin: 0;
+  font: 900 26px / 1.1 var(--mc-font-display);
+  overflow-wrap: anywhere;
+}
+.mc-launch-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+.mc-launch-tile {
+  position: relative;
+}
+.mc-launch-site {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 4px;
+  border-radius: 20px;
+  color: var(--mc-ink);
+  text-decoration: none;
+  font: 700 16px / 1.25 var(--mc-font-ui);
+  text-align: center;
+  transition: background-color var(--mc-m-base) var(--mc-ease);
+}
+.mc-launch-site:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: -2px;
+}
+.mc-launch-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.mc-launch-x {
+  appearance: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  position: absolute;
+  top: 2px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--mc-err-bg);
+  color: var(--mc-err);
+  box-shadow: 0 0 0 2px var(--mc-paper);
+  cursor: pointer;
+}
+.mc-launch-x svg {
+  width: 18px;
+  height: 18px;
+}
+.mc-launch-x:focus-visible {
+  outline: 4px solid var(--mc-ring);
+  outline-offset: 2px;
+}
+.mc-launch-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 2px solid var(--mc-well);
+  margin-top: 8px;
+  padding: 10px 4px 0;
+}
+.mc-launch-hint {
+  margin: 0;
+  font: 500 16px / 1.35 var(--mc-font-ui);
+  color: var(--mc-mut);
+}
+@media (hover: hover) {
+  .mc-launch-site:hover {
+    background: var(--mc-well);
+  }
+  .mc-launch-site:hover .mc-rb {
+    transform: translateY(-2px) scale(1.05);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mc-seg .mc-pinbar .mc-pinbtn,
+  .mc-seg .mc-pinbar .mc-pin-drop.is-over {
+    transition: none;
+    transform: none;
+  }
+}
 .mc-inbox-btn {
   height: var(--mc-ctl-sm);
   padding: 0 22px;

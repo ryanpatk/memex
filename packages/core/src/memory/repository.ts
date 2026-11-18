@@ -35,7 +35,7 @@ export interface MemoryData {
   linkTags: [string, string][];
   noteTags: [string, string][];
   taskTags: [string, string][];
-  spaceLinks: { profile_id: string; link_id: string; is_super_favorite?: boolean }[];
+  spaceLinks: { profile_id: string; link_id: string; is_super_favorite?: boolean; pin_position?: number | null }[];
   spaceNotes: { profile_id: string; note_id: string }[];
   spaceTasks: { profile_id: string; task_id: string }[];
   views: SavedView[];
@@ -336,9 +336,12 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
 
     spaceLinks: {
       listMembership: () => wait(db.spaceLinks),
-      setSuperFavorite: (spaceId, linkId, isSuperFavorite) => {
+      setSuperFavorite: (spaceId, linkId, isSuperFavorite, pinPosition) => {
         const row = db.spaceLinks.find((entry) => entry.profile_id === spaceId && entry.link_id === linkId);
-        if (row) row.is_super_favorite = isSuperFavorite;
+        if (row) {
+          row.is_super_favorite = isSuperFavorite;
+          if (pinPosition !== undefined) row.pin_position = pinPosition;
+        }
         return wait(undefined);
       },
       getBySpace: (spaceId) =>
@@ -353,6 +356,7 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
                 link_id: row.link_id,
                 order_index: index,
                 is_super_favorite: row.is_super_favorite,
+                pin_position: row.pin_position ?? null,
                 created_at: link?.created_at ?? now(),
                 link: link ? withLinkTags(link) : undefined,
               };

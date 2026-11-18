@@ -9,7 +9,7 @@ import { useAllLinks } from '../hooks/useLinks';
 import { useProfileLinkMembership } from '../hooks/useProfileLinks';
 import { useProfileNoteMembership } from '../hooks/useProfileNotes';
 import { useProfileTaskMembership } from '../hooks/useProfileTasks';
-import { getLinkTitle, jotSnippet, searchJots } from '@memex/core';
+import { getLinkTitle, globalPins, jotSnippet, searchJots } from '@memex/core';
 import { openUrlInBackgroundTab } from '../utils/openUrlInBackgroundTab';
 
 /*
@@ -136,17 +136,15 @@ const GoToDialog = ({ onClose }: { onClose: () => void }) => {
       { key: 'tasks', label: 'Tasks', to: TASKS_PATH, icon: null, meta: `${openTasks} open`, aliases: 'todo to-do', group: 'go' },
       { key: 'inbox', label: 'Inbox', to: INBOX_PATH, icon: null, meta: inboxCount > 0 ? String(inboxCount) : undefined, aliases: 'agents proposals file', group: 'go' },
     ];
-    const pinned: Destination[] = (links ?? [])
-      .filter((link) => link.is_super_favorite)
-      .map((link) => ({
-        key: `pin-${link.id}`,
-        label: getLinkTitle(link),
-        to: link.url,
-        href: link.url,
-        icon: <Star />,
-        aliases: link.url,
-        group: 'pinned',
-      }));
+    const pinned: Destination[] = globalPins(links ?? []).map((link) => ({
+      key: `pin-${link.id}`,
+      label: getLinkTitle(link),
+      to: link.url,
+      href: link.url,
+      icon: <Star />,
+      aliases: link.url,
+      group: 'pinned',
+    }));
     const spaceName = new Map(spaces.map((space) => [space.id, space.name]));
     const found: Destination[] =
       q.length >= 2

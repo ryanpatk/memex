@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, MoreHorizontal, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { Check, MoreHorizontal, Pencil, Pin, Plus, Search, Trash2, X } from 'lucide-react';
 import { MC_MOTION, MC_RADIUS, MC_SPACE, MC_SPACE_COLORS, MC_TYPE } from '@memex/core';
 import '../styles/cards/kitpage.css';
 import { JOURNAL_PATH } from '../constants/modules';
@@ -14,7 +14,7 @@ import Wordmark from '../components/ui/Wordmark';
 
 /*
  * The Memory Cards kit (/styleguide): every component from the design
- * sheets s01–s14 (design/memory-cards/png/), built from the real kit
+ * sheets s01–s14 (design/memory-cards/png/) plus s15 (pinned sites), built from the real kit
  * classes and components, in every state, in light, dark and Plex. All
  * content is made up. The classic catalog that lived here is in the tag
  * `classic-design-final`.
@@ -57,6 +57,9 @@ const Section = ({ id, title, lede, children }: { id: string; title: string; led
   </section>
 );
 
+/** Made-up sites for the Pinned sites section (s15). */
+const SG_PINS = ['Calendar', 'Calm Technology', 'Ink & Switch', 'japan-guide', 'Mail', 'Weather', 'Old House'];
+
 const Cell = ({ children, name }: { children: ReactNode; name: string }) => (
   <div className="mc-kit-cell">
     {children}
@@ -79,6 +82,7 @@ const SECTIONS: [string, string][] = [
   ['s12', 'Controls'],
   ['s13', 'Themes'],
   ['s14', 'Card write'],
+  ['s15', 'Pinned sites'],
 ];
 
 const StyleguidePage = () => {
@@ -1051,6 +1055,109 @@ const StyleguidePage = () => {
               </span>
               <span>Saved</span>
               <button type="button">Open</button>
+            </div>
+          </Cell>
+        </div>
+      </Section>
+
+      {/* s15 */}
+      <Section
+        id="s15"
+        title="Pinned sites"
+        lede="Pins sit in the nav pill after a divider: five round site buttons, then +N for the rest, which opens the launcher. Under 1100px they fold into one gold pin. Inside a space they are that space's pins. ⌥1–9 opens them; drag to reorder."
+      >
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 48, alignItems: 'flex-start' }}>
+          <Cell name="Five pins and +2">
+            <div className="mc-seg mc-navpill" style={{ display: 'inline-flex' }}>
+              <div className="mc-seg-nav">
+                <button type="button" className="is-on">Cards</button>
+              </div>
+              <div className="mc-pinbar">
+                <span className="mc-pinbar-sep" aria-hidden="true" />
+                <span className="mc-pinbar-pins">
+                  {SG_PINS.slice(0, 5).map((p) => (
+                    <button key={p} type="button" className="mc-pinbtn" aria-label={p}>
+                      <span className="mc-pin-letter" style={{ width: 28, height: 28 }} aria-hidden="true">
+                        {p.slice(0, 1)}
+                      </span>
+                    </button>
+                  ))}
+                </span>
+                <button type="button" className="mc-pinbtn mc-pin-more" aria-label="2 more pinned sites">
+                  +2
+                </button>
+              </div>
+            </div>
+          </Cell>
+          <Cell name="Hover: the name and its key">
+            <div className="mc-seg mc-navpill" style={{ display: 'inline-flex', marginBottom: 64 }}>
+              <div className="mc-pinbar">
+                <span className="mc-pinbar-pins">
+                  <button type="button" className="mc-pinbtn" aria-label={SG_PINS[0]} style={{ background: 'var(--mc-well)', transform: 'translateY(-2px)' }}>
+                    <span className="mc-pin-letter" style={{ width: 28, height: 28 }} aria-hidden="true">
+                      {SG_PINS[0].slice(0, 1)}
+                    </span>
+                    <span className="mc-pin-tip is-shown" aria-hidden="true">
+                      {SG_PINS[0]} <span className="mc-pin-tip-key">⌥1</span>
+                    </span>
+                  </button>
+                </span>
+              </div>
+            </div>
+          </Cell>
+          <Cell name="Dragging a link card: drop to pin">
+            <div className="mc-seg mc-navpill" style={{ display: 'inline-flex', marginBottom: 64 }}>
+              <div className="mc-pinbar">
+                <span className="mc-pinbar-sep" aria-hidden="true" />
+                <span className="mc-pinbtn mc-pin-drop is-over" aria-hidden="true">
+                  <Plus />
+                  <span className="mc-pin-tip is-shown">Drop to pin</span>
+                </span>
+              </div>
+            </div>
+          </Cell>
+          <Cell name="Narrow window: one pin button">
+            <div className="mc-seg mc-navpill" style={{ display: 'inline-flex' }}>
+              <div className="mc-seg-nav">
+                <button type="button" className="is-on">Cards</button>
+              </div>
+              <div className="mc-pinbar">
+                <span className="mc-pinbar-sep" aria-hidden="true" />
+                <button type="button" className="mc-pinbtn mc-pin-fold" style={{ display: 'grid' }} aria-label="Pinned: 7 sites">
+                  <Pin aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          </Cell>
+          <Cell name="The launcher (from +N or the pin button)">
+            <div className="mc-launcher" style={{ position: 'static', maxHeight: 'none', width: 432 }}>
+              <div className="mc-launch-head">
+                <h3 className="mc-launch-title">Pinned</h3>
+                <span className="mc-keyhint">
+                  <kbd className="mc-kb">⌥</kbd>
+                  <kbd className="mc-kb">1–7</kbd>
+                </span>
+              </div>
+              <ul className="mc-launch-grid">
+                {SG_PINS.slice(0, 6).map((p) => (
+                  <li key={p} className="mc-launch-tile">
+                    <button type="button" className="mc-launch-site" style={{ width: '100%', border: 0, background: 'none' }}>
+                      <span className="mc-rb is-large" aria-hidden="true">
+                        <span className="mc-pin-letter" style={{ width: 30, height: 30 }}>
+                          {p.slice(0, 1)}
+                        </span>
+                      </span>
+                      <span className="mc-launch-name">{p}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="mc-launch-foot">
+                <p className="mc-launch-hint">Drag to reorder.</p>
+                <button type="button" className="mc-btn is-quiet is-small">
+                  Edit pins…
+                </button>
+              </div>
             </div>
           </Cell>
         </div>

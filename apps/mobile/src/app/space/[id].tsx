@@ -15,11 +15,13 @@ import { Placeholder } from '../../ui/Placeholder';
 import { Button } from '../../ui/Pressable';
 import { StackHeader } from '../../ui/StackHeader';
 import { PinnedSites } from '../../spaces/PinnedSites';
+import { usePinMenu } from '../../spaces/usePinMenu';
 
 const countFmt = new Intl.NumberFormat();
 
 /**
- * A space's board (decision 14B, phone form): its pinned sites on top, the
+ * A space's board (decision 14B, phone form): its pinned sites on top
+ * (long-press one to move or unpin it), the
  * space's own Journal (jots written there and everything filed there, core's
  * feed) with the composer filing into it (core's withDefaultSpace), and its
  * open tasks one press away. Counts and pins are core's spaceBoard.
@@ -34,6 +36,17 @@ export default function SpaceScreen() {
   const scoped = useMemo(() => (journal && space ? spaceFeed(journal, space.id) : null), [journal, space]);
   const spaceTasks = useMemo(() => (scoped ? [...scoped.board.openTasks, ...scoped.board.doneTasks] : []), [scoped]);
   const n = scoped?.board.total ?? 0;
+  const pins = useMemo(() => scoped?.board.pinned ?? [], [scoped]);
+  const positions = useMemo(
+    () =>
+      new Map(
+        (journal?.linkMembership ?? [])
+          .filter((row) => row.profile_id === id && row.is_super_favorite)
+          .map((row) => [row.link_id, row.pin_position ?? null] as const),
+      ),
+    [id, journal],
+  );
+  const pinMenu = usePinMenu({ pins, spaceId: id ?? null, positions, onOpen: actions.openLink });
 
   // Gone only once everything loaded and it isn't there (not when it didn't load).
   if (journal && !unavailable && !space) {
@@ -65,7 +78,7 @@ export default function SpaceScreen() {
         }
         trailing={space && <TasksButton tasks={spaceTasks} space={space.id} />}
       />
-      {scoped && scoped.board.pinned.length > 0 && <PinnedSites links={scoped.board.pinned} onOpen={actions.openLink} />}
+      {pins.length > 0 && <PinnedSites links={pins} onOpen={actions.openLink} onLongPress={pinMenu.show} actionsFor={pinMenu.rows} />}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.fill}>
         {isLoading ? (
           <FeedSkeleton />

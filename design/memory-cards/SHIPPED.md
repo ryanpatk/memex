@@ -98,7 +98,7 @@ EXPO_PUBLIC_MEMEX_FIXTURES=1 npx expo start --port 8092
 - **Library → Cards:** renamed on web and phone.
 - **Card captions:** one style, caption below the picture. The setting is gone.
 - **Phone tabs:** Journal · Cards · + · Spaces · Inbox.
-- **Pinned sites:** moved off Everything, onto space pages, a Pinned group in ⌘K, and “Pin to top” on a card (with a gold pin badge).
+- **Pinned sites:** moved off Everything, onto space pages, a Pinned group in ⌘K, and “Pin to top” on a card (with a gold pin badge). **2026-11-18:** back in the top bar on every page (Ryan picked A + C from the “Pinned sites, restored” canvas): up to five pins in the nav pill after a divider, +N opens the Pinned launcher, one gold pin button under 1100px, a space's pins inside a space, ⌥1–9, drag to reorder (new `pin_position`), and the phone's Spaces tab. “Pin to top” became “Pin to the bar”. See `docs/pinned-sites.md`.
 - **Card open:** the centred card sheet, not the in-place expand.
 - **What ••• holds:** on Cards, it opens the View panel (layouts, Show, From, Sort, Saved views, then Select cards and Open space page). On a card, it holds Copy link, Pin to top, Refresh preview, Edit… and Delete.
 - **One field searches and saves.** Typing filters the cards. **Enter** or **+** opens “Save something” with what you typed, so a search never turns into a card by accident.

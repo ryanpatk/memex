@@ -24,7 +24,7 @@ export interface DemoData {
   /** An agent's changes waiting in the Inbox (MCP, docs/mcp.md). */
   proposals: InboxProposal[];
   membership: {
-    links: { profile_id: string; link_id: string; is_super_favorite?: boolean }[];
+    links: { profile_id: string; link_id: string; is_super_favorite?: boolean; pin_position?: number | null }[];
     notes: { profile_id: string; note_id: string }[];
     tasks: { profile_id: string; task_id: string }[];
   };
@@ -75,6 +75,8 @@ export const buildDemoData = (now = new Date()): DemoData => {
   const links = [
     link('l1', t(3, 9, 40), 'https://frankchimero.com/blog/2012/the-shape-of-design/', {
       title: 'The Shape of Design',
+      // Three global pins (the Spaces tab): two placed by hand, this one by name after them
+      is_super_favorite: true,
       description: 'A book about the why of design, not the how.',
       favicon_url: favicon('frankchimero.com'),
     }),
@@ -87,6 +89,8 @@ export const buildDemoData = (now = new Date()): DemoData => {
     ),
     link('l2', t(1, 12, 30), 'https://calmtech.com/', {
       title: 'Calm Technology',
+      is_super_favorite: true,
+      pin_position: 1,
       description: 'Principles for technology that respects attention.',
       favicon_url: favicon('calmtech.com'),
     }),
@@ -103,6 +107,8 @@ export const buildDemoData = (now = new Date()): DemoData => {
     }),
     link('l3', t(0, 9, 50), 'https://www.are.na/blog/the-library-of-babel', {
       title: 'Notes on a personal library, for the reading pile',
+      is_super_favorite: true,
+      pin_position: 2,
       favicon_url: favicon('are.na'),
     }),
     // Older saves, one platform at a time (no runs), so the Library has a few pages.

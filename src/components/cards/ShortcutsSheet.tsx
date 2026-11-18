@@ -2,6 +2,7 @@ import Sheet from './Sheet';
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 const MOD = IS_MAC ? '⌘' : 'Ctrl';
+const ALT = IS_MAC ? '⌥' : 'Alt ';
 
 const GROUPS: { title: string; rows: [string, string][] }[] = [
   {
@@ -10,6 +11,7 @@ const GROUPS: { title: string; rows: [string, string][] }[] = [
       [`${MOD}K`, 'Go anywhere'],
       ['/', 'Search cards'],
       ['J', 'Journal'],
+      [`${ALT}1–9`, 'Open a pinned site'],
       ['↑↓', 'Move between rows'],
       ['Esc', 'Close, stop selecting'],
     ],
@@ -33,9 +35,16 @@ const GROUPS: { title: string; rows: [string, string][] }[] = [
       ['⌫', 'Delete, with Undo'],
     ],
   },
+  {
+    title: 'Pins',
+    rows: [
+      ['⇧←→', 'Move the focused pin'],
+      ['⌫', 'Unpin it, with Undo'],
+    ],
+  },
 ];
 
-/** Keys (d34): three groups — Go, Make, Pick — of chunky 64px key caps. */
+/** Keys (d34): four groups — Go, Make, Pick, Pins — of chunky 64px key caps. */
 const ShortcutsSheet = ({ open, onClose }: { open: boolean; onClose: () => void }) => (
   <Sheet open={open} onClose={onClose} title="Keys" width={1120}>
     <div className="mc-keys-grid">

@@ -9,6 +9,7 @@ import { userDisplayName } from '../../utils/userDisplay';
 import Wordmark from '../ui/Wordmark';
 import AccountAvatar from '../AccountAvatar';
 import Menu from './Menu';
+import PinBar from './PinBar';
 import SettingsSheet from './SettingsSheet';
 import ShortcutsSheet from './ShortcutsSheet';
 import { useShortcutsKey } from './useShortcutsKey';
@@ -16,8 +17,9 @@ import { useNotNow } from './journal/notNow';
 
 /**
  * The Memory Cards top bar (x01, decision 3 A): the wordmark, three words of
- * navigation (Journal · Cards · Tasks), the Inbox with its count, and the
- * account button (Settings, Keys, Sign out). Space pills live on the Cards
+ * navigation (Journal · Cards · Tasks) with the pinned sites after a divider
+ * in the same pill (PinBar), the Inbox with its count, and the account
+ * button (Settings, Keys, Sign out). Space pills live on the Cards
  * page under the hero. On phones the three words become a bottom tab bar.
  */
 const CardsTopBar = () => {
@@ -50,17 +52,20 @@ const CardsTopBar = () => {
       <Link to={JOURNAL_PATH} className="mc-wm" aria-label="memex, Journal">
         <Wordmark />
       </Link>
-      <nav className="mc-seg" aria-label="Main">
-        <NavLink to={JOURNAL_PATH} end className={({ isActive }) => (isActive ? 'is-on' : '')}>
-          Journal
-        </NavLink>
-        <NavLink to={LIBRARY_PATH} className={cardsActive ? 'is-on' : ''} aria-current={cardsActive ? 'page' : undefined}>
-          Cards
-        </NavLink>
-        <NavLink to={TASKS_PATH} className={({ isActive }) => (isActive ? 'is-on' : '')}>
-          Tasks
-        </NavLink>
-      </nav>
+      <div className="mc-seg mc-navpill">
+        <nav className="mc-seg-nav" aria-label="Main">
+          <NavLink to={JOURNAL_PATH} end className={({ isActive }) => (isActive ? 'is-on' : '')}>
+            Journal
+          </NavLink>
+          <NavLink to={LIBRARY_PATH} className={cardsActive ? 'is-on' : ''} aria-current={cardsActive ? 'page' : undefined}>
+            Cards
+          </NavLink>
+          <NavLink to={TASKS_PATH} className={({ isActive }) => (isActive ? 'is-on' : '')}>
+            Tasks
+          </NavLink>
+        </nav>
+        <PinBar />
+      </div>
       <div className="mc-top-right">
         <NavLink
           to={INBOX_PATH}

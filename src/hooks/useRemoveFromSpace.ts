@@ -49,9 +49,9 @@ export function useRemoveFromSpace(flash: Flash) {
       const linkIds = idsOf('link');
       const noteIds = idsOf('note');
       const taskIds = idsOf('task');
-      // Links pinned in this space get their pin back on Undo
-      const pinnedIds = linkIds.filter((linkId) =>
-        (linkMembership ?? []).some((row) => row.profile_id === spaceId && row.link_id === linkId && row.is_super_favorite),
+      // Links pinned in this space get their pin (and its place) back on Undo
+      const pinned = (linkMembership ?? []).filter(
+        (row) => row.profile_id === spaceId && linkIds.includes(row.link_id) && row.is_super_favorite,
       );
       const count = parsed.length + jotMoves.length;
       const what = label ? `“${label.length > 40 ? `${label.slice(0, 40)}…` : label}”` : count === 1 ? 'it' : `${count} items`;
@@ -80,7 +80,9 @@ export function useRemoveFromSpace(flash: Flash) {
             jotMoves.length ? jots.apply(undoMoves(jotMoves)) : null,
           ]);
           await Promise.all(
-            pinnedIds.map((linkId) => setPin.mutateAsync({ profileId: spaceId, linkId, isSuperFavorite: true })),
+            pinned.map((row) =>
+              setPin.mutateAsync({ profileId: spaceId, linkId: row.link_id, isSuperFavorite: true, pinPosition: row.pin_position ?? null }),
+            ),
           );
           cue('confirm');
           flash(`Put ${what} back in “${name}”.`);
