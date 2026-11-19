@@ -287,6 +287,17 @@ export const createMemoryRepository = (seed: MemoryData, options: MemoryReposito
       getUsageCount: (tagId) => wait(db.links.filter((link) => link.tag_id === tagId).length),
     },
 
+    counts: {
+      get: () =>
+        wait({
+          links: db.links.length,
+          notes: db.notes.length,
+          tasks: db.tasks.length,
+          openTasks: db.tasks.filter((task) => !task.is_done).length,
+          jots: db.jots.length,
+        }),
+    },
+
     spaces: {
       getAll: () => wait(orderSpaces(db.spaces)),
       getById: (id) => wait(db.spaces.find((space) => space.id === id) ?? null),

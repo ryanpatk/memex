@@ -5,6 +5,7 @@ import type { JotsRepository } from '../repository'
 import type { CreateSelfMessageData, SelfMessage, UpdateSelfMessageData } from '../types'
 import type { MemexSupabaseClient } from './client'
 import { requireUser } from './user'
+import { selectAllPages } from './paging'
 
 
 export const createJotsRepository = (client: MemexSupabaseClient): JotsRepository => {
@@ -13,13 +14,14 @@ export const createJotsRepository = (client: MemexSupabaseClient): JotsRepositor
      * done client-side so Home and each space share one cached list. */
     getAll: async (): Promise<SelfMessage[]> => {
       try {
-        const { data, error } = await client
-          .from('self_messages')
-          .select('*')
-          .order('created_at', { ascending: true })
-
-        if (error) throw error
-        return data || []
+        // Every row, past the API's row cap (paging.ts)
+        return await selectAllPages((from, to, withCount) =>
+          client
+            .from('self_messages')
+            .select('*', withCount ? { count: 'exact' } : undefined)
+            .order('created_at', { ascending: true }).order('id')
+            .range(from, to),
+        )
       } catch (error: unknown) {
         const message = getErrorMessage(error)
         // Migration not applied yet — behave as an empty feed

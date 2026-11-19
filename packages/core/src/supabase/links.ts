@@ -5,6 +5,7 @@ import type { LinksRepository } from '../repository'
 import type { CreateLinkData, Link, LinkWithTag, UpdateLinkData } from '../types'
 import type { MemexSupabaseClient } from './client'
 import { requireUser } from './user'
+import { selectAllPages } from './paging'
 
 
 export const createLinksRepository = (client: MemexSupabaseClient): LinksRepository => {
@@ -76,31 +77,33 @@ export const createLinksRepository = (client: MemexSupabaseClient): LinksReposit
 
     getAll: async (): Promise<LinkWithTag[]> => {
       try {
-        const { data, error } = await client
-          .from('links')
-          .select(`
+        // Every row, past the API's row cap (paging.ts)
+        return await selectAllPages((from, to, withCount) =>
+          client
+            .from('links')
+            .select(`
             *,
             tag:tags(*),
             link_tags:link_tags(tag:tags(*)),
             project:projects(id, name)
-          `)
-          .order('created_at', { ascending: false })
-
-        if (error) throw error
-        return data || []
+          `, withCount ? { count: 'exact' } : undefined)
+            .order('created_at', { ascending: false }).order('id')
+            .range(from, to),
+        )
       } catch (error: unknown) {
         if (linksApi.isMissingRelationError(error, 'link_tags')) {
-          const { data, error: fallbackError } = await client
-            .from('links')
-            .select(`
+          // Every row, past the API's row cap (paging.ts)
+          return await selectAllPages((from, to, withCount) =>
+            client
+              .from('links')
+              .select(`
               *,
               tag:tags(*),
               project:projects(id, name)
-            `)
-            .order('created_at', { ascending: false })
-
-          if (fallbackError) throw fallbackError
-          return data || []
+            `, withCount ? { count: 'exact' } : undefined)
+              .order('created_at', { ascending: false }).order('id')
+              .range(from, to),
+          )
         }
         throw error
       }

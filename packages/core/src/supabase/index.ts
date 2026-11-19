@@ -7,6 +7,7 @@ import type { Repository } from '../repository'
 import { createAgentTokensRepository, createProposalsRepository } from './agentTokens'
 import { createApiTokensRepository } from './apiTokens'
 import { createAuthRepository } from './auth'
+import { createCountsRepository } from './counts'
 import type { MemexSupabaseClient } from './client'
 import { createJotsRepository } from './jots'
 import { createLinksRepository } from './links'
@@ -26,6 +27,7 @@ export type { AuthStorage, MemexClientOptions, MemexSupabaseClient } from './cli
 /** Every Repository area on one Supabase client (RLS scopes each query to the signed-in user). */
 export const createSupabaseRepository = (client: MemexSupabaseClient): Repository => ({
   auth: createAuthRepository(client),
+  counts: createCountsRepository(client),
   links: createLinksRepository(client),
   notes: createNotesRepository(client),
   tasks: createTasksRepository(client),

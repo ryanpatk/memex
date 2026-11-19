@@ -4,6 +4,7 @@ import { getErrorMessage } from '../errors'
 import type { SpaceLinksRepository } from '../repository'
 import type { ProfileLinkMembership, ProfileLinkWithLink } from '../types'
 import type { MemexSupabaseClient } from './client'
+import { selectAllPages } from './paging'
 
 
 export const createSpaceLinksRepository = (client: MemexSupabaseClient): SpaceLinksRepository => {
@@ -11,31 +12,43 @@ export const createSpaceLinksRepository = (client: MemexSupabaseClient): SpaceLi
     /** All profile ↔ link pairs for the current user (RLS). Lightweight filter + counts. */
     listMembership: async (): Promise<ProfileLinkMembership[]> => {
       try {
-        const { data, error } = await client
-          .from('profile_links')
-          .select('profile_id, link_id, is_super_favorite, pin_position')
-
-        if (error) throw error
-        return data || []
+        // Every row, past the API's row cap (paging.ts)
+        return await selectAllPages((from, to, withCount) =>
+          client
+            .from('profile_links')
+            .select('profile_id, link_id, is_super_favorite, pin_position', withCount ? { count: 'exact' } : undefined)
+            .order('id')
+            .range(from, to),
+        )
       } catch (error: unknown) {
         const message = getErrorMessage(error)
         // Pin order (migration 20261118120000) not applied yet: pins sort by name
         if (message.includes('pin_position')) {
-          const { data, error: fallbackError } = await client
-            .from('profile_links')
-            .select('profile_id, link_id, is_super_favorite')
-          if (!fallbackError) return data || []
+          try {
+            return await selectAllPages((from, to, withCount) =>
+              client
+                .from('profile_links')
+                .select('profile_id, link_id, is_super_favorite', withCount ? { count: 'exact' } : undefined)
+                .order('id')
+                .range(from, to),
+            )
+          } catch {
+            // fall through to the older fallbacks below
+          }
         }
         // Migration for per-space super favorites not applied yet — the error
         // reads "column profile_links.is_super_favorite does not exist", so this
         // must be checked before the table-missing case. Degrade to plain
         // membership so spaces still show their contents.
         if (message.includes('is_super_favorite')) {
-          const { data, error: fallbackError } = await client
-            .from('profile_links')
-            .select('profile_id, link_id')
-          if (fallbackError) throw fallbackError
-          return data || []
+          // Every row, past the API's row cap (paging.ts)
+          return await selectAllPages((from, to, withCount) =>
+            client
+              .from('profile_links')
+              .select('profile_id, link_id', withCount ? { count: 'exact' } : undefined)
+              .order('id')
+              .range(from, to),
+          )
         }
         if (message.includes('profile_links') && message.includes('does not exist')) {
           return []

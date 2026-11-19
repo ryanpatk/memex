@@ -1,4 +1,5 @@
 import type {
+  ItemCounts,
   AgentToken,
   ApiToken,
   CreateLinkData,
@@ -260,8 +261,17 @@ export interface ProjectsRepository {
   delete(id: string): Promise<void>;
 }
 
+/**
+ * Exact totals from the database (count queries, no rows), so a total is
+ * right however many rows a list managed to load (stream/cardsCount.ts).
+ */
+export interface CountsRepository {
+  get(): Promise<ItemCounts>;
+}
+
 export interface Repository {
   auth: AuthRepository;
+  counts: CountsRepository;
   links: LinksRepository;
   notes: NotesRepository;
   tasks: TasksRepository;

@@ -2,6 +2,8 @@
 /* eslint-env node */
 /*
  * Spaces row check (docs/spaces-row.md), on demo data:
+ *   - the Everything count is identical in Grid, List and Table, at desktop
+ *     and phone width (core stream/cardsCount.ts)
  *   - the sticky bar: hidden at the top; once the pills (Cards) or the
  *     heading (a space board, Tasks) scroll away it sticks with ↑ <page>,
  *     the compact pills and the gold Pinned button; ↑ goes back to the top
@@ -122,6 +124,28 @@ await send('Runtime.enable');
 await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
 
 try {
+  // 0. The hero's count is the same in every layout and at every width (the
+  //    599-on-the-phone vs 1,023-on-the-laptop bug: it was the length of the
+  //    layout's own list, and a device left on List counted differently)
+  const heroCount = () => evaluate(`document.querySelector('.mc-page-head .mc-hero sup')?.textContent ?? null`);
+  const counts = {};
+  for (const [w, h, mobile, path, stored, name] of [
+    [1440, 900, false, '/library', 'grid', 'desktop Grid'],
+    [1440, 900, false, '/library?view=table', null, 'desktop Table'],
+    [390, 844, true, '/library', 'list', 'phone List (remembered)'],
+    [390, 844, true, '/library', 'grid', 'phone Grid'],
+  ]) {
+    await size(w, h, mobile);
+    await go('/library');
+    await evaluate(`localStorage.setItem('memex.stream-view', ${JSON.stringify(stored ?? 'grid')})`);
+    await go(path);
+    counts[name] = await heroCount();
+  }
+  await evaluate(`localStorage.setItem('memex.stream-view', 'grid')`);
+  const values = Object.values(counts);
+  check('the Everything count is the same in every layout and width', values[0] && values.every((v) => v === values[0]), JSON.stringify(counts));
+  await size(1440, 900);
+
   // 1. The sticky bar on Cards
   await size(1440, 900);
   await go('/library');

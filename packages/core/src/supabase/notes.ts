@@ -5,6 +5,7 @@ import type { NotesRepository } from '../repository'
 import type { CreateNoteData, Note, NoteWithTags, UpdateNoteData } from '../types'
 import type { MemexSupabaseClient } from './client'
 import { requireUser } from './user'
+import { selectAllPages } from './paging'
 
 const isMissingRelationError = (error: unknown, relation: string) => {
   const message = getErrorMessage(error)
@@ -15,29 +16,31 @@ export const createNotesRepository = (client: MemexSupabaseClient): NotesReposit
   const notesApi = {
     getAll: async (): Promise<NoteWithTags[]> => {
       try {
-        const { data, error } = await client
-          .from('notes')
-          .select(`
+        // Every row, past the API's row cap (paging.ts)
+        return await selectAllPages((from, to, withCount) =>
+          client
+            .from('notes')
+            .select(`
             *,
             note_tags:note_tags(tag:tags(*))
-          `)
-          .order('updated_at', { ascending: false })
-
-        if (error) throw error
-        return data || []
+          `, withCount ? { count: 'exact' } : undefined)
+            .order('updated_at', { ascending: false }).order('id')
+            .range(from, to),
+        )
       } catch (error: unknown) {
         // Graceful degradation while the notes migration hasn't been applied
         if (isMissingRelationError(error, 'notes')) {
           return []
         }
         if (isMissingRelationError(error, 'note_tags')) {
-          const { data, error: fallbackError } = await client
-            .from('notes')
-            .select('*')
-            .order('updated_at', { ascending: false })
-
-          if (fallbackError) throw fallbackError
-          return data || []
+          // Every row, past the API's row cap (paging.ts)
+          return await selectAllPages((from, to, withCount) =>
+            client
+              .from('notes')
+              .select('*', withCount ? { count: 'exact' } : undefined)
+              .order('updated_at', { ascending: false }).order('id')
+              .range(from, to),
+          )
         }
         throw error
       }

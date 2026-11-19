@@ -3,6 +3,7 @@
 import { getErrorMessage } from '../errors'
 import type { SpaceNotesRepository } from '../repository'
 import type { MemexSupabaseClient } from './client'
+import { selectAllPages } from './paging'
 
 
 export const createSpaceNotesRepository = (client: MemexSupabaseClient): SpaceNotesRepository => {
@@ -10,12 +11,14 @@ export const createSpaceNotesRepository = (client: MemexSupabaseClient): SpaceNo
     /** All profile ↔ note pairs for the current user (RLS). Lightweight filter + counts. */
     listMembership: async (): Promise<{ profile_id: string; note_id: string }[]> => {
       try {
-        const { data, error } = await client
-          .from('profile_notes')
-          .select('profile_id, note_id')
-
-        if (error) throw error
-        return data || []
+        // Every row, past the API's row cap (paging.ts)
+        return await selectAllPages((from, to, withCount) =>
+          client
+            .from('profile_notes')
+            .select('profile_id, note_id', withCount ? { count: 'exact' } : undefined)
+            .order('id')
+            .range(from, to),
+        )
       } catch (error: unknown) {
         const message = getErrorMessage(error)
         if (message.includes('profile_notes') && message.includes('does not exist')) {

@@ -3,6 +3,7 @@
 import { getErrorMessage } from '../errors'
 import type { SpaceTasksRepository } from '../repository'
 import type { MemexSupabaseClient } from './client'
+import { selectAllPages } from './paging'
 
 
 export const createSpaceTasksRepository = (client: MemexSupabaseClient): SpaceTasksRepository => {
@@ -10,12 +11,14 @@ export const createSpaceTasksRepository = (client: MemexSupabaseClient): SpaceTa
     /** All profile ↔ task pairs for the current user (RLS). Lightweight filter + counts. */
     listMembership: async (): Promise<{ profile_id: string; task_id: string }[]> => {
       try {
-        const { data, error } = await client
-          .from('profile_tasks')
-          .select('profile_id, task_id')
-
-        if (error) throw error
-        return data || []
+        // Every row, past the API's row cap (paging.ts)
+        return await selectAllPages((from, to, withCount) =>
+          client
+            .from('profile_tasks')
+            .select('profile_id, task_id', withCount ? { count: 'exact' } : undefined)
+            .order('id')
+            .range(from, to),
+        )
       } catch (error: unknown) {
         const message = getErrorMessage(error)
         if (message.includes('profile_tasks') && message.includes('does not exist')) {

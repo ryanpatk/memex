@@ -2540,3 +2540,9 @@ html[data-theme='dark'] .mc-diff .is-ins {
     display: none;
   }
 }
+
+/* List and Table: how their rows differ from the hero's count (StreamPage) */
+.mc-layout-note {
+  margin: 0 0 12px;
+  color: var(--mc-mut);
+}

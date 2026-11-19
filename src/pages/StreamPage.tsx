@@ -76,6 +76,7 @@ import {
   isPendingItem,
   itemKey,
   itemMatchesSearch,
+  cardsCount,
   isDoneTask,
   matchesTagFilter,
   matchesTypeFilter,
@@ -97,6 +98,7 @@ import {
 } from '../constants/modules';
 import { useFeedbackToast } from '../hooks/useFeedbackToast';
 import { useAddToSpace } from '../hooks/useAddToSpace';
+import { useItemCounts } from '../hooks/useItemCounts';
 import { useAllLinks, useDeleteLink, useUpdateLink } from '../hooks/useLinks';
 import { useAllNotes, useDeleteNote, useUpdateNote } from '../hooks/useNotes';
 import { useProfileLinkMembership } from '../hooks/useProfileLinks';
@@ -1352,32 +1354,21 @@ const StreamPage = () => {
   const fieldRef = useRef<HTMLInputElement>(null);
 
   // Jots join the grid only in the plain, date-ordered view (cardsGrid.ts)
+  const mcJotsEligible = gridShowsJots({
+    types: selectedTypes,
+    sources: selectedSources,
+    tagIds: selectedTagIds,
+    untagged: includeUntagged,
+    sortField: sort.field,
+    sortDirection: sort.direction,
+  });
   const mcJots = useMemo(() => {
     if (!allJots) return [];
-    const eligible = gridShowsJots({
-      types: selectedTypes,
-      sources: selectedSources,
-      tagIds: selectedTagIds,
-      untagged: includeUntagged,
-      sortField: sort.field,
-      sortDirection: sort.direction,
-    });
-    if (!eligible) return [];
+    if (!mcJotsEligible) return [];
     return allJots
       .filter((jot) => !hiddenJotIds.has(jot.id) && jotMatches(jot, activeFilters.spaces, gridSearch, UNFILED))
       .sort((a, b) => b.created_at.localeCompare(a.created_at));
-  }, [
-    activeFilters.spaces,
-    allJots,
-    gridSearch,
-    hiddenJotIds,
-    includeUntagged,
-    selectedSources,
-    selectedTagIds,
-    selectedTypes,
-    sort.direction,
-    sort.field,
-  ]);
+  }, [activeFilters.spaces, allJots, gridSearch, hiddenJotIds, mcJotsEligible]);
   const mcJotsById = useMemo(() => new Map(mcJots.map((jot) => [jot.id, jot])), [mcJots]);
 
   // Tasks are cards in the grid (the task band is gone); done ones stay in Tasks
@@ -1530,7 +1521,22 @@ const StreamPage = () => {
   const mcSpace = mcSpaceId ? spaceById.get(mcSpaceId) : undefined;
   const mcHeroName =
     activeView && activeView.id !== 'everything' ? activeView.name : mcSpace ? mcSpace.name : 'Everything';
-  const mcShownCount = view === 'grid' ? mcGridKeys.length : filteredItems.length;
+  // The hero's count: the same in every layout and on every device (core
+  // stream/cardsCount.ts). Exact database totals when nothing is filtered.
+  const { data: itemCounts } = useItemCounts();
+  const mcPlain =
+    mcJotsEligible && activeFilters.spaces.length === 0 && !gridSearch.trim() && selectedTypes.length === 0 && selectedSources.length === 0;
+  const mcShownCount = cardsCount({ plain: mcPlain, openItems: openItems.length, jots: mcJots.length, counts: itemCounts });
+  // List and Table list done tasks and leave jots to the grid; say so when that changes the number
+  const mcLayoutNote =
+    view !== 'grid' && (mcJots.length > 0 || doneTasks.length > 0)
+      ? [
+          mcJots.length > 0 ? `${numberFormat.format(mcJots.length)} jot${mcJots.length === 1 ? '' : 's'} show in Grid` : '',
+          doneTasks.length > 0 ? `${numberFormat.format(doneTasks.length)} done task${doneTasks.length === 1 ? '' : 's'} are listed here` : '',
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      : null;
   const openLinkItem = expandedLinkId ? itemsByKey.get(itemKey('link', expandedLinkId)) : undefined;
   const openLink = openLinkItem?.type === 'link' ? openLinkItem.link : null;
 
@@ -1812,6 +1818,7 @@ const StreamPage = () => {
               />
             </div>
 
+            {mcLayoutNote && <p className="mc-lab mc-layout-note">{mcLayoutNote}.</p>}
             <div key={view} ref={streamBodyRef} className={`memex-stream-body mc-stream is-${view}`}>
               {body}
             </div>

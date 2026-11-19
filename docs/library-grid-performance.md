@@ -77,5 +77,5 @@ The fixture photos live in `scripts/fixture-images/` and are served only by the 
 ## Next
 
 - **Store picture dimensions at capture.** Adding `preview_image_width` / `preview_image_height` to `links` (additive), written by memex-scraper, would make every picture's box exact from the first frame on every device, so nothing would ever need to crop or settle. It needs a migration, a scraper deploy and (optionally) a backfill, which needs Ryan's go-ahead.
-- **Read past 1,000 rows.** Supabase's API returns at most 1,000 rows per request (`max_rows`), and `links/notes/tasks.getAll` ask once, so a Library past 1,000 links would silently show only the newest 1,000. Paging those reads with `.range()` in `@memex/core/supabase` fixes it. Not a problem at today's ~410 links.
+- ~~**Read past 1,000 rows.**~~ Done 2026-11-19. Every full-list read in `@memex/core/supabase` (links, notes, tasks, jots, space memberships) now pages with `.range()` through `selectAllPages` (`supabase/paging.ts`: exact count on the first page, then as many pages as it takes, whatever the server's `max_rows`). Tested against a fake PostgREST with a row cap (`supabase/paging.test.ts`).
 - **The List layout isn't virtualized.** It still renders every row. Fine at hundreds of items; at thousands it wants the same treatment (rows are uniform, so it's simpler).

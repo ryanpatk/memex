@@ -188,6 +188,18 @@ export interface TaskWithTags extends Task {
   tags?: Tag[]
 }
 
+/** How many of each kind of item there are (exact, from count queries). */
+export interface ItemCounts {
+  links: number
+  notes: number
+  /** Every task, done or not. */
+  tasks: number
+  /** Tasks not done yet (the ones Cards shows; done ones live on Tasks). */
+  openTasks: number
+  /** Jots (self_messages). */
+  jots: number
+}
+
 export interface Profile {
   id: string
   user_id: string
