@@ -53,11 +53,13 @@ for (let i = 0; i < 50; i++) {
 const ws = new WebSocket(targets.find((t) => t.type === 'page').webSocketDebuggerUrl);
 await new Promise((r) => ws.addEventListener('open', r));
 let id = 0;
+let dragData = null;
 const pending = new Map();
 const errors = [];
 ws.addEventListener('message', (e) => {
   const msg = JSON.parse(e.data);
   if (msg.id && pending.has(msg.id)) { pending.get(msg.id)(msg); pending.delete(msg.id); }
+  if (msg.method === 'Input.dragIntercepted') dragData = msg.params.data;
   if (msg.method === 'Runtime.exceptionThrown') errors.push(msg.params.exceptionDetails?.exception?.description?.slice(0, 200));
   if (msg.method === 'Runtime.consoleAPICalled' && msg.params.type === 'error') errors.push(msg.params.args.map((a) => a.value ?? a.description).join(' ').slice(0, 200));
 });
@@ -98,25 +100,49 @@ const createSpace = async (name) => {
   await evaluate(`document.querySelector('nav[aria-label="Main"] a[href="/library"]')?.click()`);
   await sleep(700);
 };
-/** Starts a drag on the first link card; resolves once the tray is up. Returns a handle id kept on window. */
-const startDrag = () => evaluate(`(async () => {
-  const card = [...document.querySelectorAll('[data-item-key^="link:"]')].find((c) => !c.closest('.mc-stick'));
-  window.__dt = new DataTransfer(); window.__card = card;
-  card.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: window.__dt }));
-  await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 200)));
-  return { key: card.dataset.itemKey, pills: [...document.querySelectorAll('.mc-tray .mc-pill')].map((p) => p.textContent.trim()) };
-})()`);
-const dropOn = (text) => evaluate(`(async () => {
-  const el = [...document.querySelectorAll('.mc-tray .mc-pill')].find((p) => p.textContent.trim() === ${JSON.stringify(text)});
-  if (!el) return 'no target';
-  const r = el.getBoundingClientRect(); const o = { bubbles: true, cancelable: true, dataTransfer: window.__dt, clientX: r.left + 10, clientY: r.top + 10 };
-  el.dispatchEvent(new DragEvent('dragenter', o)); el.dispatchEvent(new DragEvent('dragover', o));
-  await new Promise((r) => setTimeout(r, 60));
-  el.dispatchEvent(new DragEvent('drop', o));
-  window.__card.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: window.__dt }));
-  await new Promise((r) => setTimeout(r, 500));
-  return 'ok';
-})()`);
+/**
+ * A real drag, the way a person makes one: the mouse goes down on a link
+ * card and moves past the drag threshold, so Chrome itself fires dragstart
+ * (pointer events, then pointercancel) and hands the drag to us
+ * (Input.setInterceptDrags) instead of the operating system. Run 9's check
+ * dispatched synthetic DragEvents on the elements, which skipped all of that.
+ */
+const startDrag = async (sel = '[data-item-key^="link:"]') => {
+  dragData = null;
+  const src = await evaluate(`(() => {
+    const card = [...document.querySelectorAll(${JSON.stringify(sel)})].find((c) => { if (c.closest('.mc-stick')) return false; const r = c.getBoundingClientRect(); return r.top > 240 && r.top < innerHeight - 160; });
+    if (!card) return null; const r = card.getBoundingClientRect(); return { key: card.dataset.itemKey, x: r.left + r.width / 2, y: r.top + 40 };
+  })()`);
+  if (!src) return { key: null, pills: [] };
+  await send('Input.setInterceptDrags', { enabled: true });
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: src.x, y: src.y });
+  await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: src.x, y: src.y, button: 'left', buttons: 1, clickCount: 1 });
+  for (let i = 1; i <= 8; i++) {
+    await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: src.x + i * 6, y: src.y - i * 6, button: 'left', buttons: 1 });
+    await sleep(25);
+  }
+  await sleep(300);
+  window_ = src;
+  return { key: src.key, started: Boolean(dragData), pills: await evaluate(`[...document.querySelectorAll('.mc-tray .mc-pill')].map((p) => p.textContent.trim())`) };
+};
+let window_ = null;
+/** Drops the drag on the tray pill reading `text` with real drag events, then lets go of the mouse. */
+const dropOn = async (text) => {
+  const target = await evaluate(`(() => { const el = [...document.querySelectorAll('.mc-tray .mc-pill')].find((p) => p.textContent.trim() === ${JSON.stringify(text)}); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+  if (target && dragData) {
+    await send('Input.dispatchDragEvent', { type: 'dragEnter', x: target.x, y: target.y, data: dragData });
+    await send('Input.dispatchDragEvent', { type: 'dragOver', x: target.x, y: target.y, data: dragData });
+    await sleep(80);
+    await send('Input.dispatchDragEvent', { type: 'drop', x: target.x, y: target.y, data: dragData });
+  } else if (dragData) {
+    await send('Input.dispatchDragEvent', { type: 'dragCancel', x: 0, y: 0, data: dragData });
+  }
+  const at = target ?? window_;
+  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: at.x, y: at.y, button: 'left', buttons: 0, clickCount: 1 });
+  await send('Input.setInterceptDrags', { enabled: false });
+  await sleep(500);
+  return target ? 'ok' : 'no target';
+};
 const toasts = () => evaluate(`[...document.querySelectorAll('.mc-toast')].map((t) => t.textContent).join(' | ')`);
 
 await send('Page.enable');
@@ -231,8 +257,13 @@ try {
   // 5. The drop tray (scrolled down, where the pills are out of reach)
   await scrollTo(1200);
   const drag = await startDrag();
+  check('a real mouse drag starts (Chrome fires dragstart itself)', drag.started, drag.key);
   check('a card drag opens the tray with every space, + New space and Pin', drag.pills.length === total + 2 && drag.pills.includes(hiddenName) && drag.pills.includes('New space') && drag.pills.includes('Pin'), drag.pills.join(' · '));
   await shot('tray');
+  // Some browsers still send a pointer move while the button is held mid-drag; that closed the tray
+  await evaluate(`document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, buttons: 1, pointerType: 'mouse' }))`);
+  await sleep(150);
+  check('a pointer move with the button held keeps the tray open', await evaluate(`Boolean(document.querySelector('.mc-tray'))`));
   const lastSpace = drag.pills[total - 1];
   await dropOn(lastSpace);
   const filed = await toasts();
@@ -253,6 +284,27 @@ try {
   await sleep(800);
   const madeToast = await toasts();
   check('dropping on + New space makes it and files the card there', sheetOpen && /Dropped here/.test(madeToast), madeToast);
+
+  // 5b. A real drag opens the tray in every layout, on every page, scrolled, at both widths
+  for (const [w, h, mobile, path, y] of [
+    [1440, 900, false, '/library?view=list', 400],
+    [1440, 900, false, '/library?view=table', 400],
+    [1440, 900, false, '/tasks', 0],
+    [1440, 900, false, '/spaces/sp-kitchen', 400],
+    [1440, 900, false, '/', 0],
+    [390, 844, true, '/library', 900],
+    [390, 844, true, '/library?view=list', 300],
+  ]) {
+    await size(w, h, mobile);
+    await go(path);
+    await scrollTo(y);
+    const d = await startDrag('[data-item-key]');
+    const opened = d.pills.includes('Reading') && d.pills.includes('New space');
+    await dropOn('Reading');
+    const t = await toasts();
+    check(`real drag at ${w}px on ${path} (scrolled ${y}): tray opens, drop files`, d.started && opened && t.includes('Reading'), `${d.key} → ${t || '(no toast)'}`);
+  }
+  await size(1440, 900);
 
   // 6. Phone width
   await size(390, 844, true);

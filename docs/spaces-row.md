@@ -48,6 +48,12 @@ The moment a card starts moving (a card, a selection, a task row or a Journal en
 
 Dropping files the card through the same path as the pills, with a toast and Undo. The tray folds away when the drag ends, whether you dropped, pressed Esc or let go elsewhere. It sits above the bars and the selection bar, and below toasts and popovers.
 
+**Reliability (2026-11-19):**
+
+- The tray opens on the first animation frame after `dragstart`, or after 80ms if a browser holds frames back during its drag session.
+- A pointer move ends a drag only when no button is held (`utils/itemDrag.ts` `endsItemDrag`). A browser that still sends a pointer move mid-drag used to close the tray the moment it opened.
+- `check-spaces.mjs` drags for real: mouse down, move past the threshold, and Chrome fires `dragstart` itself (`Input.setInterceptDrags`). It covers Grid, List, Table, Tasks, a board and the Journal, scrolled, at 1440 and 390px.
+
 Pinning by drag happens on Pin in the tray. The gold button's own drop target was retired, because the tray covers it.
 
 ### Edit spaces

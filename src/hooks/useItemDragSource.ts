@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useAppStore } from '../store';
-import { ITEM_DRAG_TYPE, dragGhostLabel, resolveDragKeys } from '../utils/itemDrag';
+import { ITEM_DRAG_TYPE, dragGhostLabel, endsItemDrag, resolveDragKeys } from '../utils/itemDrag';
 
 /**
  * Installs the one listener that turns a drag starting on an item (any
@@ -13,6 +13,8 @@ export function useItemDragSource() {
   useEffect(() => {
     let ghost: HTMLElement | null = null;
     let sources: HTMLElement[] = [];
+    // Which drag the pending “begin” belongs to (a timer from an earlier drag never starts this one)
+    let dragSeq = 0;
 
     const cleanup = () => {
       sources.forEach((el) => el.classList.remove('is-drag-source'));
@@ -67,8 +69,14 @@ export function useItemDragSource() {
       event.dataTransfer.setDragImage(ghost, 14, 14);
 
       // Change the page only after the drag has begun (doing it inside
-      // dragstart can cancel the drag in some browsers)
-      requestAnimationFrame(() => {
+      // dragstart can cancel the drag in some browsers). A frame normally
+      // comes first; the timer covers a browser that holds frames back while
+      // its drag session starts, so the drop tray always opens.
+      const seq = ++dragSeq;
+      let begun = false;
+      const begin = () => {
+        if (begun || seq !== dragSeq) return;
+        begun = true;
         ghost?.remove();
         document.documentElement.classList.add('is-item-dragging');
         sources = keys.flatMap((key) =>
@@ -77,25 +85,34 @@ export function useItemDragSource() {
         if (el.dataset.dragKeys) sources.push(el);
         sources.forEach((source) => source.classList.add('is-drag-source'));
         useAppStore.getState().setItemDrag({ keys });
-      });
+      };
+      requestAnimationFrame(begin);
+      window.setTimeout(begin, 80);
     };
 
     // dragend doesn't reach the document when the dragged element left the
     // page mid-drag (filtered out by the drop), so also end on drop and on
-    // the first pointer move after a drag.
+    // the first pointer move after a drag, but only once no button is held:
+    // a browser may still send a pointer move mid-drag, and ending on it
+    // closed the drop tray the moment it opened (itemDrag.ts endsItemDrag).
     const onEnd = () => {
+      // A drag that ends before its first frame never opens the tray afterwards
+      dragSeq += 1;
       if (useAppStore.getState().itemDrag || sources.length) cleanup();
+    };
+    const onPointerMove = (event: PointerEvent) => {
+      if (endsItemDrag(event)) onEnd();
     };
 
     document.addEventListener('dragstart', onDragStart);
     document.addEventListener('dragend', onEnd);
     document.addEventListener('drop', onEnd);
-    document.addEventListener('pointermove', onEnd);
+    document.addEventListener('pointermove', onPointerMove);
     return () => {
       document.removeEventListener('dragstart', onDragStart);
       document.removeEventListener('dragend', onEnd);
       document.removeEventListener('drop', onEnd);
-      document.removeEventListener('pointermove', onEnd);
+      document.removeEventListener('pointermove', onPointerMove);
       cleanup();
     };
   }, []);

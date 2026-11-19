@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dragAttrs, dragGhostLabel, isFileableKey, parseDragKeys, resolveDragKeys } from './itemDrag';
+import { dragAttrs, dragGhostLabel, endsItemDrag, isFileableKey, parseDragKeys, resolveDragKeys } from './itemDrag';
 
 describe('isFileableKey', () => {
   it('accepts links, notes, tasks and jots', () => {
@@ -83,5 +83,16 @@ describe('dragAttrs', () => {
     expect(dragAttrs('jot:a', 'hi')).toEqual({ draggable: true, 'data-drag-label': 'hi' });
     expect(dragAttrs('jot:temp-1', 'hi')).toEqual({});
     expect(dragAttrs('task:temp-1', 'hi')).toEqual({});
+  });
+});
+
+describe('endsItemDrag', () => {
+  it('doesn’t end a drag on a pointer move while a button is held (the drop tray closed the moment it opened)', () => {
+    expect(endsItemDrag({ buttons: 1 })).toBe(false);
+    expect(endsItemDrag({ buttons: 2 })).toBe(false);
+  });
+
+  it('ends it on the first move with nothing pressed (after a drop outside the window)', () => {
+    expect(endsItemDrag({ buttons: 0 })).toBe(true);
   });
 });

@@ -53,3 +53,12 @@ export const dragGhostLabel = (keys: readonly string[], title?: string | null) =
 /** Props that make an item's element a drag source (none for optimistic rows). */
 export const dragAttrs = (key: string, title: string) =>
   isFileableKey(key) ? { draggable: true, 'data-drag-label': title } : {};
+
+/**
+ * Whether a pointer move means an item drag is over: only when no button is
+ * held. While a drag runs the button is down; some browsers still send a
+ * pointer move then, and treating it as the end closed the drop tray the
+ * moment it opened. A move with nothing pressed comes after a drop outside
+ * the window, which no dragend reports.
+ */
+export const endsItemDrag = (event: { buttons: number }) => event.buttons === 0;

@@ -2546,3 +2546,28 @@ html[data-theme='dark'] .mc-diff .is-ins {
   margin: 0 0 12px;
   color: var(--mc-mut);
 }
+
+/* “memex has been updated · Reload” (ShellNotices, hooks/useNewerDeploy) */
+.mc-update {
+  position: fixed;
+  left: 24px;
+  bottom: 24px;
+  z-index: var(--mc-z-toast);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 8px 8px 22px;
+  border-radius: var(--mc-r-pill);
+  background: var(--mc-toast);
+  color: #fff;
+  font: 600 17px / 1.2 var(--mc-font-ui);
+  box-shadow: var(--mc-sh2);
+}
+@media (max-width: 760px) {
+  .mc-update {
+    left: 12px;
+    right: 12px;
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    justify-content: space-between;
+  }
+}
